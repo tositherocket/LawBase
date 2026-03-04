@@ -943,7 +943,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (localStorage). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.3.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.4.1</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1086,6 +1086,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         req.onerror=e=>rej(e);
       });
     }
+    // Expose openDB globally so annotation script reuses same connection
+    window._openDB = openDB;
     function saveToStorage(){
       const minimal=state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}));
       const data={laws:minimal,activeId:state.activeId};
@@ -1110,18 +1112,51 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     // Export/Import
     function exportAll(){
-      const data={version:1,exportedAt:new Date().toISOString(),activeId:state.activeId,laws:state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}))};
-      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='zakoni_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      // Load all annotations then export together
+      openDB().then(db=>new Promise(res=>{
+        const req=db.transaction('annotations','readonly').objectStore('annotations').getAll();
+        req.onsuccess=e=>res(e.target.result||[]);
+        req.onerror=()=>res([]);
+      })).then(()=>{
+        // Get all annotation keys too
+        return openDB().then(db=>new Promise(res=>{
+          const tx=db.transaction('annotations','readonly');
+          const store=tx.objectStore('annotations');
+          const annotations={};
+          const reqKeys=store.getAllKeys();
+          reqKeys.onsuccess=ek=>{
+            const keys=ek.target.result||[];
+            const reqVals=store.getAll();
+            reqVals.onsuccess=ev=>{
+              const vals=ev.target.result||[];
+              keys.forEach((k,i)=>{if(vals[i]) annotations[k]=vals[i];});
+              res(annotations);
+            };
+          };
+        }));
+      }).then(annotations=>{
+        const data={version:2,exportedAt:new Date().toISOString(),activeId:state.activeId,
+          laws:state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()})),
+          annotations};
+        const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+        const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lawbase_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
     }
     async function importAll(file){
       try{
         const text=await file.text(); const data=JSON.parse(text);
         if(!data || !Array.isArray(data.laws)) throw new Error('invalid');
         state.laws=data.laws.map(l=>({id:l.id||uid(),title:l.title||'Untitled',alt:l.alt||'',content:l.content||'',updatedAt:l.updatedAt||Date.now(),articles:splitIntoArticles(l.content||'')}));
-        // Fix: restore exact activeId from export if available
         const restoredId = state.laws.find(x=>x.id===data.activeId)?.id;
         state.activeId = restoredId || state.laws[0]?.id || null;
+        // Restore annotations if present
+        if(data.annotations && typeof data.annotations==='object'){
+          const db=await openDB();
+          const tx=db.transaction('annotations','readwrite');
+          const store=tx.objectStore('annotations');
+          store.clear();
+          Object.entries(data.annotations).forEach(([k,v])=>store.put(v,k));
+        }
         renderAll(); saveToStorage(); alert('Import complete. Loaded ' + state.laws.length + ' laws.');
       }catch(e){ alert('Import failed. Valid JSON format?'); }
     }
@@ -1572,7 +1607,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         drawerLawsHint:'Riemërtimi, redaktimi dhe fshirja bëhen këtu.',
         drawerImpExp:'Import / Eksport', exportBtn:'Eksporto (JSON)', importBtn:'Importo',
         clearAllBtn:'Pastro të gjitha', themeH:'Tema', langH:'Gjuha',
-        footer:'Të dhënat ruhen lokalisht (localStorage).',
+        footer:'Të dhënat ruhen lokalisht (IndexedDB).',
         cancelBtn:'Anulo', saveBtn:'Ruaj',
         modalLabelTitle:'Titulli', modalLabelDoc:'Dokumenti',
         modalLabelPaste:'Ose ngjit tekstin', modalFileHint:'.txt/.md/.html/.docx (lokal)',
@@ -1591,7 +1626,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         drawerLawsHint:'Преименување, уредување и бришење се прават овде.',
         drawerImpExp:'Увоз / Извоз', exportBtn:'Извоз (JSON)', importBtn:'Увоз',
         clearAllBtn:'Исчисти сите', themeH:'Тема', langH:'Јазик',
-        footer:'Податоците се чуваат локално (localStorage).',
+        footer:'Податоците се чуваат локално (IndexedDB).',
         cancelBtn:'Откажи', saveBtn:'Зачувај',
         modalLabelTitle:'Наслов', modalLabelDoc:'Документ',
         modalLabelPaste:'Или залепи текст', modalFileHint:'.txt/.md/.html/.docx (локално)',
@@ -1610,7 +1645,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         drawerLawsHint:'Rename, edit and delete laws here.',
         drawerImpExp:'Import / Export', exportBtn:'Export (JSON)', importBtn:'Import',
         clearAllBtn:'Clear all', themeH:'Theme', langH:'Language',
-        footer:'Data stored locally (localStorage).',
+        footer:'Data stored locally (IndexedDB).',
         cancelBtn:'Cancel', saveBtn:'Save',
         modalLabelTitle:'Title', modalLabelDoc:'Document',
         modalLabelPaste:'Or paste text', modalFileHint:'.txt/.md/.html/.docx (local)',
@@ -1691,20 +1726,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   <script>
   (function(){
     const ANN_STORE='annotations';
-    let _annDb=null;
-    function openAnnDB(){
-      return new Promise((res,rej)=>{
-        if(_annDb){res(_annDb);return;}
-        const req=indexedDB.open('lawbase_db',2);
-        req.onupgradeneeded=e=>{
-          const db=e.target.result;
-          if(!db.objectStoreNames.contains('data')) db.createObjectStore('data');
-          if(!db.objectStoreNames.contains(ANN_STORE)) db.createObjectStore(ANN_STORE);
-        };
-        req.onsuccess=e=>{_annDb=e.target.result;res(_annDb);};
-        req.onerror=e=>rej(e);
-      });
-    }
+    // Reuse the shared DB connection from main script
+    function openAnnDB(){ return window._openDB(); }
     function annKey(lawId,idx){return lawId+'::'+idx;}
     function saveNote(lawId,idx,text){
       return openAnnDB().then(db=>{
