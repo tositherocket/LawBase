@@ -106,103 +106,161 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* ── Theme definitions ─────────────────────────────────────────── */
-    :root, [data-theme="light"] {
-      --primary:       #4361ee;
-      --primary-dark:  #3a56d4;
-      --primary-soft:  rgba(67,97,238,0.08);
-      --accent:        #4361ee;
-      --danger:        #e63946;
+    /* ══════════════════════════════════════════════════════════════
+       THEME SYSTEM — data-style + data-mode (light|dark)
+       ══════════════════════════════════════════════════════════════ */
+    :root {
       --border-radius: 8px;
-      --box-shadow:    0 2px 8px rgba(0,0,0,0.06);
       --transition:    all 0.18s ease;
-      --bg:            #f5f7fb;
-      --panel:         #ffffff;
-      --chip:          #f1f3f9;
-      --border:        #e1e5eb;
-      --text:          #1a1d2e;
-      --muted:         #6c757d;
       --font-body:     'Segoe UI', system-ui, sans-serif;
       --font-heading:  'Segoe UI', system-ui, sans-serif;
     }
 
-    [data-theme="dark"] {
-      --primary:       #7b96ff;
-      --primary-dark:  #5c7cfa;
-      --primary-soft:  rgba(123,150,255,0.12);
-      --accent:        #7b96ff;
-      --danger:        #ff6b7a;
+    /* ══ CLASSIC light ══ */
+    :root, [data-style="classic"][data-mode="light"] {
+      --primary:      #4361ee;
+      --primary-dark: #3a56d4;
+      --primary-soft: rgba(67,97,238,0.08);
+      --accent:       #4361ee;
+      --danger:       #e63946;
+      --box-shadow:   0 2px 8px rgba(0,0,0,0.06);
+      --bg:           #f5f7fb;
+      --panel:        #ffffff;
+      --chip:         #f1f3f9;
+      --border:       #e1e5eb;
+      --text:         #1a1d2e;
+      --muted:        #6c757d;
+      --font-body:    'Segoe UI', system-ui, sans-serif;
+      --font-heading: 'Segoe UI', system-ui, sans-serif;
       --border-radius: 8px;
-      --box-shadow:    0 2px 12px rgba(0,0,0,0.35);
-      --transition:    all 0.18s ease;
-      --bg:            #0f1117;
-      --panel:         #1a1d27;
-      --chip:          #242837;
-      --border:        #2e3347;
-      --text:          #e2e5f0;
-      --muted:         #7a80a0;
-      --font-body:     'Segoe UI', system-ui, sans-serif;
-      --font-heading:  'Segoe UI', system-ui, sans-serif;
+    }
+    [data-style="classic"][data-mode="dark"] {
+      --primary:      #7b96ff;
+      --primary-dark: #5c7cfa;
+      --primary-soft: rgba(123,150,255,0.12);
+      --accent:       #7b96ff;
+      --danger:       #ff6b7a;
+      --box-shadow:   0 2px 12px rgba(0,0,0,0.4);
+      --bg:           #0f1117;
+      --panel:        #1a1d27;
+      --chip:         #242837;
+      --border:       #2e3347;
+      --text:         #e2e5f0;
+      --muted:        #7a80a0;
+      --font-body:    'Segoe UI', system-ui, sans-serif;
+      --font-heading: 'Segoe UI', system-ui, sans-serif;
+      --border-radius: 8px;
     }
 
-    [data-theme="legal"] {
-      --primary:       #8B6914;
-      --primary-dark:  #6d5210;
-      --primary-soft:  rgba(201,168,76,0.1);
-      --accent:        #C9A84C;
-      --danger:        #b94040;
+    /* ══ LEGAL light ══ */
+    [data-style="legal"][data-mode="light"] {
+      --primary:      #7A5C1E;
+      --primary-dark: #5e4515;
+      --primary-soft: rgba(201,168,76,0.1);
+      --accent:       #C9A84C;
+      --danger:       #b94040;
+      --box-shadow:   0 1px 6px rgba(0,0,0,0.07);
+      --bg:           #F7F5F0;
+      --panel:        #FDFCF9;
+      --chip:         #F0EDE6;
+      --border:       #DDD9D0;
+      --text:         #1E1C18;
+      --muted:        #7A776E;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Serif Display', serif;
       --border-radius: 3px;
-      --box-shadow:    0 1px 6px rgba(0,0,0,0.07);
-      --transition:    all 0.18s ease;
-      --bg:            #F7F5F0;
-      --panel:         #FDFCF9;
-      --chip:          #F0EDE6;
-      --border:        #DDD9D0;
-      --text:          #1E1C18;
-      --muted:         #7A776E;
-      --font-body:     'DM Sans', sans-serif;
-      --font-heading:  'DM Serif Display', serif;
+    }
+    [data-style="legal"][data-mode="dark"] {
+      --primary:      #E8C876;
+      --primary-dark: #d4b05a;
+      --primary-soft: rgba(232,200,118,0.1);
+      --accent:       #E8C876;
+      --danger:       #ff6b6b;
+      --box-shadow:   0 2px 16px rgba(0,0,0,0.5);
+      --bg:           #0E0C08;
+      --panel:        #171410;
+      --chip:         #211E18;
+      --border:       #2E2A22;
+      --text:         #EAE6DC;
+      --muted:        #6A6660;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Serif Display', serif;
+      --border-radius: 3px;
     }
 
-    [data-theme="midnight"] {
-      --primary:       #E8C876;
-      --primary-dark:  #d4b05a;
-      --primary-soft:  rgba(232,200,118,0.1);
-      --accent:        #E8C876;
-      --danger:        #ff6b6b;
+    /* ══ MIDNIGHT light ══ */
+    [data-style="midnight"][data-mode="light"] {
+      --primary:      #3D3580;
+      --primary-dark: #2d2760;
+      --primary-soft: rgba(61,53,128,0.08);
+      --accent:       #6C63FF;
+      --danger:       #d04060;
+      --box-shadow:   0 2px 10px rgba(61,53,128,0.1);
+      --bg:           #F2F1FA;
+      --panel:        #FAFAFE;
+      --chip:         #EAEAF5;
+      --border:       #D5D3EE;
+      --text:         #1A1830;
+      --muted:        #7874A8;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Sans', sans-serif;
       --border-radius: 6px;
-      --box-shadow:    0 2px 16px rgba(0,0,0,0.5);
-      --transition:    all 0.18s ease;
-      --bg:            #08080D;
-      --panel:         #0F0F18;
-      --chip:          #18182A;
-      --border:        #252535;
-      --text:          #EAE8E0;
-      --muted:         #5A5870;
-      --font-body:     'DM Sans', sans-serif;
-      --font-heading:  'DM Sans', sans-serif;
+    }
+    [data-style="midnight"][data-mode="dark"] {
+      --primary:      #9D96FF;
+      --primary-dark: #7b72f5;
+      --primary-soft: rgba(157,150,255,0.1);
+      --accent:       #9D96FF;
+      --danger:       #ff6b80;
+      --box-shadow:   0 2px 20px rgba(0,0,0,0.6);
+      --bg:           #07070F;
+      --panel:        #0F0E1A;
+      --chip:         #171628;
+      --border:       #232236;
+      --text:         #E4E2F5;
+      --muted:        #5A5880;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Sans', sans-serif;
+      --border-radius: 6px;
     }
 
-    [data-theme="soft"] {
-      --primary:       #5C6BC0;
-      --primary-dark:  #4757b0;
-      --primary-soft:  rgba(92,107,192,0.1);
-      --accent:        #5C6BC0;
-      --danger:        #e57373;
+    /* ══ SOFT light ══ */
+    [data-style="soft"][data-mode="light"] {
+      --primary:      #5C6BC0;
+      --primary-dark: #4757b0;
+      --primary-soft: rgba(92,107,192,0.1);
+      --accent:       #5C6BC0;
+      --danger:       #e57373;
+      --box-shadow:   0 2px 20px rgba(92,107,192,0.1);
+      --bg:           #ECEFFE;
+      --panel:        #F8F9FF;
+      --chip:         #E4E7FC;
+      --border:       #CDD1F5;
+      --text:         #1E2060;
+      --muted:        #7B82C0;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Sans', sans-serif;
       --border-radius: 14px;
-      --box-shadow:    0 2px 20px rgba(92,107,192,0.12);
-      --transition:    all 0.18s ease;
-      --bg:            #ECEFFE;
-      --panel:         #F8F9FF;
-      --chip:          #E4E7FC;
-      --border:        #CDD1F5;
-      --text:          #1E2060;
-      --muted:         #7B82C0;
-      --font-body:     'DM Sans', sans-serif;
-      --font-heading:  'DM Sans', sans-serif;
+    }
+    [data-style="soft"][data-mode="dark"] {
+      --primary:      #8B96E8;
+      --primary-dark: #7080d8;
+      --primary-soft: rgba(139,150,232,0.12);
+      --accent:       #8B96E8;
+      --danger:       #f08080;
+      --box-shadow:   0 2px 20px rgba(0,0,0,0.45);
+      --bg:           #0C0D1A;
+      --panel:        #141528;
+      --chip:         #1C1E35;
+      --border:       #282A45;
+      --text:         #DDE0F8;
+      --muted:        #6668A0;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Sans', sans-serif;
+      --border-radius: 14px;
     }
 
-    /* ── Base reset ────────────────────────────────────────────────── */
+        /* ── Base reset ────────────────────────────────────────────────── */
     * {
       margin: 0;
       padding: 0;
@@ -710,6 +768,28 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     /* Theme picker */
+    .theme-mode-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .theme-mode-btn {
+      flex: 1;
+      padding: 7px 12px;
+      border-radius: var(--border-radius);
+      border: 2px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .theme-mode-btn.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
     .theme-picker {
       display: flex;
       gap: 8px;
@@ -1025,25 +1105,27 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       </div>
       <div class="group">
         <h4 id="themeGroupH4"><i class="fas fa-palette"></i> Theme</h4>
+        <!-- Light / Dark toggle -->
+        <div class="theme-mode-row">
+          <button class="theme-mode-btn active" data-mode="light"><i class="fas fa-sun"></i> Light</button>
+          <button class="theme-mode-btn" data-mode="dark"><i class="fas fa-moon"></i> Dark</button>
+        </div>
+        <!-- Style picker -->
         <div class="theme-picker">
-          <button class="theme-opt" data-theme="light" title="Light">
-            <span class="theme-swatch" style="background:linear-gradient(135deg,#f5f7fb 50%,#4361ee 50%)"></span>
-            <span>Light</span>
+          <button class="theme-opt active" data-style="classic">
+            <span class="theme-swatch" id="sw-classic"></span>
+            <span>Classic</span>
           </button>
-          <button class="theme-opt" data-theme="dark" title="Dark">
-            <span class="theme-swatch" style="background:linear-gradient(135deg,#0f1117 50%,#7b96ff 50%)"></span>
-            <span>Dark</span>
-          </button>
-          <button class="theme-opt" data-theme="legal" title="Legal Clarity">
-            <span class="theme-swatch" style="background:linear-gradient(135deg,#F7F5F0 50%,#C9A84C 50%)"></span>
+          <button class="theme-opt" data-style="legal">
+            <span class="theme-swatch" id="sw-legal"></span>
             <span>Legal</span>
           </button>
-          <button class="theme-opt" data-theme="midnight" title="Midnight">
-            <span class="theme-swatch" style="background:linear-gradient(135deg,#08080D 50%,#E8C876 50%)"></span>
+          <button class="theme-opt" data-style="midnight">
+            <span class="theme-swatch" id="sw-midnight"></span>
             <span>Midnight</span>
           </button>
-          <button class="theme-opt" data-theme="soft" title="Soft">
-            <span class="theme-swatch" style="background:linear-gradient(135deg,#ECEFFE 50%,#5C6BC0 50%)"></span>
+          <button class="theme-opt" data-style="soft">
+            <span class="theme-swatch" id="sw-soft"></span>
             <span>Soft</span>
           </button>
         </div>
@@ -1057,7 +1139,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.4.5</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.4.6</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1145,25 +1227,48 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     let currentSearchResults = [];
     let currentSearchIndex = -1;
 
-    // Theme
-    const THEMES = ['light','dark','legal','midnight','soft'];
-    function applyTheme(theme){
-      if(!THEMES.includes(theme)) theme='light';
-      document.documentElement.setAttribute('data-theme', theme);
-      // Update header toggle icon
-      themeBtn.innerHTML = (theme==='dark'||theme==='midnight')
+    // Theme system — style + mode
+    const STYLES = ['classic','legal','midnight','soft'];
+    const SWATCHES = {
+      classic:  {light:['#f5f7fb','#4361ee'], dark:['#0f1117','#7b96ff']},
+      legal:    {light:['#F7F5F0','#C9A84C'], dark:['#0E0C08','#E8C876']},
+      midnight: {light:['#F2F1FA','#6C63FF'], dark:['#07070F','#9D96FF']},
+      soft:     {light:['#ECEFFE','#5C6BC0'], dark:['#0C0D1A','#8B96E8']},
+    };
+
+    function applyTheme(style, mode){
+      if(!STYLES.includes(style)) style='classic';
+      if(mode!=='dark') mode='light';
+      document.documentElement.setAttribute('data-style', style);
+      document.documentElement.setAttribute('data-mode', mode);
+      localStorage.setItem('theme-style', style);
+      localStorage.setItem('theme-mode', mode);
+      // Header toggle icon
+      themeBtn.innerHTML = mode==='dark'
         ? '<i class="fas fa-sun"></i>'
         : '<i class="fas fa-moon"></i>';
-      localStorage.setItem('theme', theme);
-      // Update active state in picker
+      // Update mode buttons
+      document.querySelectorAll('.theme-mode-btn').forEach(b=>{
+        b.classList.toggle('active', b.dataset.mode===mode);
+      });
+      // Update style buttons
       document.querySelectorAll('.theme-opt').forEach(b=>{
-        b.classList.toggle('active', b.dataset.theme===theme);
+        b.classList.toggle('active', b.dataset.style===style);
+      });
+      // Update swatches
+      STYLES.forEach(s=>{
+        const el=document.getElementById('sw-'+s);
+        if(!el) return;
+        const [bg,acc]=SWATCHES[s][mode];
+        el.style.background=`linear-gradient(135deg,${bg} 50%,${acc} 50%)`;
       });
     }
     function initTheme(){
-      const saved = localStorage.getItem('theme');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+      const style=localStorage.getItem('theme-style')||'classic';
+      const savedMode=localStorage.getItem('theme-mode');
+      const prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const mode=savedMode||(prefersDark?'dark':'light');
+      applyTheme(style, mode);
     }
 
     const uid = () => Math.random().toString(36).slice(2,9);
@@ -1567,13 +1672,23 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     fulltextInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); runFulltext(); }});
 
     themeBtn.addEventListener('click', ()=>{
-      const current=localStorage.getItem('theme')||'light';
-      applyTheme(current==='dark'||current==='midnight' ? 'light' : 'dark');
+      const mode=localStorage.getItem('theme-mode')||'light';
+      const style=localStorage.getItem('theme-style')||'classic';
+      applyTheme(style, mode==='dark'?'light':'dark');
     });
 
     // Theme picker
+    document.querySelectorAll('.theme-mode-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const style=localStorage.getItem('theme-style')||'classic';
+        applyTheme(style, btn.dataset.mode);
+      });
+    });
     document.querySelectorAll('.theme-opt').forEach(btn=>{
-      btn.addEventListener('click', ()=> applyTheme(btn.dataset.theme));
+      btn.addEventListener('click', ()=>{
+        const mode=localStorage.getItem('theme-mode')||'light';
+        applyTheme(btn.dataset.style, mode);
+      });
     });
     openSettings.addEventListener('click', ()=>{ drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); renderLawsManager(); });
     closeSettings.addEventListener('click', ()=>{ drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); });
