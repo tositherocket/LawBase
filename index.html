@@ -657,11 +657,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       .mobile-sticky-search {
         display: none; /* enabled by JS */
         position: fixed;
-        top: 0;
+        bottom: 0;
         left: 0;
         right: 0;
         z-index: 2000;
-        padding: 8px 10px;
+        padding: 4px 8px;
         background: rgba(0,0,0,0.0);
         pointer-events: none; /* enabled on button only */
       }
@@ -676,24 +676,24 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        padding: 12px;
+        gap: 8px;
+        padding: 7px 12px;
         border: none;
-        border-radius: 10px;
+        border-radius: 8px;
         background: #4361ee;
         color: #fff;
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 0.8rem;
         box-shadow: 0 2px 10px rgba(0,0,0,0.25);
       }
 
       .mobile-sticky-btn .chev { transition: transform 0.2s ease; }
       .mobile-sticky-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
 
-      /* When expanded, controls becomes fixed under sticky button */
+      /* When expanded, controls appears above the bottom sticky button */
       .controls.mobile-fixed {
         position: fixed;
-        top: 60px;
+        bottom: 50px;
         left: 10px;
         right: 10px;
         z-index: 1999;
@@ -748,40 +748,38 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       .back-to-top {
         position: fixed;
         right: 12px;
-        bottom: 12px;
+        bottom: 46px;
         z-index: 2600;
-        width: 34px;
-        height: 34px;
+        width: 36px;
+        height: 36px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.18);
-        background: rgba(67, 97, 238, 0.85);
+        background: rgba(67, 97, 238, 0.9);
         color: #fff;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 800;
         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         display: none;
         align-items: center;
         justify-content: center;
       }
-
       .back-to-top.on { display: inline-flex; }
       .back-to-top:active { transform: scale(0.95); }
     }
 
-
-    /* === Back to top button (desktop + mobile) === */
+    /* === Back to top button (desktop) === */
     .back-to-top {
       position: fixed;
       right: 12px;
-      bottom: 12px;
+      bottom: 46px;
       z-index: 2600;
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(67, 97, 238, 0.85);
+      background: rgba(67, 97, 238, 0.9);
       color: #fff;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 800;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       display: none;
