@@ -747,50 +747,50 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     @media (max-width: 900px) {
       .back-to-top {
         position: fixed;
-        right: 14px;
-        bottom: 14px;
+        right: 12px;
+        bottom: 12px;
         z-index: 2600;
-        width: 46px;
-        height: 46px;
+        width: 34px;
+        height: 34px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.18);
-        background: rgba(67, 97, 238, 0.95);
+        background: rgba(67, 97, 238, 0.85);
         color: #fff;
-        font-size: 18px;
+        font-size: 14px;
         font-weight: 800;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         display: none;
         align-items: center;
         justify-content: center;
       }
 
       .back-to-top.on { display: inline-flex; }
-      .back-to-top:active { transform: scale(0.98); }
+      .back-to-top:active { transform: scale(0.95); }
     }
 
 
     /* === Back to top button (desktop + mobile) === */
     .back-to-top {
       position: fixed;
-      right: 14px;
-      bottom: 14px;
+      right: 12px;
+      bottom: 12px;
       z-index: 2600;
-      width: 46px;
-      height: 46px;
+      width: 34px;
+      height: 34px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(67, 97, 238, 0.95);
+      background: rgba(67, 97, 238, 0.85);
       color: #fff;
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 800;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       display: none;
       align-items: center;
       justify-content: center;
       cursor: pointer;
     }
     .back-to-top.on { display: inline-flex !important; }
-    .back-to-top:active { transform: scale(0.98); }
+    .back-to-top:active { transform: scale(0.95); }
 </style>
 
   <!-- Auto-load Mammoth with CDN fallback -->
@@ -1489,8 +1489,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     function scrollToTop(){
-      if(currentContainer) currentContainer.scrollTo({ top: 0, behavior: 'smooth' });
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if(currentContainer) currentContainer.scrollTo({ top: 0, behavior: 'instant' });
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
     function bind(){
