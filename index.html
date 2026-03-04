@@ -789,6 +789,42 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
     .back-to-top.on { display: inline-flex !important; }
     .back-to-top:active { transform: scale(0.95); }
+
+    /* === Annotations === */
+    .article.has-note { border-left: 3px solid #f4a261; padding-left: 10px; }
+    .note-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-left: 8px; width: 20px; height: 20px; border-radius: 50%;
+      border: 1px solid #f4a261; background: transparent; color: #f4a261;
+      font-size: 11px; cursor: pointer; vertical-align: middle;
+      opacity: 0.7; transition: opacity 0.15s;
+    }
+    .note-btn:hover { opacity: 1; background: #f4a261; color: #fff; }
+    .note-btn.has-note { background: #f4a261; color: #fff; opacity: 1; }
+    .note-preview {
+      margin: 6px 0 4px 0; padding: 6px 10px; border-radius: 6px;
+      background: rgba(244,162,97,0.12); border-left: 2px solid #f4a261;
+      font-size: 0.82rem; color: var(--text); white-space: pre-wrap; line-height: 1.5;
+    }
+    /* Annotation modal */
+    #noteModal { display:none; position:fixed; inset:0; z-index:4000; background:rgba(0,0,0,0.45); align-items:center; justify-content:center; }
+    #noteModal.open { display:flex; }
+    #noteModal .modal-box {
+      background: var(--card); border-radius: 14px; padding: 22px;
+      width: min(420px, 92vw); box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    #noteModal h4 { margin:0; font-size:0.95rem; color: var(--text); }
+    #noteModal textarea {
+      width:100%; min-height:100px; border-radius:8px; border:1px solid var(--border);
+      background:var(--bg); color:var(--text); padding:10px; font-size:0.88rem;
+      resize:vertical; font-family:inherit; line-height:1.5;
+    }
+    #noteModal .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+    #noteModal .modal-actions button { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:0.85rem; }
+    #noteDeleteBtn { background: #e63946; color:#fff; margin-right:auto; }
+    #noteSaveBtn { background: #4361ee; color:#fff; }
+    #noteCancelBtn { background: var(--border); color: var(--text); }
 </style>
 
   <!-- Auto-load Mammoth with CDN fallback -->
@@ -907,7 +943,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (localStorage). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.2.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (localStorage). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.3.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -948,6 +984,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   <script>
     // --- State & Storage ---
     const state = { laws: [], activeId: null };
+    window._appState = state;
     const STORAGE_KEY = 'zakoni_ui_final_v1';
 
     // --- DOM refs ---
@@ -1039,8 +1076,12 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     function openDB(){
       return new Promise((res,rej)=>{
         if(_db){res(_db);return;}
-        const req=indexedDB.open(DB_NAME,1);
-        req.onupgradeneeded=e=>{e.target.result.createObjectStore(DB_STORE);};
+        const req=indexedDB.open(DB_NAME,2);
+        req.onupgradeneeded=e=>{
+          const db=e.target.result;
+          if(!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
+          if(!db.objectStoreNames.contains('annotations')) db.createObjectStore('annotations');
+        };
         req.onsuccess=e=>{_db=e.target.result;res(_db);};
         req.onerror=e=>rej(e);
       });
@@ -1113,6 +1154,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
     function clearHighlights(root){ root.querySelectorAll('mark.result').forEach(m=>{ const t=document.createTextNode(m.textContent); m.replaceWith(t); }); }
     const _docCache={};
+    window._docCache=_docCache;
     function renderDoc(){
       const law=state.laws.find(l=>l.id===state.activeId);
       if(!law){
@@ -1471,7 +1513,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     function findContainer(){
       // Desktop often scrolls inside .doc (right panel).
-      return document.querySelector('.doc') || document.getElementById('docView') || null;
+      return document.querySelector('.doc') || document.getElementById('doc') || null;
     }
 
     function readScrollTop(){
@@ -1630,6 +1672,140 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         btn.addEventListener('click', function(){ applyLang(btn.dataset.lang); });
       });
     });
+  })();
+  </script>
+
+  <!-- Annotation Modal -->
+  <div id="noteModal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h4 id="noteModalTitle">📝 Note</h4>
+      <textarea id="noteTextarea" placeholder="Write your note here..."></textarea>
+      <div class="modal-actions">
+        <button id="noteDeleteBtn" type="button">🗑 Delete</button>
+        <button id="noteCancelBtn" type="button">Cancel</button>
+        <button id="noteSaveBtn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const ANN_STORE='annotations';
+    let _annDb=null;
+    function openAnnDB(){
+      return new Promise((res,rej)=>{
+        if(_annDb){res(_annDb);return;}
+        const req=indexedDB.open('lawbase_db',2);
+        req.onupgradeneeded=e=>{
+          const db=e.target.result;
+          if(!db.objectStoreNames.contains('data')) db.createObjectStore('data');
+          if(!db.objectStoreNames.contains(ANN_STORE)) db.createObjectStore(ANN_STORE);
+        };
+        req.onsuccess=e=>{_annDb=e.target.result;res(_annDb);};
+        req.onerror=e=>rej(e);
+      });
+    }
+    function annKey(lawId,idx){return lawId+'::'+idx;}
+    function saveNote(lawId,idx,text){
+      return openAnnDB().then(db=>{
+        const tx=db.transaction(ANN_STORE,'readwrite');
+        const st=tx.objectStore(ANN_STORE);
+        if(text.trim()) st.put(text,annKey(lawId,idx));
+        else st.delete(annKey(lawId,idx));
+      });
+    }
+    function loadNotes(lawId,indices){
+      return openAnnDB().then(db=>new Promise(res=>{
+        const tx=db.transaction(ANN_STORE,'readonly');
+        const st=tx.objectStore(ANN_STORE);
+        const result={};
+        let pending=indices.length;
+        if(!pending){res(result);return;}
+        indices.forEach(idx=>{
+          const r=st.get(annKey(lawId,idx));
+          r.onsuccess=e=>{if(e.target.result)result[idx]=e.target.result;if(--pending===0)res(result);};
+          r.onerror=()=>{if(--pending===0)res(result);};
+        });
+      }));
+    }
+
+    function injectNoteButtons(){
+      const state=window._appState;
+      if(!state) return;
+      const law=state.laws&&state.laws.find(l=>l.id===state.activeId);
+      if(!law) return;
+      const articles=document.querySelectorAll('#doc .article');
+      if(!articles.length) return;
+      const indices=Array.from(articles).map(a=>parseInt(a.dataset.index));
+      loadNotes(law.id,indices).then(notes=>{
+        articles.forEach(block=>{
+          const idx=parseInt(block.dataset.index);
+          const h3=block.querySelector('h3');
+          if(!h3) return;
+          h3.querySelector('.note-btn')&&h3.querySelector('.note-btn').remove();
+          block.querySelector('.note-preview')&&block.querySelector('.note-preview').remove();
+          const btn=document.createElement('button');
+          btn.className='note-btn'+(notes[idx]?' has-note':'');
+          btn.type='button'; btn.title=notes[idx]?'Edit note':'Add note'; btn.textContent='📝';
+          btn.addEventListener('click',e=>{e.stopPropagation();openNoteModal(law.id,idx,h3.textContent.replace('📝','').trim(),notes[idx]||'');});
+          h3.appendChild(btn);
+          if(notes[idx]){
+            block.classList.add('has-note');
+            const prev=document.createElement('div');
+            prev.className='note-preview'; prev.textContent=notes[idx];
+            h3.insertAdjacentElement('afterend',prev);
+          } else {
+            block.classList.remove('has-note');
+          }
+        });
+      });
+    }
+
+    const modal=document.getElementById('noteModal');
+    const textarea=document.getElementById('noteTextarea');
+    const titleEl=document.getElementById('noteModalTitle');
+    let _curLawId=null,_curIdx=null;
+
+    function openNoteModal(lawId,idx,title,existing){
+      _curLawId=lawId; _curIdx=idx;
+      titleEl.textContent='📝 '+title;
+      textarea.value=existing;
+      modal.classList.add('open');
+      setTimeout(()=>textarea.focus(),50);
+    }
+    function closeNoteModal(){modal.classList.remove('open');}
+
+    document.getElementById('noteCancelBtn').addEventListener('click',closeNoteModal);
+    modal.addEventListener('click',e=>{if(e.target===modal)closeNoteModal();});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNoteModal();});
+
+    document.getElementById('noteSaveBtn').addEventListener('click',()=>{
+      saveNote(_curLawId,_curIdx,textarea.value).then(()=>{
+        closeNoteModal();
+        // Invalidate HTML cache so note preview rebuilds
+        if(window._docCache){Object.keys(window._docCache).forEach(k=>{if(k.startsWith(_curLawId))delete window._docCache[k];});}
+        if(typeof renderDoc==='function'){renderDoc();}
+        setTimeout(injectNoteButtons,60);
+      });
+    });
+    document.getElementById('noteDeleteBtn').addEventListener('click',()=>{
+      saveNote(_curLawId,_curIdx,'').then(()=>{
+        closeNoteModal();
+        if(window._docCache){Object.keys(window._docCache).forEach(k=>{if(k.startsWith(_curLawId))delete window._docCache[k];});}
+        if(typeof renderDoc==='function'){renderDoc();}
+        setTimeout(injectNoteButtons,60);
+      });
+    });
+
+    // Watch docView for changes → inject buttons
+    document.addEventListener('DOMContentLoaded',()=>{
+      const docEl=document.getElementById('doc');
+      if(!docEl) return;
+      let t=null;
+      new MutationObserver(()=>{clearTimeout(t);t=setTimeout(injectNoteButtons,40);}).observe(docEl,{childList:true});
+    });
+
+    window.injectNoteButtons=injectNoteButtons;
   })();
   </script>
 </body>
