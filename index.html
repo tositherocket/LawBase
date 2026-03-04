@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="mk">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -48,7 +48,7 @@
     function registerSW(){
       if(!('serviceWorker' in navigator)) return;
       const swCode = `
-const CACHE='zakoni-v1';
+const CACHE='lawbase-v2';
 const CDNS=['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css','https://unpkg.com/mammoth/mammoth.browser.min.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CDNS).catch(()=>{})).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
@@ -943,7 +943,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.4.1</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.4.2</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1229,7 +1229,22 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const editBtn=document.createElement('button'); editBtn.className='btn btn-ghost'; editBtn.innerHTML='<i class="fas fa-edit"></i>';
         editBtn.addEventListener('click',()=>{ editId=l.id; lawModalTitle.textContent='Edit law'; formTitle.value=l.title; formAlt.value=l.alt||''; formText.value=l.content||''; updatePreview(l.content||''); formFile.value=''; lawModal.showModal(); });
         const delBtn=document.createElement('button'); delBtn.className='btn btn-ghost'; delBtn.innerHTML='<i class="fas fa-trash"></i>';
-        delBtn.addEventListener('click',()=>{ if(confirm('Are you sure you want to delete this law?')){ const i=state.laws.findIndex(x=>x.id===l.id); if(i>=0) state.laws.splice(i,1); if(state.activeId===l.id) state.activeId=state.laws[0]?.id||null; renderAll(); saveToStorage(); }});
+        delBtn.addEventListener('click',()=>{ if(confirm('Are you sure you want to delete this law?')){
+          const i=state.laws.findIndex(x=>x.id===l.id);
+          if(i>=0) state.laws.splice(i,1);
+          if(state.activeId===l.id) state.activeId=state.laws[0]?.id||null;
+          // Delete annotations for this law
+          openDB().then(db=>{
+            const tx=db.transaction('annotations','readwrite');
+            const store=tx.objectStore('annotations');
+            const req=store.getAllKeys();
+            req.onsuccess=e=>{
+              e.target.result.filter(k=>k.startsWith(l.id+'::'))
+                .forEach(k=>store.delete(k));
+            };
+          });
+          renderAll(); saveToStorage();
+        }});
         acts.appendChild(openBtn); acts.appendChild(editBtn); acts.appendChild(delBtn);
 
         row.appendChild(left); row.appendChild(acts); lawsManager.appendChild(row);
@@ -1448,7 +1463,14 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     exportBtn.addEventListener('click', exportAll);
     importBtn.addEventListener('click', ()=> importFile.click());
     importFile.addEventListener('change', ()=>{ const f=importFile.files&&importFile.files[0]; if(f) importAll(f); importFile.value=''; });
-    clearAllBtn.addEventListener('click', ()=>{ if(confirm('Are you sure you want to clear everything?')){ state.laws=[]; state.activeId=null; renderAll(); saveToStorage(); }});
+    clearAllBtn.addEventListener('click', ()=>{ if(confirm('Are you sure you want to clear everything?')){
+      state.laws=[]; state.activeId=null; renderAll(); saveToStorage();
+      // Also clear all annotations
+      openDB().then(db=>{
+        const tx=db.transaction('annotations','readwrite');
+        tx.objectStore('annotations').clear();
+      });
+    }});
 
     lightBtn.addEventListener('click', ()=>{ applyTheme('light'); });
     darkBtn.addEventListener('click', ()=>{ applyTheme('dark'); });
@@ -1666,6 +1688,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       var L = UI[lang] || UI.en;
       localStorage.setItem('zakoni_lang', lang);
       window._uiLang = L;
+      document.documentElement.lang = lang;
 
       document.querySelectorAll('.lang-btn').forEach(function(b){
         b.classList.toggle('lang-active', b.dataset.lang===lang);
@@ -1808,7 +1831,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         // Invalidate HTML cache so note preview rebuilds
         if(window._docCache){Object.keys(window._docCache).forEach(k=>{if(k.startsWith(_curLawId))delete window._docCache[k];});}
         if(typeof renderDoc==='function'){renderDoc();}
-        setTimeout(injectNoteButtons,60);
+        // MutationObserver will auto-call injectNoteButtons after DOM updates
       });
     });
     document.getElementById('noteDeleteBtn').addEventListener('click',()=>{
@@ -1816,7 +1839,6 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         closeNoteModal();
         if(window._docCache){Object.keys(window._docCache).forEach(k=>{if(k.startsWith(_curLawId))delete window._docCache[k];});}
         if(typeof renderDoc==='function'){renderDoc();}
-        setTimeout(injectNoteButtons,60);
       });
     });
 
