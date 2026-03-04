@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LawBase</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="application-name" content="LawBase" />
+  <meta name="description" content="LawBase — Search and browse laws" />
+  <meta name="theme-color" content="#4361ee" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="LawBase" />
+  <link rel="apple-touch-icon" id="appleTouchIcon" />
+  <link rel="icon" id="faviconIcon" type="image/png" />
+  <link rel="manifest" id="pwaManifest" />
+
+  <!-- Inline PWA Setup -->
+  <script>
+  (function(){
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#4361ee"/><text x="96" y="130" font-size="110" text-anchor="middle" font-family="serif" fill="white">⚖</text></svg>`;
+    const svgB64 = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+
+    function makePng(size, cb){
+      const c = document.createElement('canvas'); c.width = c.height = size;
+      const ctx = c.getContext('2d'); const img = new Image();
+      img.onload = () => { ctx.drawImage(img, 0, 0, size, size); cb(c.toDataURL('image/png')); };
+      img.src = svgB64;
+    }
+
+    function injectManifest(icon192, icon512){
+      const manifest = {
+        name: 'LawBase', short_name: 'LawBase',
+        description: 'LawBase — Search and browse laws',
+        start_url: '.', display: 'standalone',
+        background_color: '#f5f7fb', theme_color: '#4361ee', orientation: 'any',
+        icons: [
+          { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+      document.getElementById('pwaManifest').href = URL.createObjectURL(blob);
+    }
+
+    function registerSW(){
+      if(!('serviceWorker' in navigator)) return;
+      const swCode = `
+const CACHE='zakoni-v1';
+const CDNS=['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css','https://unpkg.com/mammoth/mammoth.browser.min.js'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CDNS).catch(()=>{})).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(cached=>{if(cached)return cached;return fetch(e.request).then(resp=>{if(resp&&resp.status===200&&resp.type!=='opaque'){const clone=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,clone));}return resp;}).catch(()=>cached||new Response('Offline',{status:503}));})  );});
+      `;
+      const swBlob = new Blob([swCode], {type:'application/javascript'});
+      navigator.serviceWorker.register(URL.createObjectURL(swBlob), {scope: './'})
+        .then(()=>console.log('✅ SW registered')).catch(e=>console.warn('SW error:',e));
+    }
+
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault(); deferredPrompt = e; showInstallBanner();
+    });
+
+    function showInstallBanner(){
+      if(document.getElementById('pwaInstallBanner')) return;
+      const banner = document.createElement('div');
+      banner.id = 'pwaInstallBanner';
+      banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#4361ee;color:#fff;padding:12px 20px;border-radius:12px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 4px 20px rgba(67,97,238,0.4);font-size:0.9rem;max-width:90vw;';
+      banner.innerHTML = '<span>📲</span><span><strong>Install the application</strong><br><small>Works offline, no browser needed</small></span><button id="pwaInstallBtn" style="background:#fff;color:#4361ee;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;">Install</button><button id="pwaInstallDismiss" style="background:transparent;color:rgba(255,255,255,0.7);border:none;font-size:1.2rem;cursor:pointer;padding:0 4px;">✕</button>';
+      document.body.appendChild(banner);
+      document.getElementById('pwaInstallBtn').onclick = async () => {
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        deferredPrompt = null; banner.remove();
+      };
+      document.getElementById('pwaInstallDismiss').onclick = () => banner.remove();
+    }
+
+    function showiOSHint(){
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if(!isIOS || window.navigator.standalone) return;
+      if(localStorage.getItem('pwa_ios_hint')) return;
+      localStorage.setItem('pwa_ios_hint','1');
+      const hint = document.createElement('div');
+      hint.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:14px 18px;border-radius:14px;font-size:0.85rem;z-index:9999;max-width:88vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);line-height:1.6;';
+      hint.innerHTML = '📲 <strong>Install on iPhone/iPad</strong><br>Tap <strong>Share</strong> (□↑) → <strong>"Add to Home Screen"</strong><br><button onclick="this.parentElement.remove()" style="margin-top:8px;background:rgba(255,255,255,0.15);border:none;color:#fff;padding:6px 16px;border-radius:8px;cursor:pointer;">Got it</button>';
+      document.body.appendChild(hint);
+    }
+
+    window.addEventListener('load', () => {
+      makePng(192, png192 => { makePng(512, png512 => { injectManifest(png192, png512); }); });
+      document.getElementById('appleTouchIcon').href = svgB64;
+      const faviconEl = document.getElementById('faviconIcon');
+      if(faviconEl) makePng(64, png64 => { faviconEl.href = png64; });
+      registerSW();
+      setTimeout(showiOSHint, 1500);
+    });
+    window.addEventListener('appinstalled', () => { const b=document.getElementById('pwaInstallBanner'); if(b)b.remove(); });
+  })();
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a56d4;
+      --secondary: #6c63ff;
+      --success: #4cc9f0;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --gray: #6c757d;
+      --light-gray: #e9ecef;
+      --white: #ffffff;
+      --danger: #e63946;
+      --warning: #fca311;
+      --border-radius: 8px;
+      --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --transition: all 0.2s ease;
+
+      --bg: #f5f7fb;
+      --fg: #333;
+      --panel: #ffffff;
+      --chip: #f1f3f9;
+      --border: #e1e5eb;
+      --text: #333;
+      --muted: #6c757d;
+    }
+
+    .dark-theme {
+      --bg: #121212;
+      --fg: #e7eaf1;
+      --panel: #1e1e1e;
+      --chip: #2d2d2d;
+      --border: #333;
+      --text: #e7eaf1;
+      --muted: #9aa3b2;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--fg);
+      transition: var(--transition);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Compact header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--panel);
+      box-shadow: var(--box-shadow);
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary);
+      letter-spacing: -0.3px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--border-radius);
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 0.85rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--light-gray);
+    }
+
+    .wrap {
+      padding: 12px 16px;
+      max-width: 1800px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Compact tabs */
+    .law-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 0;
+    }
+
+    .law-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: var(--border-radius);
+      padding: 8px 14px;
+      background: var(--panel);
+      box-shadow: var(--box-shadow);
+      transition: var(--transition);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .law-tab:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .law-tab.active {
+      border-color: var(--primary);
+      background: rgba(67, 97, 238, 0.05);
+    }
+
+    .law-tab .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+
+    .law-tab .title {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* CONTROLS - dual search panel */
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      background: var(--panel);
+      padding: 10px 12px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      border: 1px solid var(--border);
+    }
+
+    .controls input {
+      flex: 1;
+      min-width: 180px;
+      padding: 8px 12px;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .controls input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+    }
+
+    .controls .divider {
+      width: 2px;
+      height: 32px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      flex-basis: 100%;
+    }
+
+    /* Main grid */
+    .main {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 12px;
+    }
+
+    /* Articles list */
+    .articles-list {
+      background: var(--panel);
+      border-radius: var(--border-radius);
+      padding: 12px;
+      box-shadow: var(--box-shadow);
+      max-height: calc(100vh - 220px);
+      overflow: auto;
+      border: 1px solid var(--border);
+    }
+
+    .art-link {
+      display: block;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: var(--border-radius);
+      background: var(--chip);
+      color: var(--text);
+      text-decoration: none;
+      transition: var(--transition);
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+
+    .art-link:hover {
+      transform: translateX(3px);
+      box-shadow: var(--box-shadow);
+      background: var(--panel);
+    }
+
+    /* Document panel */
+    .doc {
+      background: var(--panel);
+      border-radius: var(--border-radius);
+      padding: 16px 20px;
+      box-shadow: var(--box-shadow);
+      overflow-y: auto;
+      overflow-x: hidden;
+      max-height: calc(100vh - 220px);
+      box-sizing: border-box;
+      border: 1px solid var(--border);
+    }
+
+    .doc::-webkit-scrollbar {
+      width: 8px;
+      height: 0;
+    }
+
+    .doc::-webkit-scrollbar-track {
+      background: var(--chip);
+      border-radius: 8px;
+    }
+
+    .doc::-webkit-scrollbar-thumb {
+      background: var(--gray);
+      border-radius: 8px;
+    }
+
+    .doc::-webkit-scrollbar-thumb:hover {
+      background: var(--dark);
+    }
+
+    .article {
+      margin: 0 0 20px 0;
+      padding: 2px 0;
+    }
+
+    .article h3 {
+      margin: 0 0 10px 0;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--primary);
+    }
+
+    .article pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      text-align: justify;
+      text-justify: inter-word;
+      line-height: 1.7;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .article.highlight {
+      background: rgba(76, 201, 240, 0.1);
+      border-radius: var(--border-radius);
+      padding: 12px;
+    }
+
+    .empty {
+      border: 2px dashed var(--border);
+      padding: 24px;
+      border-radius: var(--border-radius);
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    /* HIDDEN fulltext-bar */
+    .fulltext-bar {
+      display: none !important;
+    }
+
+    /* Settings drawer */
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100vh;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+      transition: var(--transition);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--border);
+    }
+
+    .drawer.open {
+      right: 0;
+    }
+
+    .drawer header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      position: sticky;
+      top: 0;
+    }
+
+    .drawer .body {
+      padding: 16px;
+      overflow: auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .drawer .group {
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      padding: 14px;
+      background: var(--chip);
+    }
+
+    .drawer .group h4 {
+      margin: 0 0 12px 0;
+      color: var(--primary);
+      font-size: 0.95rem;
+    }
+
+    .law-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      border-radius: var(--border-radius);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .law-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .drawer .footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    /* Modal */
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+
+    dialog {
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 0;
+      max-width: 680px;
+      width: 96%;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+      border: 1px solid var(--border);
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-body {
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .row input[type="text"],
+    .row input[type="url"] {
+      flex: 1;
+      min-width: 220px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .row textarea {
+      width: 100%;
+      min-height: 150px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      background: var(--panel);
+      color: var(--text);
+      resize: vertical;
+      font-size: 0.9rem;
+    }
+
+    .file {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .preview {
+      white-space: pre-wrap;
+      border: 2px dashed var(--border);
+      border-radius: var(--border-radius);
+      padding: 12px;
+      background: var(--chip);
+      max-height: 100px;
+      overflow: auto;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    mark.result {
+      background: #ffd54d;
+      color: #111;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      .doc {
+        max-height: unset;
+      }
+
+      .articles-list {
+        max-height: 40vh;
+      }
+
+      .drawer {
+        width: 100%;
+        right: -100%;
+      }
+
+      .wrap {
+        padding: 10px 12px;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls input {
+        min-width: unset;
+      }
+
+      .controls .divider {
+        display: none;
+      }
+    }
+
+    /* Animation */
+    @keyframes highlight {
+      0% { background-color: rgba(76, 201, 240, 0.2); }
+      100% { background-color: transparent; }
+    }
+
+    .article.highlight {
+      animation: highlight 2s ease;
+    }
+
+    .heart {
+      color: #e63946;
+    }
+    .lang-btn.lang-active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+  
+
+    /* === Mobile sticky minimized search trigger === */
+    .mobile-sticky-search { display: none; }
+
+    @media (max-width: 900px) {
+      .mobile-sticky-search {
+        display: none; /* enabled by JS */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        padding: 8px 10px;
+        background: rgba(0,0,0,0.0);
+        pointer-events: none; /* enabled on button only */
+      }
+
+      .mobile-sticky-search.on {
+        display: block;
+      }
+
+      .mobile-sticky-btn {
+        pointer-events: auto;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: #4361ee;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.95rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      }
+
+      .mobile-sticky-btn .chev { transition: transform 0.2s ease; }
+      .mobile-sticky-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+      /* When expanded, controls becomes fixed under sticky button */
+      .controls.mobile-fixed {
+        position: fixed;
+        top: 60px;
+        left: 10px;
+        right: 10px;
+        z-index: 1999;
+        max-height: calc(100vh - 80px);
+        overflow: auto;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      }
+
+      /* When hidden in sticky mode, controls is invisible */
+      .controls.mobile-hidden {
+        display: none !important;
+      }
+
+      /* Slightly more compact on mobile */
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls .divider { display: none; }
+      header { position: relative; }
+      .main { grid-template-columns: 1fr; }
+      .doc { max-height: unset; }
+      .articles-list { max-height: 40vh; }
+      .drawer { width: 100%; right: -100%; }
+    }
+
+
+    /* === Mobile sticky: show ONLY fulltext (right) search when expanded === */
+    @media (max-width: 900px) {
+      .controls.mobile-fixed.only-fulltext #searchInput,
+      .controls.mobile-fixed.only-fulltext #searchBtn,
+      .controls.mobile-fixed.only-fulltext #clearSearchBtn {
+        display: none !important;
+      }
+
+      .controls.mobile-fixed.only-fulltext .divider {
+        display: none !important;
+      }
+
+      /* Make fulltext area a bit tighter */
+      .controls.mobile-fixed.only-fulltext #fulltextInput {
+        width: 100%;
+      }
+    }
+
+
+    /* === Back to top button (bottom-right) === */
+    .back-to-top { display: none; }
+
+    @media (max-width: 900px) {
+      .back-to-top {
+        position: fixed;
+        right: 14px;
+        bottom: 14px;
+        z-index: 2600;
+        width: 46px;
+        height: 46px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(67, 97, 238, 0.95);
+        color: #fff;
+        font-size: 18px;
+        font-weight: 800;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .back-to-top.on { display: inline-flex; }
+      .back-to-top:active { transform: scale(0.98); }
+    }
+
+
+    /* === Back to top button (desktop + mobile) === */
+    .back-to-top {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 2600;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(67, 97, 238, 0.95);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .back-to-top.on { display: inline-flex !important; }
+    .back-to-top:active { transform: scale(0.98); }
+</style>
+
+  <!-- Auto-load Mammoth with CDN fallback -->
+  <script>
+    window.__docxReady = new Promise((resolve)=>{
+      const tryLoad = (srcs) => {
+        if (!srcs.length) return resolve(false);
+        const src = srcs.shift();
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = ()=> resolve(true);
+        s.onerror = ()=> tryLoad(srcs);
+        document.head.appendChild(s);
+      };
+      tryLoad([
+        'https://unpkg.com/mammoth/mammoth.browser.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js'
+      ]);
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Mobile Sticky Search Bar (minimized/expanded trigger) -->
+  <div id="mobileStickySearch" class="mobile-sticky-search" aria-hidden="true">
+    <button id="mobileStickyToggle" class="mobile-sticky-btn" type="button" aria-expanded="false">
+      <span class="icon">🔍</span>
+      <span class="label">Search</span>
+      <span class="chev">▾</span>
+    </button>
+  </div>
+
+  <div class="app">
+    <header>
+      <div class="nav">
+        <div class="nav-left">
+          <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
+        </div>
+        <div class="nav-right">
+          <button id="addLawBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Add</button>
+          <button id="openSettings" class="btn btn-ghost"><i class="fas fa-cog"></i> Settings</button>
+          <button id="themeBtn" class="btn btn-ghost" title="Light/Dark"><i class="fas fa-moon"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <!-- Tabs -->
+      <div id="lawTabs" class="law-tabs"></div>
+
+      <!-- Controls (dual search panel) -->
+      <div class="controls" id="controlsPanel">
+        <input id="searchInput" type="text" placeholder="Search by article/title (e.g. 12 or Article 12)" />
+        <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+        <button id="clearSearchBtn" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
+
+        <span class="divider"></span>
+
+        <input id="fulltextInput" type="text" placeholder="Full-text search (e.g. penalty sanctions)" />
+        <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+        <button id="fulltextNextBtn" class="btn"><i class="fas fa-arrow-down"></i> Next</button>
+        <button id="fulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
+        <span id="fulltextCount" class="hint"></span>
+
+        <div id="activeTitle" class="hint"></div>
+      </div>
+
+      <!-- Main -->
+      <div class="main">
+        <aside>
+          <div id="articlesList" class="articles-list">
+            <div class="empty"><i class="fas fa-file-alt"></i><br>Articles will appear when you select a law.</div>
+          </div>
+        </aside>
+        <section id="doc" class="doc">
+          <div class="empty"><i class="fas fa-folder-open"></i><br>No active law. Add one and select a tab to view.</div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings drawer -->
+  <aside id="drawer" class="drawer" aria-hidden="true">
+    <header>
+      <strong><i class="fas fa-cog"></i> Settings</strong>
+      <div style="float:right"><button id="closeSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
+    </header>
+    <div class="body">
+      <div class="group">
+        <h4><i class="fas fa-gavel"></i> Laws</h4>
+        <div id="lawsManager"></div>
+        <div class="hint">Rename, edit content and delete laws here.</div>
+      </div>
+      <div class="group">
+        <h4><i class="fas fa-file-import"></i> Import / Export</h4>
+        <div class="row">
+          <button id="exportBtn" class="btn"><i class="fas fa-file-export"></i> Export (JSON)</button>
+          <button id="importBtn" class="btn btn-ghost"><i class="fas fa-file-import"></i> Import</button>
+          <input id="importFile" type="file" accept=".json" style="display:none" />
+        </div>
+        <button id="clearAllBtn" class="btn btn-ghost" style="color:#f56"><i class="fas fa-trash"></i> Clear all</button>
+      </div>
+      <div class="group">
+        <h4><i class="fas fa-palette"></i> Theme</h4>
+        <div class="row">
+          <button id="lightBtn" class="btn btn-ghost"><i class="fas fa-sun"></i> Light</button>
+          <button id="darkBtn" class="btn btn-ghost"><i class="fas fa-moon"></i> Dark</button>
+        </div>
+      </div>
+      <div class="group">
+        <h4><i class="fas fa-language"></i> <span id="lbl-lang-title">Language</span></h4>
+        <div class="row">
+          <button class="btn btn-ghost lang-btn" data-lang="sq">🇦🇱 Shqip</button>
+          <button class="btn btn-ghost lang-btn" data-lang="mk">🇲🇰 Македонски</button>
+          <button class="btn btn-ghost lang-btn lang-active" data-lang="en">🇬🇧 English</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (localStorage). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span></div>
+  </aside>
+
+  <!-- Add/Edit modal -->
+  <dialog id="lawModal">
+    <form method="dialog">
+      <div class="modal-head">
+        <div style="font-weight:700" id="lawModalTitle"><i class="fas fa-plus"></i> Add law</div>
+        <button type="button" id="closeLawModal" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <label><i class="fas fa-heading"></i> Title</label>
+        <div class="row"><input id="formTitle" type="text" placeholder="E.g. Law on Obligations" /></div>
+
+        <label><i class="fas fa-info-circle"></i> Description / ALT (e.g. "Official Gazette no. 12/2024" or URL)</label>
+        <div class="row"><input id="formAlt" type="text" placeholder="Official Gazette no. … or https://..." /></div>
+
+        <label><i class="fas fa-file-upload"></i> Document</label>
+        <div class="row file">
+          <input id="formFile" type="file" accept=".txt,.md,.html,.htm,.docx" />
+          <span class="hint">.txt/.md/.html/.docx (local)</span>
+        </div>
+
+        <label><i class="fas fa-paste"></i> Or paste text</label>
+        <div class="row"><textarea id="formText" placeholder="Paste text here"></textarea></div>
+
+        <div class="row">
+          <div class="hint"><i class="fas fa-eye"></i> Preview (first 300 characters):</div>
+          <div id="formPreview" class="preview"></div>
+        </div>
+      </div>
+      <div class="footer">
+        <button class="btn btn-ghost" id="cancelLaw"><i class="fas fa-times"></i> Cancel</button>
+        <button class="btn btn-primary" id="saveLawBtn"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    // --- State & Storage ---
+    const state = { laws: [], activeId: null };
+    const STORAGE_KEY = 'zakoni_ui_final_v1';
+
+    // --- DOM refs ---
+    const lawTabs = document.getElementById('lawTabs');
+    const articlesList = document.getElementById('articlesList');
+    const docEl = document.getElementById('doc');
+    const activeTitle = document.getElementById('activeTitle');
+
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+    const fulltextInput = document.getElementById('fulltextInput');
+    const fulltextBtn = document.getElementById('fulltextBtn');
+    const fulltextNextBtn = document.getElementById('fulltextNextBtn');
+    const fulltextClear = document.getElementById('fulltextClear');
+    const fulltextCount = document.getElementById('fulltextCount');
+
+    const addLawBtn = document.getElementById('addLawBtn');
+    const themeBtn = document.getElementById('themeBtn');
+
+    const drawer = document.getElementById('drawer');
+    const openSettings = document.getElementById('openSettings');
+    const closeSettings = document.getElementById('closeSettings');
+    const lawsManager = document.getElementById('lawsManager');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const importFile = document.getElementById('importFile');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const lightBtn = document.getElementById('lightBtn');
+    const darkBtn = document.getElementById('darkBtn');
+
+    const lawModal = document.getElementById('lawModal');
+    const lawModalTitle = document.getElementById('lawModalTitle');
+    const closeLawModal = document.getElementById('closeLawModal');
+    const cancelLaw = document.getElementById('cancelLaw');
+    const saveLawBtn = document.getElementById('saveLawBtn');
+    const formTitle = document.getElementById('formTitle');
+    const formAlt = document.getElementById('formAlt');
+    const formFile = document.getElementById('formFile');
+    const formText = document.getElementById('formText');
+    const formPreview = document.getElementById('formPreview');
+
+    let editId = null;
+    let docxAvailable = false;
+    
+    // Variables for search navigation
+    let currentSearchResults = [];
+    let currentSearchIndex = -1;
+
+    // Theme
+    function applyTheme(mode){ 
+      if (mode === 'dark') {
+        document.body.classList.add('dark-theme');
+        themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+      } else {
+        document.body.classList.remove('dark-theme');
+        themeBtn.innerHTML = '<i class="fas fa-moon"></i>';
+      }
+      localStorage.setItem('theme', mode); 
+    }
+    
+    function initTheme(){ 
+      const saved = localStorage.getItem('theme'); 
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; 
+      applyTheme(saved || (prefersDark ? 'dark' : 'light')); 
+    }
+
+    const uid = () => Math.random().toString(36).slice(2,9);
+    const updatePreview = (text) => { formPreview.textContent = (text || '').slice(0,300); };
+
+    // Split text by articles — supports MK (Член/чл), AL (Neni/neni.), SR (Član/čl), EN (Article)
+    function splitIntoArticles(raw){
+      const lines=(raw||'').replace(/\r/g,'').split('\n'); const articles=[]; let current={index:null,title:'',text:[]};
+      const commit=()=>{ if(current.index!==null) articles.push({index:current.index,title:current.title,text:current.text.join('\n')}); };
+      for(const line of lines){
+        // MK: Член/чл, AL: Neni/neni, SR: Član/čl, EN: Article/Art
+        const m=line.match(/^\s*(Член|чл\.?|Neni|neni\.?|Član|čl\.?|Article|Art\.?)\s*(\d+)\s*\.?\s*(.*)$/i);
+        if(m){ commit(); current={index:parseInt(m[2],10), title:(m[1] + ' ' + m[2] + (m[3] ? ' — ' + m[3] : '')), text:[]}; }
+        else { current.text.push(line); }
+      }
+      commit(); if(!articles.length) articles.push({index:0,title:'Text',text:raw});
+      return articles;
+    }
+
+    // Persistence
+    function saveToStorage(){
+      try{
+        const minimal=state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}));
+        const payload = JSON.stringify({laws:minimal,activeId:state.activeId});
+        const sizeMB = (payload.length / 1024 / 1024).toFixed(2);
+        localStorage.setItem(STORAGE_KEY, payload);
+        console.log(`💾 Saved: ${sizeMB} MB`);
+      }catch(e){
+        if(e.name === 'QuotaExceededError' || e.code === 22){
+          const totalMB = (JSON.stringify(state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content}))).length/1024/1024).toFixed(2);
+          alert(`⚠️ Save error!\n\nData too large for localStorage (${totalMB} MB, limit ~5 MB).\n\nSolution: Export (JSON) and re-import next time.`);
+        } else {
+          console.error('saveToStorage error:', e);
+        }
+      }
+    }
+    function loadFromStorage(){
+      try{
+        const raw=localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        const parsed=JSON.parse(raw);
+        state.laws=(parsed.laws||[]).map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now(),articles:splitIntoArticles(l.content||'')}));
+        // Fix: restore exact activeId if found, else first law
+        state.activeId = state.laws.find(x=>x.id===parsed.activeId)?.id ?? (state.laws[0]?.id ?? null);
+      }catch(e){ console.error('loadFromStorage error:', e); }
+    }
+
+    // Export/Import
+    function exportAll(){
+      const data={version:1,exportedAt:new Date().toISOString(),activeId:state.activeId,laws:state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}))};
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='zakoni_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    async function importAll(file){
+      try{
+        const text=await file.text(); const data=JSON.parse(text);
+        if(!data || !Array.isArray(data.laws)) throw new Error('invalid');
+        state.laws=data.laws.map(l=>({id:l.id||uid(),title:l.title||'Untitled',alt:l.alt||'',content:l.content||'',updatedAt:l.updatedAt||Date.now(),articles:splitIntoArticles(l.content||'')}));
+        // Fix: restore exact activeId from export if available
+        const restoredId = state.laws.find(x=>x.id===data.activeId)?.id;
+        state.activeId = restoredId || state.laws[0]?.id || null;
+        renderAll(); saveToStorage(); alert('Import complete. Loaded ' + state.laws.length + ' laws.');
+      }catch(e){ alert('Import failed. Valid JSON format?'); }
+    }
+
+    // Render
+    function renderTabs(){
+      lawTabs.innerHTML='';
+      if(!state.laws.length){ const e=document.createElement('div'); e.className='hint'; e.textContent='No laws — click "Add".'; lawTabs.appendChild(e); return; }
+      state.laws.forEach(law=>{
+        const el=document.createElement('div');
+        el.className='law-tab'+(law.id===state.activeId?' active':'');
+        el.addEventListener('click',()=>setActive(law.id));
+        const dot=document.createElement('span'); dot.className='dot';
+        const title=document.createElement('span'); title.className='title'; title.textContent=law.title;
+        el.appendChild(dot); el.appendChild(title); lawTabs.appendChild(el);
+      });
+    }
+    function renderMembers(){
+      articlesList.innerHTML='';
+      const law=state.laws.find(l=>l.id===state.activeId);
+      if(!law){ const e=document.createElement('div'); e.className='empty'; e.textContent='Articles will appear when you select a law.'; articlesList.appendChild(e); return; }
+      law.articles.forEach(a=>{
+        const link=document.createElement('a'); link.href='javascript:void(0)'; link.className='art-link'; link.textContent=a.title;
+        link.addEventListener('click',()=>{
+          const target=docEl.querySelector(`.article[data-index="${a.index}"]`);
+          if(target){ target.scrollIntoView({behavior:'smooth',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1200); }
+        });
+        articlesList.appendChild(link);
+      });
+    }
+    function clearHighlights(root){ root.querySelectorAll('mark.result').forEach(m=>{ const t=document.createTextNode(m.textContent); m.replaceWith(t); }); }
+    function renderDoc(){
+      const law=state.laws.find(l=>l.id===state.activeId);
+      docEl.innerHTML='';
+      if(!law){
+        const e=document.createElement('div'); e.className='empty'; e.textContent='No active law. Add one and select a tab to view.';
+        docEl.appendChild(e); activeTitle.textContent=''; return;
+      }
+      activeTitle.textContent='Active: '+law.title+(law.alt?' — '+law.alt:'');
+      law.articles.forEach(a=>{
+        const block=document.createElement('article'); block.className='article'; block.dataset.index=a.index;
+        const h=document.createElement('h3'); h.textContent=a.title;
+        const p=document.createElement('pre'); p.textContent=(a.text||'').trim();
+        block.appendChild(h); block.appendChild(p); docEl.appendChild(block);
+      });
+      clearHighlights(docEl);
+    }
+    function renderAll(){ renderTabs(); renderMembers(); renderDoc(); renderLawsManager(); }
+
+    function setActive(id){ state.activeId=id; renderAll(); saveToStorage(); }
+
+    function renderLawsManager(){
+      lawsManager.innerHTML=''; if(!state.laws.length){ lawsManager.innerHTML='<div class="hint">No laws.</div>'; return; }
+      state.laws.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(l=>{
+        const row=document.createElement('div'); row.className='law-item';
+        const left=document.createElement('div'); left.style.display='grid'; left.style.gap='6px';
+        const name=document.createElement('input'); name.type='text'; name.value=l.title; name.placeholder='Title';
+        name.addEventListener('change',()=>{ l.title=name.value.trim()||'Untitled'; l.updatedAt=Date.now(); renderTabs(); saveToStorage(); });
+        const alt=document.createElement('input'); alt.type='text'; alt.value=l.alt||''; alt.placeholder='Description / ALT';
+        alt.addEventListener('change',()=>{ l.alt=alt.value.trim(); l.updatedAt=Date.now(); renderDoc(); renderTabs(); saveToStorage(); });
+        left.appendChild(name); left.appendChild(alt);
+
+        const acts=document.createElement('div'); acts.className='law-actions';
+        const openBtn=document.createElement('button'); openBtn.className='btn btn-ghost'; openBtn.innerHTML='<i class="fas fa-folder-open"></i>';
+        openBtn.addEventListener('click',()=>{ setActive(l.id); drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); });
+        const editBtn=document.createElement('button'); editBtn.className='btn btn-ghost'; editBtn.innerHTML='<i class="fas fa-edit"></i>';
+        editBtn.addEventListener('click',()=>{ editId=l.id; lawModalTitle.textContent='Edit law'; formTitle.value=l.title; formAlt.value=l.alt||''; formText.value=l.content||''; updatePreview(l.content||''); formFile.value=''; lawModal.showModal(); });
+        const delBtn=document.createElement('button'); delBtn.className='btn btn-ghost'; delBtn.innerHTML='<i class="fas fa-trash"></i>';
+        delBtn.addEventListener('click',()=>{ if(confirm('Are you sure you want to delete this law?')){ const i=state.laws.findIndex(x=>x.id===l.id); if(i>=0) state.laws.splice(i,1); if(state.activeId===l.id) state.activeId=state.laws[0]?.id||null; renderAll(); saveToStorage(); }});
+        acts.appendChild(openBtn); acts.appendChild(editBtn); acts.appendChild(delBtn);
+
+        row.appendChild(left); row.appendChild(acts); lawsManager.appendChild(row);
+      });
+    }
+
+    // Upload extraction (.txt/.md/.html/.docx)
+    async function extractTextFromFile(file){
+      const name=file.name||''; const ext=name.includes('.')?name.split('.').pop().toLowerCase():''; const type=(file.type||'').toLowerCase();
+      if (type.startsWith('text/') || ['txt','md','html','htm'].includes(ext)) return await file.text();
+
+      if (ext==='docx' || type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document'){
+        if (!docxAvailable || !window.mammoth){
+          alert('DOCX unavailable — library not loaded. Wait 2-3 sec and try again.');
+          return '';
+        }
+        try{
+          const arrayBuffer=await file.arrayBuffer();
+          // Use mammoth to extract text from DOCX
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          return result.value || '';
+        }catch(e){ 
+          console.error('DOCX parsing error:', e);
+          alert('Failed to read .docx. Use .txt or copy/paste.'); 
+          return ''; 
+        }
+      }
+
+      alert('Unsupported format. Use .docx/.txt/.md/.html or copy/paste.');
+      return '';
+    }
+
+    // Add/Edit flows
+    function openAddModal(){ editId=null; lawModalTitle.textContent='Add law'; formTitle.value=''; formAlt.value=''; formText.value=''; formFile.value=''; updatePreview(''); lawModal.showModal(); }
+    async function persistLawFromForm(){
+      const title=(formTitle.value||'').trim(); if(!title){ alert('Please enter a title.'); return; }
+      let raw=(formText.value||'').trim();
+      if(!raw && formFile.files && formFile.files[0]) raw=await extractTextFromFile(formFile.files[0]);
+      if(!raw){ alert('Please enter text or upload a file.'); return; }
+      const alt=(formAlt.value||'').trim();
+
+      if(editId){
+        const l=state.laws.find(x=>x.id===editId);
+        if(l){ l.title=title; l.alt=alt; l.content=raw; l.articles=splitIntoArticles(raw); l.updatedAt=Date.now(); setActive(l.id); }
+      }else{
+        const id=uid(); const law={id,title,alt,content:raw,articles:splitIntoArticles(raw),updatedAt:Date.now()};
+        state.laws.push(law); setActive(id);
+      }
+      saveToStorage(); lawModal.close(); formTitle.value=''; formAlt.value=''; formText.value=''; formFile.value=''; updatePreview('');
+    }
+
+    // Search by article/title
+    function searchActive(){
+      const q=(searchInput.value||'').trim();
+      const law=state.laws.find(l=>l.id===state.activeId);
+      docEl.querySelectorAll('.highlight').forEach(el=>el.classList.remove('highlight'));
+      if(!law||!q) return;
+      const m=q.match(/(\d+)/); let target=null;
+      if(m){ const num=parseInt(m[1],10); target=docEl.querySelector(`.article[data-index="${num}"]`); }
+      if(!target){
+        for(const el of docEl.querySelectorAll('.article h3')){
+          if(el.textContent.toLowerCase().includes(q.toLowerCase())){ target=el.closest('.article'); break; }
+        }
+      }
+      if(target){ target.classList.add('highlight'); target.scrollIntoView({behavior:'smooth',block:'start'}); } else { alert('No result found.'); }
+    }
+
+    // Full-text search (highlight all)
+    function highlightAll(root, query){
+      if(!query) return 0;
+      const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode:(n)=> n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT
+      });
+      const regex=new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+      let count=0, nodes=[];
+      currentSearchResults = []; // Reset search results
+      
+      while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(node=>{
+        const val=node.nodeValue;
+        if(!regex.test(val)) return;
+        const frag=document.createDocumentFragment();
+        let last=0;
+        val.replace(regex,(match,offset)=>{
+          const pre=val.slice(last,offset); if(pre) frag.appendChild(document.createTextNode(pre));
+          const mark=document.createElement('mark'); mark.className='result'; mark.textContent=match; 
+          
+          // Store search result position
+          currentSearchResults.push(mark);
+          
+          frag.appendChild(mark);
+          last=offset+match.length; count++; return match;
+        });
+        const tail=val.slice(last); if(tail) frag.appendChild(document.createTextNode(tail));
+        node.replaceWith(frag);
+      });
+      return count;
+    }
+    
+    // Navigate to next search result
+    function navigateToNextResult() {
+      if (currentSearchResults.length === 0) return;
+      
+      // Remove previous highlight
+      if (currentSearchIndex >= 0 && currentSearchResults[currentSearchIndex]) {
+        currentSearchResults[currentSearchIndex].style.backgroundColor = '';
+        currentSearchResults[currentSearchIndex].style.outline = '';
+      }
+      
+      currentSearchIndex = (currentSearchIndex + 1) % currentSearchResults.length;
+      
+      // Highlight current result
+      const currentResult = currentSearchResults[currentSearchIndex];
+      currentResult.style.backgroundColor = '#ff6b6b';
+      currentResult.style.outline = '2px solid #e63946';
+      
+      // Scroll to the result
+      currentResult.scrollIntoView({behavior: 'smooth', block: 'center'});
+      
+      // Update counter
+      fulltextCount.textContent = `Result ${currentSearchIndex + 1} of ${currentSearchResults.length}`;
+    }
+    
+    function runFulltext(){
+      const q=(fulltextInput.value||'').trim();
+      clearHighlights(docEl);
+      currentSearchResults = [];
+      currentSearchIndex = -1;
+      
+      if(!q){ fulltextCount.textContent=''; return; }
+      const matches=highlightAll(docEl,q);
+      
+      if (matches > 0) {
+        fulltextCount.textContent = `Total: ${matches} results — Click "Next" to navigate`;
+        // Auto-navigate to first result
+        navigateToNextResult();
+      } else {
+        fulltextCount.textContent = '⚠️ No results found';
+      }
+    }
+
+    // Events
+    document.getElementById('addLawBtn').addEventListener('click', openAddModal);
+    closeLawModal.addEventListener('click', ()=> lawModal.close());
+    cancelLaw.addEventListener('click', (e)=>{ e.preventDefault(); lawModal.close(); });
+    saveLawBtn.addEventListener('click', (e)=>{ e.preventDefault(); persistLawFromForm(); });
+
+    formText.addEventListener('input', ()=> updatePreview(formText.value));
+    formFile.addEventListener('change', async ()=>{ 
+      const f=formFile.files&&formFile.files[0]; 
+      if(!f){ updatePreview(''); return; } 
+      try{ 
+        const txt=await extractTextFromFile(f); 
+        updatePreview(txt);
+      }catch(e){ 
+        console.error('Error processing file:', e);
+        updatePreview(''); 
+      }
+    });
+
+    searchBtn.addEventListener('click', searchActive);
+    clearSearchBtn.addEventListener('click', ()=>{ searchInput.value=''; docEl.querySelectorAll('.highlight').forEach(el=>el.classList.remove('highlight')); });
+    searchInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); searchActive(); }});
+
+    fulltextBtn.addEventListener('click', runFulltext);
+    fulltextNextBtn.addEventListener('click', navigateToNextResult);
+    fulltextClear.addEventListener('click', ()=>{ 
+      fulltextInput.value=''; 
+      clearHighlights(docEl); 
+      fulltextCount.textContent=''; 
+      currentSearchResults = [];
+      currentSearchIndex = -1;
+    });
+    fulltextInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); runFulltext(); }});
+
+    themeBtn.addEventListener('click', ()=>{ 
+      const current=localStorage.getItem('theme')||'light'; 
+      applyTheme(current==='light'?'dark':'light'); 
+    });
+    openSettings.addEventListener('click', ()=>{ drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); renderLawsManager(); });
+    closeSettings.addEventListener('click', ()=>{ drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); });
+
+    exportBtn.addEventListener('click', exportAll);
+    importBtn.addEventListener('click', ()=> importFile.click());
+    importFile.addEventListener('change', ()=>{ const f=importFile.files&&importFile.files[0]; if(f) importAll(f); importFile.value=''; });
+    clearAllBtn.addEventListener('click', ()=>{ if(confirm('Are you sure you want to clear everything?')){ state.laws=[]; state.activeId=null; renderAll(); saveToStorage(); }});
+
+    lightBtn.addEventListener('click', ()=>{ applyTheme('light'); });
+    darkBtn.addEventListener('click', ()=>{ applyTheme('dark'); });
+
+    (async ()=>{ initTheme(); loadFromStorage(); docxAvailable = await window.__docxReady; renderAll(); })();
+  </script>
+
+
+  <script>
+  (function(){
+    const MOBILE_MAX = 900;
+    const THRESH = 140;
+
+    function isMobile(){ return window.innerWidth <= MOBILE_MAX; }
+
+    const sticky = document.getElementById('mobileStickySearch');
+    const toggle = document.getElementById('mobileStickyToggle');
+    const controls = document.getElementById('controlsPanel');
+
+    if(!sticky || !toggle || !controls){
+      console.log('mobile sticky: missing elements', {sticky, toggle, controls});
+      return;
+    }
+
+    let expanded = false;
+
+    function setExpanded(v){
+      expanded = v;
+      toggle.setAttribute('aria-expanded', v ? 'true' : 'false');
+      if(v){
+        controls.classList.remove('mobile-hidden');
+        controls.classList.add('mobile-fixed');
+        controls.classList.add('only-fulltext');
+      } else {
+        controls.classList.remove('mobile-fixed');
+        controls.classList.remove('only-fulltext');
+        // if in sticky mode (above threshold) - hide controls
+        if(isMobile() && (window.scrollY || window.pageYOffset) > THRESH){
+          controls.classList.add('mobile-hidden');
+        }
+      }
+    }
+
+    function update(){
+      if(!isMobile()){
+        sticky.classList.remove('on');
+        sticky.setAttribute('aria-hidden','true');
+        controls.classList.remove('mobile-hidden','mobile-fixed');
+        setExpanded(false);
+        return;
+      }
+
+      const y = window.scrollY || window.pageYOffset;
+      if(y > THRESH){
+        sticky.classList.add('on');
+        sticky.setAttribute('aria-hidden','false');
+        if(!expanded){
+          controls.classList.add('mobile-hidden');
+        }
+      } else {
+        sticky.classList.remove('on');
+        sticky.setAttribute('aria-hidden','true');
+        controls.classList.remove('mobile-hidden');
+        setExpanded(false);
+      }
+    }
+
+    toggle.addEventListener('click', function(){
+      if(!isMobile()) return;
+      setExpanded(!expanded);
+    });
+
+    // click outside to close (when expanded)
+    document.addEventListener('click', function(e){
+      if(!expanded) return;
+      const t = e.target;
+      if(controls.contains(t) || toggle.contains(t)) return;
+      setExpanded(false);
+    });
+
+    window.addEventListener('scroll', update, {passive:true});
+    window.addEventListener('resize', update);
+    update();
+  })();
+  </script>
+
+  <button id="backToTop" class="back-to-top" type="button" title="Back to top" aria-label="Back to top">↑</button>
+
+
+  <script>
+  (function(){
+    const btn = document.getElementById('backToTop');
+    if(!btn) return;
+
+    const THRESH = 400;
+    let currentContainer = null;
+
+    function findContainer(){
+      // Desktop often scrolls inside .doc (right panel).
+      return document.querySelector('.doc') || document.getElementById('docView') || null;
+    }
+
+    function readScrollTop(){
+      const winY = window.scrollY || window.pageYOffset || 0;
+      const cY = currentContainer ? (currentContainer.scrollTop || 0) : 0;
+      return Math.max(winY, cY);
+    }
+
+    function update(){
+      const y = readScrollTop();
+      if(y > THRESH) btn.classList.add('on');
+      else btn.classList.remove('on');
+    }
+
+    function scrollToTop(){
+      if(currentContainer) currentContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function bind(){
+      const c = findContainer();
+      if(c === currentContainer) return;
+      if(currentContainer) currentContainer.removeEventListener('scroll', update);
+      currentContainer = c;
+      if(currentContainer) currentContainer.addEventListener('scroll', update, { passive: true });
+      update();
+    }
+
+    btn.addEventListener('click', scrollToTop);
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', function(){ bind(); update(); });
+
+    // Bind after load and observe DOM changes
+    window.addEventListener('load', bind);
+    if('MutationObserver' in window){
+      const mo = new MutationObserver(function(){ bind(); });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+    } else {
+      setInterval(bind, 800);
+    }
+
+    bind();
+  })();
+  </script>
+  <script>
+  /* Language Selector */
+  (function() {
+    var UI = {
+      sq: {
+        brand:'LawBase', addBtn:'Shto', settingsBtn:'Cilësimet',
+        searchPh:'Kërko sipas nenit/titullit (shembull: 12 ose "Neni 12")',
+        searchBtn:'Kërko', clearBtn:'Pastro',
+        fulltextPh:'Kërko në të gjithë tekstin',
+        nextBtn:'Tjetri',
+        drawerTitle:'Cilësimet', drawerLawsH:'Ligjet',
+        drawerLawsHint:'Riemërtimi, redaktimi dhe fshirja bëhen këtu.',
+        drawerImpExp:'Import / Eksport', exportBtn:'Eksporto (JSON)', importBtn:'Importo',
+        clearAllBtn:'Pastro të gjitha', themeH:'Tema', langH:'Gjuha',
+        footer:'Të dhënat ruhen lokalisht (localStorage).',
+        cancelBtn:'Anulo', saveBtn:'Ruaj',
+        modalLabelTitle:'Titulli', modalLabelDoc:'Dokumenti',
+        modalLabelPaste:'Ose ngjit tekstin', modalFileHint:'.txt/.md/.html/.docx (lokal)',
+        modalPreview:'👁 Pamja paraprake (300 karakterët e parë):',
+        mobileSrch:'Kërko',
+        active:'Aktiv:', hits:function(n){return 'Gjithsej: '+n+' — Kliko "Tjetri"';},
+        hitNav:function(i,n){return 'Rezultati '+i+' nga '+n;}, noHits:'⚠️ Nuk ka rezultate',
+      },
+      mk: {
+        brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки',
+        searchPh:'Пребарај по член/наслов (пример: 12 или „Член 12")',
+        searchBtn:'Пребарај', clearBtn:'Исчисти',
+        fulltextPh:'Пребарај низ целиот текст',
+        nextBtn:'Наредно',
+        drawerTitle:'Поставки', drawerLawsH:'Закони',
+        drawerLawsHint:'Преименување, уредување и бришење се прават овде.',
+        drawerImpExp:'Увоз / Извоз', exportBtn:'Извоз (JSON)', importBtn:'Увоз',
+        clearAllBtn:'Исчисти сите', themeH:'Тема', langH:'Јазик',
+        footer:'Податоците се чуваат локално (localStorage).',
+        cancelBtn:'Откажи', saveBtn:'Зачувај',
+        modalLabelTitle:'Наслов', modalLabelDoc:'Документ',
+        modalLabelPaste:'Или залепи текст', modalFileHint:'.txt/.md/.html/.docx (локално)',
+        modalPreview:'👁 Преглед (првите 300 знаци):',
+        mobileSrch:'Пребарувач',
+        active:'Активен:', hits:function(n){return 'Вкупно: '+n+' — Кликни „Наредно"';},
+        hitNav:function(i,n){return 'Погодок '+i+' од '+n;}, noHits:'⚠️ Нема погодоци',
+      },
+      en: {
+        brand:'LawBase', addBtn:'Add', settingsBtn:'Settings',
+        searchPh:'Search by article/title (e.g. 12 or Article 12)',
+        searchBtn:'Search', clearBtn:'Clear',
+        fulltextPh:'Full-text search (e.g. sanctions)',
+        nextBtn:'Next',
+        drawerTitle:'Settings', drawerLawsH:'Laws',
+        drawerLawsHint:'Rename, edit and delete laws here.',
+        drawerImpExp:'Import / Export', exportBtn:'Export (JSON)', importBtn:'Import',
+        clearAllBtn:'Clear all', themeH:'Theme', langH:'Language',
+        footer:'Data stored locally (localStorage).',
+        cancelBtn:'Cancel', saveBtn:'Save',
+        modalLabelTitle:'Title', modalLabelDoc:'Document',
+        modalLabelPaste:'Or paste text', modalFileHint:'.txt/.md/.html/.docx (local)',
+        modalPreview:'👁 Preview (first 300 characters):',
+        mobileSrch:'Search',
+        active:'Active:', hits:function(n){return 'Total: '+n+' — Click "Next"';},
+        hitNav:function(i,n){return 'Result '+i+' of '+n;}, noHits:'⚠️ No results found',
+      }
+    };
+
+    function el(id){ return document.getElementById(id); }
+    function setH(id,h){ var e=el(id); if(e) e.innerHTML=h; }
+    function setT(id,t){ var e=el(id); if(e) e.textContent=t; }
+    function setP(id,p){ var e=el(id); if(e) e.placeholder=p; }
+    function setQ(sel,prop,val){ var e=document.querySelector(sel); if(e) e[prop]=val; }
+
+    function applyLang(lang) {
+      var L = UI[lang] || UI.en;
+      localStorage.setItem('zakoni_lang', lang);
+      window._uiLang = L;
+
+      document.querySelectorAll('.lang-btn').forEach(function(b){
+        b.classList.toggle('lang-active', b.dataset.lang===lang);
+      });
+
+      setQ('.brand','innerHTML','<i class="fas fa-scale-balanced"></i> '+L.brand);
+      setH('addLawBtn','<i class="fas fa-plus"></i> '+L.addBtn);
+      setH('openSettings','<i class="fas fa-cog"></i> '+L.settingsBtn);
+      setP('searchInput',L.searchPh);
+      setH('searchBtn','<i class="fas fa-search"></i> '+L.searchBtn);
+      setH('clearSearchBtn','<i class="fas fa-times"></i> '+L.clearBtn);
+      setP('fulltextInput',L.fulltextPh);
+      setH('fulltextBtn','<i class="fas fa-search"></i> '+L.searchBtn);
+      setH('fulltextNextBtn','<i class="fas fa-arrow-down"></i> '+L.nextBtn);
+      setH('fulltextClear','<i class="fas fa-times"></i> '+L.clearBtn);
+      setQ('#mobileStickySearch .label','textContent',L.mobileSrch);
+
+      var groups = document.querySelectorAll('#drawer .body .group');
+      if(groups[0]){ groups[0].querySelector('h4').innerHTML='<i class="fas fa-gavel"></i> '+L.drawerLawsH; var dh=groups[0].querySelector('.hint'); if(dh) dh.textContent=L.drawerLawsHint; }
+      if(groups[1]){ groups[1].querySelector('h4').innerHTML='<i class="fas fa-file-import"></i> '+L.drawerImpExp; setH('exportBtn','<i class="fas fa-file-export"></i> '+L.exportBtn); setH('importBtn','<i class="fas fa-file-import"></i> '+L.importBtn); setH('clearAllBtn','<i class="fas fa-trash"></i> '+L.clearAllBtn); }
+      if(groups[2]) groups[2].querySelector('h4').innerHTML='<i class="fas fa-palette"></i> '+L.themeH;
+      if(groups[3]) groups[3].querySelector('h4').innerHTML='<i class="fas fa-language"></i> '+L.langH;
+
+      setQ('#drawer header strong','innerHTML','<i class="fas fa-cog"></i> '+L.drawerTitle);
+      var ft=document.querySelector('#drawer .footer .hint');
+      if(ft) ft.innerHTML='<i class="fas fa-info-circle"></i> '+L.footer+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
+
+      setP('formTitle',L.modalLabelTitle);
+      setH('cancelLaw','<i class="fas fa-times"></i> '+L.cancelBtn);
+      setH('saveLawBtn','<i class="fas fa-save"></i> '+L.saveBtn);
+
+      if(typeof renderAll==='function') renderAll();
+    }
+
+    window.addEventListener('load', function(){
+      var saved = localStorage.getItem('zakoni_lang') || 'en';
+      applyLang(saved);
+      document.querySelectorAll('.lang-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){ applyLang(btn.dataset.lang); });
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
