@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="mk">
 <head>
   <meta charset="utf-8" />
@@ -644,6 +644,10 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       color: #fff;
       border-color: var(--primary);
     }
+    mark.fuzzy-match {
+      background: #ffe066;
+      opacity: 0.85;
+    }
   
 
     /* === Mobile sticky minimized search trigger === */
@@ -905,7 +909,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (localStorage). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (localStorage). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.2.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1031,32 +1035,38 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       return articles;
     }
 
-    // Persistence
+    // Persistence — IndexedDB (no 5MB limit, no compression needed)
+    const DB_NAME='lawbase_db', DB_STORE='data', DB_KEY='state';
+    let _db=null;
+    function openDB(){
+      return new Promise((res,rej)=>{
+        if(_db){res(_db);return;}
+        const req=indexedDB.open(DB_NAME,1);
+        req.onupgradeneeded=e=>{e.target.result.createObjectStore(DB_STORE);};
+        req.onsuccess=e=>{_db=e.target.result;res(_db);};
+        req.onerror=e=>rej(e);
+      });
+    }
     function saveToStorage(){
-      try{
-        const minimal=state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}));
-        const payload = JSON.stringify({laws:minimal,activeId:state.activeId});
-        const sizeMB = (payload.length / 1024 / 1024).toFixed(2);
-        localStorage.setItem(STORAGE_KEY, payload);
-        console.log(`💾 Saved: ${sizeMB} MB`);
-      }catch(e){
-        if(e.name === 'QuotaExceededError' || e.code === 22){
-          const totalMB = (JSON.stringify(state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content}))).length/1024/1024).toFixed(2);
-          alert(`⚠️ Save error!\n\nData too large for localStorage (${totalMB} MB, limit ~5 MB).\n\nSolution: Export (JSON) and re-import next time.`);
-        } else {
-          console.error('saveToStorage error:', e);
-        }
-      }
+      const minimal=state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}));
+      const data={laws:minimal,activeId:state.activeId};
+      openDB().then(db=>{
+        const tx=db.transaction(DB_STORE,'readwrite');
+        tx.objectStore(DB_STORE).put(data,DB_KEY);
+      }).catch(e=>console.error('saveToStorage error:',e));
     }
     function loadFromStorage(){
-      try{
-        const raw=localStorage.getItem(STORAGE_KEY);
-        if(!raw) return;
-        const parsed=JSON.parse(raw);
-        state.laws=(parsed.laws||[]).map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now(),articles:splitIntoArticles(l.content||'')}));
-        // Fix: restore exact activeId if found, else first law
-        state.activeId = state.laws.find(x=>x.id===parsed.activeId)?.id ?? (state.laws[0]?.id ?? null);
-      }catch(e){ console.error('loadFromStorage error:', e); }
+      return openDB().then(db=>new Promise((res,rej)=>{
+        const req=db.transaction(DB_STORE,'readonly').objectStore(DB_STORE).get(DB_KEY);
+        req.onsuccess=e=>{
+          const parsed=e.target.result;
+          if(!parsed){res();return;}
+          state.laws=(parsed.laws||[]).map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now(),articles:splitIntoArticles(l.content||'')}));
+          state.activeId=state.laws.find(x=>x.id===parsed.activeId)?.id??(state.laws[0]?.id??null);
+          res();
+        };
+        req.onerror=e=>rej(e);
+      })).catch(e=>console.error('loadFromStorage error:',e));
     }
 
     // Export/Import
@@ -1098,31 +1108,34 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const link=document.createElement('a'); link.href='javascript:void(0)'; link.className='art-link'; link.textContent=a.title;
         link.addEventListener('click',()=>{
           const target=docEl.querySelector(`.article[data-index="${a.index}"]`);
-          if(target){ target.scrollIntoView({behavior:'smooth',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1200); }
+          if(target){ target.scrollIntoView({behavior:'instant',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1200); }
         });
         articlesList.appendChild(link);
       });
     }
     function clearHighlights(root){ root.querySelectorAll('mark.result').forEach(m=>{ const t=document.createTextNode(m.textContent); m.replaceWith(t); }); }
+    const _docCache={};
     function renderDoc(){
       const law=state.laws.find(l=>l.id===state.activeId);
-      docEl.innerHTML='';
       if(!law){
-        const e=document.createElement('div'); e.className='empty'; e.textContent='No active law. Add one and select a tab to view.';
-        docEl.appendChild(e); activeTitle.textContent=''; return;
+        docEl.innerHTML='<div class="empty">No active law. Add one and select a tab to view.</div>';
+        activeTitle.textContent=''; return;
       }
-      activeTitle.textContent='Active: '+law.title+(law.alt?' — '+law.alt:'');
-      law.articles.forEach(a=>{
-        const block=document.createElement('article'); block.className='article'; block.dataset.index=a.index;
-        const h=document.createElement('h3'); h.textContent=a.title;
-        const p=document.createElement('pre'); p.textContent=(a.text||'').trim();
-        block.appendChild(h); block.appendChild(p); docEl.appendChild(block);
-      });
-      clearHighlights(docEl);
+      activeTitle.textContent=(window._uiLang&&window._uiLang.active||'Active: ')+law.title+(law.alt?' — '+law.alt:'');
+      const key=law.id+'_'+(law.updatedAt||0);
+      if(!_docCache[key]){
+        const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+esc((a.text||'').trim())+'</pre></article>').join('');
+      }
+      docEl.innerHTML=_docCache[key];
     }
     function renderAll(){ renderTabs(); renderMembers(); renderDoc(); renderLawsManager(); }
 
-    function setActive(id){ state.activeId=id; renderAll(); saveToStorage(); }
+    function setActive(id){
+      state.activeId=id;
+      renderTabs(); renderMembers(); renderDoc();
+      saveToStorage();
+    }
 
     function renderLawsManager(){
       lawsManager.innerHTML=''; if(!state.laws.length){ lawsManager.innerHTML='<div class="hint">No laws.</div>'; return; }
@@ -1206,80 +1219,113 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           if(el.textContent.toLowerCase().includes(q.toLowerCase())){ target=el.closest('.article'); break; }
         }
       }
-      if(target){ target.classList.add('highlight'); target.scrollIntoView({behavior:'smooth',block:'start'}); } else { alert('No result found.'); }
+      if(target){ target.classList.add('highlight'); target.scrollIntoView({behavior:'instant',block:'start'}); } else { alert('No result found.'); }
     }
 
-    // Full-text search (highlight all)
+    // ── Fuzzy search helpers ──────────────────────────────────────────────
+    // Returns true if needle matches haystack with max `maxErrors` mistakes
+    function fuzzyMatch(haystack, needle, maxErrors) {
+      const h = haystack.toLowerCase();
+      const n = needle.toLowerCase();
+      if(h.includes(n)) return true; // exact match first (fast path)
+      if(n.length < 4) return false;  // too short for fuzzy
+      // Sliding window Levenshtein
+      for(let i = 0; i <= h.length - n.length + maxErrors; i++) {
+        const chunk = h.substr(i, n.length + maxErrors);
+        if(levenshtein(chunk.substr(0, n.length), n) <= maxErrors) return true;
+      }
+      return false;
+    }
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      const dp = Array.from({length: m+1}, (_,i) => Array.from({length: n+1}, (_,j) => i===0?j:j===0?i:0));
+      for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+        dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+      return dp[m][n];
+    }
+
+    // Full-text search (highlight all) — supports fuzzy
     function highlightAll(root, query){
       if(!query) return 0;
-      const walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      const isFuzzy = query.length >= 4;
+      // maxErrors: 1 mistake per 4 chars (e.g. 4-7 chars → 1, 8-11 → 2)
+      const maxErrors = isFuzzy ? Math.floor(query.length / 5) + 1 : 0;
+      const exactRegex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode:(n)=> n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT
       });
-      const regex=new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
       let count=0, nodes=[];
-      currentSearchResults = []; // Reset search results
-      
+      currentSearchResults = [];
       while(walker.nextNode()) nodes.push(walker.currentNode);
       nodes.forEach(node=>{
-        const val=node.nodeValue;
-        if(!regex.test(val)) return;
-        const frag=document.createDocumentFragment();
-        let last=0;
-        val.replace(regex,(match,offset)=>{
-          const pre=val.slice(last,offset); if(pre) frag.appendChild(document.createTextNode(pre));
-          const mark=document.createElement('mark'); mark.className='result'; mark.textContent=match; 
-          
-          // Store search result position
+        const val = node.nodeValue;
+        // Check if this node has any match (exact or fuzzy)
+        const hasExact = exactRegex.test(val);
+        exactRegex.lastIndex = 0;
+        const hasFuzzy = !hasExact && isFuzzy && fuzzyMatch(val, query, maxErrors);
+        if(!hasExact && !hasFuzzy) return;
+        if(hasExact){
+          // Highlight exact matches inline
+          const frag = document.createDocumentFragment();
+          let last = 0;
+          val.replace(exactRegex,(match,offset)=>{
+            if(last < offset) frag.appendChild(document.createTextNode(val.slice(last,offset)));
+            const mark = document.createElement('mark');
+            mark.className = 'result';
+            mark.textContent = match;
+            currentSearchResults.push(mark);
+            frag.appendChild(mark);
+            last = offset+match.length; count++; return match;
+          });
+          if(last < val.length) frag.appendChild(document.createTextNode(val.slice(last)));
+          node.replaceWith(frag);
+        } else {
+          // Fuzzy: highlight the whole word/segment that matched
+          const mark = document.createElement('mark');
+          mark.className = 'result fuzzy-match';
+          mark.title = 'Fuzzy match';
+          mark.textContent = val;
           currentSearchResults.push(mark);
-          
-          frag.appendChild(mark);
-          last=offset+match.length; count++; return match;
-        });
-        const tail=val.slice(last); if(tail) frag.appendChild(document.createTextNode(tail));
-        node.replaceWith(frag);
+          node.replaceWith(mark);
+          count++;
+        }
       });
       return count;
     }
-    
+
     // Navigate to next search result
     function navigateToNextResult() {
       if (currentSearchResults.length === 0) return;
-      
       // Remove previous highlight
       if (currentSearchIndex >= 0 && currentSearchResults[currentSearchIndex]) {
         currentSearchResults[currentSearchIndex].style.backgroundColor = '';
         currentSearchResults[currentSearchIndex].style.outline = '';
       }
-      
       currentSearchIndex = (currentSearchIndex + 1) % currentSearchResults.length;
-      
       // Highlight current result
       const currentResult = currentSearchResults[currentSearchIndex];
       currentResult.style.backgroundColor = '#ff6b6b';
       currentResult.style.outline = '2px solid #e63946';
-      
-      // Scroll to the result
-      currentResult.scrollIntoView({behavior: 'smooth', block: 'center'});
-      
+      // Scroll to the result - instant jump, no animation
+      currentResult.scrollIntoView({behavior: 'instant', block: 'center'});
       // Update counter
-      fulltextCount.textContent = `Result ${currentSearchIndex + 1} of ${currentSearchResults.length}`;
+      const isFuzzy = currentResult.classList.contains('fuzzy-match');
+      const label = isFuzzy ? ' (~fuzzy)' : '';
+      fulltextCount.textContent = (window._uiLang&&window._uiLang.hitNav||function(i,n){return 'Result '+i+' of '+n;})(currentSearchIndex+1, currentSearchResults.length) + label;
     }
-    
+
     function runFulltext(){
       const q=(fulltextInput.value||'').trim();
       clearHighlights(docEl);
       currentSearchResults = [];
       currentSearchIndex = -1;
-      
       if(!q){ fulltextCount.textContent=''; return; }
       const matches=highlightAll(docEl,q);
-      
       if (matches > 0) {
-        fulltextCount.textContent = `Total: ${matches} results — Click "Next" to navigate`;
-        // Auto-navigate to first result
+        fulltextCount.textContent = (window._uiLang&&window._uiLang.hits||function(n){return 'Total: '+n+' results';})(matches);
         navigateToNextResult();
       } else {
-        fulltextCount.textContent = '⚠️ No results found';
+        fulltextCount.textContent = (window._uiLang&&window._uiLang.noHits)||'⚠️ No results found';
       }
     }
 
@@ -1332,7 +1378,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     lightBtn.addEventListener('click', ()=>{ applyTheme('light'); });
     darkBtn.addEventListener('click', ()=>{ applyTheme('dark'); });
 
-    (async ()=>{ initTheme(); loadFromStorage(); docxAvailable = await window.__docxReady; renderAll(); })();
+    (async ()=>{ initTheme(); await loadFromStorage(); docxAvailable = await window.__docxReady; renderAll(); })();
   </script>
 
 
