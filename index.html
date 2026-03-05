@@ -1462,7 +1462,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.7.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.7.2</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1851,7 +1851,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           if(el.textContent.toLowerCase().includes(q.toLowerCase())){ target=el.closest('.article'); break; }
         }
       }
-      if(target){ target.classList.add('highlight'); target.scrollIntoView({behavior:'instant',block:'start'}); } else { alert('No result found.'); }
+      if(target){ target.classList.add('highlight'); target.scrollIntoView({behavior:'instant',block:'start'}); }
     }
 
     // ── Fuzzy search helpers ──────────────────────────────────────────────
@@ -1983,6 +1983,18 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     searchBtn.addEventListener('click', searchActive);
     clearSearchBtn.addEventListener('click', ()=>{ searchInput.value=''; docEl.querySelectorAll('.highlight').forEach(el=>el.classList.remove('highlight')); });
     searchInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); searchActive(); }});
+
+    // Instant search — scroll direkt ndërkohë që shkruan
+    let _searchDebounce = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(_searchDebounce);
+      const q = searchInput.value.trim();
+      if (!q) {
+        docEl.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+        return;
+      }
+      _searchDebounce = setTimeout(() => searchActive(), 120);
+    });
 
     fulltextBtn.addEventListener('click', runFulltext);
     fulltextNextBtn.addEventListener('click', navigateToNextResult);
