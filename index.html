@@ -1238,6 +1238,67 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     #noteDeleteBtn { background: var(--danger); color:#fff; margin-right:auto; }
     #noteSaveBtn { background: var(--primary); color:#fff; }
     #noteCancelBtn { background: var(--border); color: var(--text); }
+
+    /* ── Reading Mode ─────────────────────────────────────────── */
+    .reading-mode-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 500;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--box-shadow);
+    }
+    .reading-mode-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70%;
+    }
+    .reading-mode-exit {
+      font-size: 0.82rem;
+      padding: 5px 12px;
+      flex-shrink: 0;
+    }
+
+    /* Body in reading mode */
+    body.reading-mode header,
+    body.reading-mode .law-tabs,
+    body.reading-mode #controlsPanel,
+    body.reading-mode aside,
+    body.reading-mode .mobile-sticky-search {
+      display: none !important;
+    }
+    body.reading-mode .app {
+      padding-top: 44px;
+    }
+    body.reading-mode .wrap {
+      padding: 0;
+      gap: 0;
+    }
+    body.reading-mode .main {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+    body.reading-mode .doc {
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      padding: 24px clamp(12px, 3vw, 40px);
+      max-width: 100%;
+      width: 100%;
+      margin: 0;
+    }
+    body.reading-mode .back-to-top {
+      bottom: 16px;
+    }
 </style>
 
   <!-- Auto-load Mammoth with CDN fallback -->
@@ -1271,6 +1332,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   </div>
 
   <button id="themeBtn" style="display:none"></button>
+  <!-- Reading Mode Exit Bar -->
+  <div id="readingModeBar" class="reading-mode-bar" style="display:none">
+    <span class="reading-mode-title" id="readingModeTitle"></span>
+    <button id="exitReadingMode" class="btn btn-ghost reading-mode-exit"><i class="fas fa-times"></i> Exit Reading Mode</button>
+  </div>
   <div class="app">
     <header>
       <div class="nav">
@@ -1278,6 +1344,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
+          <button id="readingModeBtn" class="btn btn-ghost" title="Reading mode"><i class="fas fa-book-open"></i></button>
           <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
       </div>
@@ -1395,7 +1462,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.6.2</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.6.8</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1955,6 +2022,88 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     document.getElementById('fontResetBtn').addEventListener('click', () => {
       applyFontSize(FONT_DEFAULT);
     });
+
+    // Reading Mode
+    const readingModeBtn = document.getElementById('readingModeBtn');
+    const exitReadingMode = document.getElementById('exitReadingMode');
+    const readingModeBar = document.getElementById('readingModeBar');
+    const readingModeTitle = document.getElementById('readingModeTitle');
+
+    function enterReadingMode() {
+      const law = state.laws.find(l => l.id === state.activeId);
+      if (!law) return;
+      const docPanel = document.getElementById('doc');
+
+      // Gjej nenin MÊ TÊ AFËRT me krye të dukshëm
+      let targetIndex = null;
+      if (docPanel) {
+        const articles = docPanel.querySelectorAll('.article');
+        const scrollTop = docPanel.scrollTop;
+        let minDist = Infinity;
+        articles.forEach(art => {
+          const dist = Math.abs(art.offsetTop - scrollTop);
+          if (dist < minDist) { minDist = dist; targetIndex = art.dataset.index; }
+        });
+      }
+
+      document.body.classList.add('reading-mode');
+      readingModeBar.style.display = 'flex';
+      readingModeTitle.textContent = '📖 ' + law.title + (law.alt ? ' — ' + law.alt : '');
+      readingModeBtn.innerHTML = '<i class="fas fa-book-open" style="color:var(--primary)"></i>';
+
+      // Scroll tek neni pas reflow
+      let frames = 0;
+      function restore() {
+        frames++;
+        if (frames < 4) { requestAnimationFrame(restore); return; }
+        if (targetIndex !== null && docPanel) {
+          const target = docPanel.querySelector(`.article[data-index="${targetIndex}"]`);
+          if (target) docPanel.scrollTop = target.offsetTop;
+        }
+      }
+      requestAnimationFrame(restore);
+    }
+    function leaveReadingMode() {
+      const docPanel = document.getElementById('doc');
+
+      // Gjej nenin MÊ TÊ AFËRT me krye
+      let targetIndex = null;
+      if (docPanel) {
+        const articles = docPanel.querySelectorAll('.article');
+        const scrollTop = docPanel.scrollTop;
+        let minDist = Infinity;
+        articles.forEach(art => {
+          const dist = Math.abs(art.offsetTop - scrollTop);
+          if (dist < minDist) { minDist = dist; targetIndex = art.dataset.index; }
+        });
+      }
+
+      document.body.classList.remove('reading-mode');
+      readingModeBar.style.display = 'none';
+      readingModeBtn.innerHTML = '<i class="fas fa-book-open"></i>';
+
+      // Rikthe pozicionin pas reflow
+      let frames = 0;
+      function restore() {
+        frames++;
+        if (frames < 4) { requestAnimationFrame(restore); return; }
+        if (targetIndex !== null && docPanel) {
+          const target = docPanel.querySelector(`.article[data-index="${targetIndex}"]`);
+          if (target) docPanel.scrollTop = target.offsetTop;
+        }
+      }
+      requestAnimationFrame(restore);
+    }
+    function toggleReadingMode() {
+      document.body.classList.contains('reading-mode') ? leaveReadingMode() : enterReadingMode();
+    }
+
+    readingModeBtn.addEventListener('click', toggleReadingMode);
+    exitReadingMode.addEventListener('click', leaveReadingMode);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') leaveReadingMode(); });
+
+    // Exit reading mode when law changes
+    const _origSetActive = setActive;
 
     themeBtn.addEventListener('click', ()=>{
       const style=localStorage.getItem('theme-style')||'classic';
