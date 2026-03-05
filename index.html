@@ -260,6 +260,152 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border-radius: 14px;
     }
 
+    /* ══ CORPORATE light ══ */
+    [data-style="corporate"][data-mode="light"] {
+      --primary:      #1a6fc4;
+      --primary-dark: #145fa8;
+      --primary-soft: rgba(26,111,196,0.08);
+      --accent:       #1a6fc4;
+      --danger:       #d63031;
+      --box-shadow:   0 1px 4px rgba(0,0,0,0.08);
+      --bg:           #f0f2f5;
+      --panel:        #ffffff;
+      --chip:         #f7f8fa;
+      --border:       #dde1e7;
+      --text:         #1a1f36;
+      --muted:        #697386;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Sans', sans-serif;
+      --border-radius: 4px;
+      /* Corporate-specific */
+      --corp-header:  #1a3a5c;
+      --corp-sidebar: #ffffff;
+      --corp-tabs-bg: #2c5f8a;
+    }
+    [data-style="corporate"][data-mode="dark"] {
+      --primary:      #4fa3e8;
+      --primary-dark: #3a8fd4;
+      --primary-soft: rgba(79,163,232,0.1);
+      --accent:       #4fa3e8;
+      --danger:       #ff6b6b;
+      --box-shadow:   0 1px 6px rgba(0,0,0,0.4);
+      --bg:           #0d1117;
+      --panel:        #161b22;
+      --chip:         #1c2128;
+      --border:       #30363d;
+      --text:         #c9d1d9;
+      --muted:        #6e7681;
+      --font-body:    'DM Sans', sans-serif;
+      --font-heading: 'DM Sans', sans-serif;
+      --border-radius: 4px;
+      --corp-header:  #0d1117;
+      --corp-sidebar: #161b22;
+      --corp-tabs-bg: #1c2128;
+    }
+
+    /* ══ Corporate layout overrides ══ */
+    [data-style="corporate"] header {
+      background: var(--corp-header);
+      border-bottom: none;
+      padding: 0 20px;
+      height: 52px;
+    }
+    [data-style="corporate"] .nav {
+      height: 52px;
+    }
+    [data-style="corporate"] .brand {
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    [data-style="corporate"] header .btn-ghost {
+      color: rgba(255,255,255,0.85);
+      border-color: rgba(255,255,255,0.25);
+    }
+    [data-style="corporate"] header .btn-ghost:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    [data-style="corporate"] header #themeBtn,
+    [data-style="corporate"] header #openSettings {
+      color: rgba(255,255,255,0.85);
+      border-color: rgba(255,255,255,0.2);
+    }
+    [data-style="corporate"] header #addLawBtn {
+      background: #2196f3;
+      color: #fff;
+    }
+    /* Tab strip like Gavelytics */
+    [data-style="corporate"] .law-tabs {
+      background: var(--corp-tabs-bg);
+      border-radius: 0;
+      padding: 0 16px;
+      gap: 2px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    [data-style="corporate"] .law-tab {
+      border-radius: 0;
+      border: none;
+      border-bottom: 3px solid transparent;
+      background: transparent;
+      box-shadow: none;
+      color: rgba(255,255,255,0.75);
+      padding: 10px 16px 9px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    [data-style="corporate"] .law-tab:hover {
+      transform: none;
+      color: #fff;
+      background: rgba(255,255,255,0.08);
+      box-shadow: none;
+    }
+    [data-style="corporate"] .law-tab.active {
+      color: #ffffff;
+      border-bottom: 3px solid #fff;
+      background: rgba(255,255,255,0.12);
+    }
+    [data-style="corporate"] .law-tab .dot { display: none; }
+    [data-style="corporate"] .law-tab .title {
+      color: inherit;
+      font-weight: inherit;
+    }
+    /* Wrap with sidebar feel */
+    [data-style="corporate"] .wrap {
+      padding: 0;
+      gap: 0;
+    }
+    [data-style="corporate"] #controlsPanel {
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+    }
+    [data-style="corporate"] .main {
+      padding: 16px;
+      gap: 16px;
+    }
+    [data-style="corporate"] .articles-list {
+      border-radius: var(--border-radius);
+      border: 1px solid var(--border);
+    }
+    [data-style="corporate"] .doc {
+      border-radius: var(--border-radius);
+    }
+    [data-style="corporate"] .article h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
         /* ── Base reset ────────────────────────────────────────────────── */
     * {
       margin: 0;
@@ -272,6 +418,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       background-color: var(--bg);
       color: var(--text);
       transition: var(--transition);
+      overflow-x: hidden;
     }
 
     .app {
@@ -320,7 +467,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     .btn-primary {
       background: var(--primary);
-      color: var(--white);
+      color: #fff;
     }
 
     .btn-primary:hover {
@@ -329,22 +476,22 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     .btn-ghost {
       background: transparent;
-      color: var(--gray);
+      color: var(--text);
       border: 1px solid var(--border);
     }
 
     .btn-ghost:hover {
-      background: var(--light-gray);
+      background: var(--chip);
     }
 
     .wrap {
-      padding: 12px 16px;
+      padding: 8px 16px 5px 16px;
       max-width: 1800px;
       margin: 0 auto;
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 5px;
     }
 
     /* Compact tabs */
@@ -398,14 +545,15 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     /* CONTROLS - dual search panel */
     .controls {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
       align-items: center;
       background: var(--panel);
-      padding: 10px 12px;
+      padding: 8px 12px;
       border-radius: var(--border-radius);
       box-shadow: var(--box-shadow);
       border: 1px solid var(--border);
+      row-gap: 4px;
     }
 
     .controls input {
@@ -422,7 +570,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     .controls input:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+      box-shadow: 0 0 0 2px var(--primary-soft);
     }
 
     .controls .divider {
@@ -436,13 +584,25 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       font-size: 0.8rem;
       color: var(--muted);
       flex-basis: 100%;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    #activeTitle {
+      padding: 2px 0 0 0;
+      font-size: 0.78rem;
+    }
+
+    /* activeTitle nuk zë hapësirë kur është bosh */
+    #activeTitle:empty {
+      display: none;
     }
 
     /* Main grid */
     .main {
       display: grid;
       grid-template-columns: 240px 1fr;
-      gap: 12px;
+      gap: 5px;
     }
 
     /* Articles list */
@@ -499,16 +659,16 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     .doc::-webkit-scrollbar-thumb {
-      background: var(--gray);
+      background: var(--muted);
       border-radius: 8px;
     }
 
     .doc::-webkit-scrollbar-thumb:hover {
-      background: var(--dark);
+      background: var(--text);
     }
 
     .article {
-      margin: 0 0 20px 0;
+      margin: 0 0 12px 0;
       padding: 2px 0;
     }
 
@@ -527,7 +687,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       overflow-wrap: break-word;
       text-align: justify;
       text-justify: inter-word;
-      line-height: 1.7;
+      line-height: 1.6;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       font-size: 0.95rem;
       color: var(--text);
@@ -715,14 +875,28 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     @media (max-width: 900px) {
       .main {
         grid-template-columns: 1fr;
+        gap: 0;
       }
 
+      /* Vetëm doc dhe articles-list shkojnë fund-e-fund */
       .doc {
         max-height: unset;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        margin-left: -12px;
+        margin-right: -12px;
       }
 
       .articles-list {
         max-height: 40vh;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        margin-left: -12px;
+        margin-right: -12px;
       }
 
       .drawer {
@@ -741,6 +915,16 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
       .controls input {
         min-width: unset;
+      }
+
+      /* Tab-et më kompakte */
+      .law-tabs {
+        padding: 4px 8px;
+        gap: 6px;
+      }
+      .law-tab {
+        font-size: 0.82rem;
+        padding: 6px 10px;
       }
 
       .controls .divider {
@@ -856,7 +1040,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         padding: 7px 12px;
         border: none;
         border-radius: 8px;
-        background: #4361ee;
+        background: var(--primary);
         color: #fff;
         font-weight: 700;
         font-size: 0.8rem;
@@ -866,21 +1050,45 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       .mobile-sticky-btn .chev { transition: transform 0.2s ease; }
       .mobile-sticky-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
 
+      /* Smooth sticky bar entrance */
+      .mobile-sticky-search {
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .mobile-sticky-search.on {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
       /* When expanded, controls appears above the bottom sticky button */
       .controls.mobile-fixed {
         position: fixed;
         bottom: 50px;
-        left: 10px;
-        right: 10px;
+        left: 0;
+        right: 0;
         z-index: 1999;
         max-height: calc(100vh - 80px);
         overflow: auto;
         box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin: 0;
       }
 
-      /* When hidden in sticky mode, controls is invisible */
+      /* When hidden in sticky mode — fade out smoothly, no layout jump */
       .controls.mobile-hidden {
-        display: none !important;
+        opacity: 0 !important;
+        transform: translateY(-8px) !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+        transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s !important;
+      }
+
+      /* Smooth fade-in when visible */
+      .controls {
+        transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s;
       }
 
       /* Slightly more compact on mobile */
@@ -930,7 +1138,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         height: 36px;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.18);
-        background: rgba(67, 97, 238, 0.9);
+        background: var(--primary);
         color: #fff;
         font-size: 16px;
         font-weight: 800;
@@ -953,7 +1161,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       height: 36px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(67, 97, 238, 0.9);
+      background: var(--primary);
       color: #fff;
       font-size: 16px;
       font-weight: 800;
@@ -967,19 +1175,19 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     .back-to-top:active { transform: scale(0.95); }
 
     /* === Annotations === */
-    .article.has-note { border-left: 3px solid #f4a261; padding-left: 10px; }
+    .article.has-note { border-left: 3px solid var(--accent); padding-left: 10px; }
     .note-btn {
       display: inline-flex; align-items: center; justify-content: center;
       margin-left: 8px; width: 20px; height: 20px; border-radius: 50%;
-      border: 1px solid #f4a261; background: transparent; color: #f4a261;
+      border: 1px solid var(--accent); background: transparent; color: var(--accent);
       font-size: 11px; cursor: pointer; vertical-align: middle;
       opacity: 0.7; transition: opacity 0.15s;
     }
-    .note-btn:hover { opacity: 1; background: #f4a261; color: #fff; }
-    .note-btn.has-note { background: #f4a261; color: #fff; opacity: 1; }
+    .note-btn:hover { opacity: 1; background: var(--accent); color: #fff; }
+    .note-btn.has-note { background: var(--accent); color: #fff; opacity: 1; }
     .note-preview {
       margin: 6px 0 4px 0; padding: 6px 10px; border-radius: 6px;
-      background: rgba(244,162,97,0.12); border-left: 2px solid #f4a261;
+      background: var(--primary-soft); border-left: 2px solid var(--accent);
       font-size: 0.82rem; color: var(--text); white-space: pre-wrap; line-height: 1.5;
     }
     /* Annotation modal */
@@ -998,8 +1206,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
     #noteModal .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
     #noteModal .modal-actions button { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:0.85rem; }
-    #noteDeleteBtn { background: #e63946; color:#fff; margin-right:auto; }
-    #noteSaveBtn { background: #4361ee; color:#fff; }
+    #noteDeleteBtn { background: var(--danger); color:#fff; margin-right:auto; }
+    #noteSaveBtn { background: var(--primary); color:#fff; }
     #noteCancelBtn { background: var(--border); color: var(--text); }
 </style>
 
@@ -1061,7 +1269,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
         <input id="fulltextInput" type="text" placeholder="Full-text search (e.g. penalty sanctions)" />
         <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
-        <button id="fulltextNextBtn" class="btn"><i class="fas fa-arrow-down"></i> Next</button>
+        <button id="fulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i> Next</button>
         <button id="fulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
         <span id="fulltextCount" class="hint"></span>
 
@@ -1097,7 +1305,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       <div class="group">
         <h4><i class="fas fa-file-import"></i> Import / Export</h4>
         <div class="row">
-          <button id="exportBtn" class="btn"><i class="fas fa-file-export"></i> Export (JSON)</button>
+          <button id="exportBtn" class="btn btn-ghost"><i class="fas fa-file-export"></i> Export (JSON)</button>
           <button id="importBtn" class="btn btn-ghost"><i class="fas fa-file-import"></i> Import</button>
           <input id="importFile" type="file" accept=".json" style="display:none" />
         </div>
@@ -1128,6 +1336,10 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
             <span class="theme-swatch" id="sw-soft"></span>
             <span>Soft</span>
           </button>
+          <button class="theme-opt" data-style="corporate">
+            <span class="theme-swatch" id="sw-corporate"></span>
+            <span>Corporate</span>
+          </button>
         </div>
       </div>
       <div class="group">
@@ -1139,7 +1351,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.4.6</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.5.9</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1228,12 +1440,13 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     let currentSearchIndex = -1;
 
     // Theme system — style + mode
-    const STYLES = ['classic','legal','midnight','soft'];
+    const STYLES = ['classic','legal','midnight','soft','corporate'];
     const SWATCHES = {
-      classic:  {light:['#f5f7fb','#4361ee'], dark:['#0f1117','#7b96ff']},
-      legal:    {light:['#F7F5F0','#C9A84C'], dark:['#0E0C08','#E8C876']},
-      midnight: {light:['#F2F1FA','#6C63FF'], dark:['#07070F','#9D96FF']},
-      soft:     {light:['#ECEFFE','#5C6BC0'], dark:['#0C0D1A','#8B96E8']},
+      classic:   {light:['#f5f7fb','#4361ee'], dark:['#0f1117','#7b96ff']},
+      legal:     {light:['#F7F5F0','#C9A84C'], dark:['#0E0C08','#E8C876']},
+      midnight:  {light:['#F2F1FA','#6C63FF'], dark:['#07070F','#9D96FF']},
+      soft:      {light:['#ECEFFE','#5C6BC0'], dark:['#0C0D1A','#8B96E8']},
+      corporate: {light:['#1a3a5c','#2196f3'], dark:['#0d1117','#4fa3e8']},
     };
 
     function applyTheme(style, mode){
@@ -1418,7 +1631,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       const key=law.id+'_'+(law.updatedAt||0);
       if(!_docCache[key]){
         const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+esc((a.text||'').trim())+'</pre></article>').join('');
+        // Hiq rreshtat bosh të tepërt (3+ newline → 1 newline)
+        const clean=s=>s.replace(/\n{3,}/g,'\n\n').trim();
+        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+esc(clean(a.text||''))+'</pre></article>').join('');
       }
       docEl.innerHTML=_docCache[key];
     }
@@ -1713,7 +1928,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   <script>
   (function(){
     const MOBILE_MAX = 900;
-    const THRESH = 140;
+    const THRESH = 200;       // rrit nga 140 → 200 për më pak ndjeshmëri
+    const HYSTERESIS = 40;    // duhet scroll 40px lart para se të fshihet sticky
 
     function isMobile(){ return window.innerWidth <= MOBILE_MAX; }
 
@@ -1721,24 +1937,25 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     const toggle = document.getElementById('mobileStickyToggle');
     const controls = document.getElementById('controlsPanel');
 
-    if(!sticky || !toggle || !controls){
-      console.log('mobile sticky: missing elements', {sticky, toggle, controls});
-      return;
-    }
+    if(!sticky || !toggle || !controls) return;
 
     let expanded = false;
+    let lastY = 0;
+    let ticking = false;   // rAF throttle — parandalon glitch gjatë scroll rapid
 
     function setExpanded(v){
       expanded = v;
       toggle.setAttribute('aria-expanded', v ? 'true' : 'false');
       if(v){
+        // Hiq hidden PARA se të shtosh fixed — kështu transition funksionon
         controls.classList.remove('mobile-hidden');
+        // Forced reflow për të aktivizuar transition fade-in
+        void controls.offsetHeight;
         controls.classList.add('mobile-fixed');
         controls.classList.add('only-fulltext');
       } else {
         controls.classList.remove('mobile-fixed');
         controls.classList.remove('only-fulltext');
-        // if in sticky mode (above threshold) - hide controls
         if(isMobile() && (window.scrollY || window.pageYOffset) > THRESH){
           controls.classList.add('mobile-hidden');
         }
@@ -1751,25 +1968,45 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         sticky.setAttribute('aria-hidden','true');
         controls.classList.remove('mobile-hidden','mobile-fixed');
         setExpanded(false);
+        lastY = 0;
         return;
       }
 
       const y = window.scrollY || window.pageYOffset;
+      const scrollingDown = y > lastY;
+
       if(y > THRESH){
         sticky.classList.add('on');
         sticky.setAttribute('aria-hidden','false');
-        if(!expanded){
+        // Fshih controls vetëm kur scroll poshtë dhe nuk është expanded
+        if(scrollingDown && !expanded){
           controls.classList.add('mobile-hidden');
         }
+        // Shfaq controls kur scroll lart me >= HYSTERESIS
+        if(!scrollingDown && y < lastY - HYSTERESIS && !expanded){
+          controls.classList.remove('mobile-hidden');
+        }
       } else {
+        // Lart pragut — gjithmonë shfaq controls, fshih sticky
         sticky.classList.remove('on');
         sticky.setAttribute('aria-hidden','true');
         controls.classList.remove('mobile-hidden');
-        setExpanded(false);
+        if(expanded) setExpanded(false);
+      }
+
+      lastY = y;
+      ticking = false;
+    }
+
+    function onScroll(){
+      if(!ticking){
+        ticking = true;
+        requestAnimationFrame(update);
       }
     }
 
-    toggle.addEventListener('click', function(){
+    toggle.addEventListener('click', function(e){
+      e.stopPropagation();
       if(!isMobile()) return;
       setExpanded(!expanded);
     });
@@ -1782,7 +2019,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       setExpanded(false);
     });
 
-    window.addEventListener('scroll', update, {passive:true});
+    window.addEventListener('scroll', onScroll, {passive:true});
     window.addEventListener('resize', update);
     update();
   })();
