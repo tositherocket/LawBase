@@ -546,10 +546,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     .controls {
       display: flex;
       gap: 8px;
+      row-gap: 4px;
       flex-wrap: wrap;
       align-items: center;
       background: var(--panel);
-      padding: 10px 12px;
+      padding: 8px 12px 6px 12px;
       border-radius: var(--border-radius);
       box-shadow: var(--box-shadow);
       border: 1px solid var(--border);
@@ -583,6 +584,15 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       font-size: 0.8rem;
       color: var(--muted);
       flex-basis: 100%;
+      margin: 0;
+      line-height: 1;
+    }
+
+    #activeTitle {
+      margin-top: -2px;
+      padding: 0;
+      font-size: 0.75rem;
+      line-height: 1;
     }
 
     /* Main grid */
@@ -613,7 +623,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       text-decoration: none;
       transition: var(--transition);
       border: 1px solid var(--border);
-      font-size: 0.9rem;
+      font-size: calc(var(--font-size-doc, 15px) * 0.93);
     }
 
     .art-link:hover {
@@ -674,9 +684,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       overflow-wrap: break-word;
       text-align: justify;
       text-justify: inter-word;
-      line-height: 1.7;
+      line-height: 1.6;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      font-size: 0.95rem;
+      font-size: var(--font-size-doc, 15px);
       color: var(--text);
     }
 
@@ -939,7 +949,37 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       border-color: var(--primary);
     }
 
-    /* Theme picker */
+    /* Font size control */
+    .font-size-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .font-size-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .font-size-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .font-btn {
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      min-width: 36px;
+    }
+    .font-size-val {
+      font-size: 0.82rem;
+      color: var(--muted);
+      min-width: 34px;
+      text-align: center;
+    }
     .theme-mode-row {
       display: flex;
       gap: 6px;
@@ -1335,6 +1375,16 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
             <span>Corporate</span>
           </button>
         </div>
+        <!-- Font size -->
+        <div class="font-size-row">
+          <span class="font-size-label" id="lbl-font-size">Text size</span>
+          <div class="font-size-controls">
+            <button id="fontDecBtn" class="btn btn-ghost font-btn" title="Smaller">A−</button>
+            <span id="fontSizeDisplay" class="font-size-val">15px</span>
+            <button id="fontIncBtn" class="btn btn-ghost font-btn" title="Larger">A+</button>
+            <button id="fontResetBtn" class="btn btn-ghost font-btn" title="Reset">↺</button>
+          </div>
+        </div>
       </div>
       <div class="group">
         <h4><i class="fas fa-language"></i> <span id="lbl-lang-title">Language</span></h4>
@@ -1345,7 +1395,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.6.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.6.2</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1878,8 +1928,35 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     });
     fulltextInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); runFulltext(); }});
 
+    // Font size
+    const FONT_MIN = 12, FONT_MAX = 22, FONT_DEFAULT = 15;
+    const fontDisplay = document.getElementById('fontSizeDisplay');
+
+    function applyFontSize(size) {
+      size = Math.min(FONT_MAX, Math.max(FONT_MIN, size));
+      document.documentElement.style.setProperty('--font-size-doc', size + 'px');
+      localStorage.setItem('font-size', size);
+      if (fontDisplay) fontDisplay.textContent = size + 'px';
+      document.getElementById('fontDecBtn').disabled = size <= FONT_MIN;
+      document.getElementById('fontIncBtn').disabled = size >= FONT_MAX;
+    }
+    function initFontSize() {
+      const saved = parseInt(localStorage.getItem('font-size')) || FONT_DEFAULT;
+      applyFontSize(saved);
+    }
+    document.getElementById('fontIncBtn').addEventListener('click', () => {
+      const cur = parseInt(localStorage.getItem('font-size')) || FONT_DEFAULT;
+      applyFontSize(cur + 1);
+    });
+    document.getElementById('fontDecBtn').addEventListener('click', () => {
+      const cur = parseInt(localStorage.getItem('font-size')) || FONT_DEFAULT;
+      applyFontSize(cur - 1);
+    });
+    document.getElementById('fontResetBtn').addEventListener('click', () => {
+      applyFontSize(FONT_DEFAULT);
+    });
+
     themeBtn.addEventListener('click', ()=>{
-      const mode=localStorage.getItem('theme-mode')||'light';
       const style=localStorage.getItem('theme-style')||'classic';
       applyTheme(style, mode==='dark'?'light':'dark');
     });
@@ -1913,7 +1990,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }});
 
 
-    (async ()=>{ initTheme(); await loadFromStorage(); docxAvailable = await window.__docxReady; renderAll(); })();
+    (async ()=>{ initTheme(); initFontSize(); await loadFromStorage(); docxAvailable = await window.__docxReady; renderAll(); })();
   </script>
 
 
