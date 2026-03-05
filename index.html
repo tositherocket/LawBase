@@ -332,7 +332,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       border-color: rgba(255,255,255,0.2);
     }
     [data-style="corporate"] header #addLawBtn {
-      background: #2196f3;
+      background: var(--primary);
       color: #fff;
     }
     /* Tab strip like Gavelytics */
@@ -485,13 +485,13 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     .wrap {
-      padding: 8px 16px 5px 16px;
+      padding: 12px 16px;
       max-width: 1800px;
       margin: 0 auto;
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 12px;
     }
 
     /* Compact tabs */
@@ -545,15 +545,14 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     /* CONTROLS - dual search panel */
     .controls {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       flex-wrap: wrap;
       align-items: center;
       background: var(--panel);
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-radius: var(--border-radius);
       box-shadow: var(--box-shadow);
       border: 1px solid var(--border);
-      row-gap: 4px;
     }
 
     .controls input {
@@ -584,25 +583,13 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       font-size: 0.8rem;
       color: var(--muted);
       flex-basis: 100%;
-      margin: 0;
-      line-height: 1.2;
-    }
-
-    #activeTitle {
-      padding: 2px 0 0 0;
-      font-size: 0.78rem;
-    }
-
-    /* activeTitle nuk zë hapësirë kur është bosh */
-    #activeTitle:empty {
-      display: none;
     }
 
     /* Main grid */
     .main {
       display: grid;
       grid-template-columns: 240px 1fr;
-      gap: 5px;
+      gap: 12px;
     }
 
     /* Articles list */
@@ -668,7 +655,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     .article {
-      margin: 0 0 12px 0;
+      margin: 0 0 20px 0;
       padding: 2px 0;
     }
 
@@ -687,7 +674,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       overflow-wrap: break-word;
       text-align: justify;
       text-justify: inter-word;
-      line-height: 1.6;
+      line-height: 1.7;
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       font-size: 0.95rem;
       color: var(--text);
@@ -865,10 +852,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     mark.result {
-      background: #ffd54d;
-      color: #111;
-      padding: 0 4px;
-      border-radius: 4px;
+      background: var(--accent);
+      color: #fff;
+      padding: 1px 3px;
+      border-radius: 3px;
+      font-weight: 600;
     }
 
     /* Responsive */
@@ -943,7 +931,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     .heart {
-      color: #e63946;
+      color: var(--danger);
     }
     .lang-btn.lang-active {
       background: var(--primary);
@@ -1005,8 +993,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       display: block;
     }
     mark.fuzzy-match {
-      background: #ffe066;
-      opacity: 0.85;
+      background: var(--primary-soft);
+      opacity: 0.9;
+      outline: 1px solid var(--primary);
     }
   
 
@@ -1241,6 +1230,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     </button>
   </div>
 
+  <button id="themeBtn" style="display:none"></button>
   <div class="app">
     <header>
       <div class="nav">
@@ -1248,9 +1238,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
-          <button id="addLawBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Add</button>
-          <button id="openSettings" class="btn btn-ghost"><i class="fas fa-cog"></i> Settings</button>
-          <button id="themeBtn" class="btn btn-ghost" title="Light/Dark"><i class="fas fa-moon"></i></button>
+          <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
       </div>
     </header>
@@ -1298,6 +1286,12 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     </header>
     <div class="body">
       <div class="group">
+        <h4><i class="fas fa-plus"></i> <span id="lbl-add-law">Add Law</span></h4>
+        <div class="row">
+          <button id="addLawBtn" class="btn btn-primary" style="flex:1"><i class="fas fa-plus"></i> <span id="lbl-add-btn">Add Law</span></button>
+        </div>
+      </div>
+      <div class="group">
         <h4><i class="fas fa-gavel"></i> Laws</h4>
         <div id="lawsManager"></div>
         <div class="hint">Rename, edit content and delete laws here.</div>
@@ -1309,7 +1303,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           <button id="importBtn" class="btn btn-ghost"><i class="fas fa-file-import"></i> Import</button>
           <input id="importFile" type="file" accept=".json" style="display:none" />
         </div>
-        <button id="clearAllBtn" class="btn btn-ghost" style="color:#f56"><i class="fas fa-trash"></i> Clear all</button>
+        <button id="clearAllBtn" class="btn btn-ghost" style="color:var(--danger)"><i class="fas fa-trash"></i> Clear all</button>
       </div>
       <div class="group">
         <h4 id="themeGroupH4"><i class="fas fa-palette"></i> Theme</h4>
@@ -1351,7 +1345,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.5.9</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.6.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1631,9 +1625,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       const key=law.id+'_'+(law.updatedAt||0);
       if(!_docCache[key]){
         const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        // Hiq rreshtat bosh të tepërt (3+ newline → 1 newline)
-        const clean=s=>s.replace(/\n{3,}/g,'\n\n').trim();
-        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+esc(clean(a.text||''))+'</pre></article>').join('');
+        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+esc((a.text||'').trim())+'</pre></article>').join('');
       }
       docEl.innerHTML=_docCache[key];
     }
@@ -1827,7 +1819,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       currentSearchIndex = (currentSearchIndex + 1) % currentSearchResults.length;
       // Highlight current result
       const currentResult = currentSearchResults[currentSearchIndex];
-      currentResult.style.backgroundColor = '#ff6b6b';
+      currentResult.style.backgroundColor = 'rgba(230,57,70,0.25)';
       currentResult.style.outline = '2px solid #e63946';
       // Scroll to the result - instant jump, no animation
       currentResult.scrollIntoView({behavior: 'instant', block: 'center'});
@@ -2082,7 +2074,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   (function() {
     var UI = {
       sq: {
-        brand:'LawBase', addBtn:'Shto', settingsBtn:'Cilësimet',
+        brand:'LawBase', addBtn:'Shto', settingsBtn:'Cilësimet', addLawLabel:'Shto Ligj',
         searchPh:'Kërko sipas nenit/titullit (shembull: 12 ose "Neni 12")',
         searchBtn:'Kërko', clearBtn:'Pastro',
         fulltextPh:'Kërko në të gjithë tekstin',
@@ -2101,7 +2093,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         hitNav:function(i,n){return 'Rezultati '+i+' nga '+n;}, noHits:'⚠️ Nuk ka rezultate',
       },
       mk: {
-        brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки',
+        brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
         searchPh:'Пребарај по член/наслов (пример: 12 или „Член 12")',
         searchBtn:'Пребарај', clearBtn:'Исчисти',
         fulltextPh:'Пребарај низ целиот текст',
@@ -2120,7 +2112,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         hitNav:function(i,n){return 'Погодок '+i+' од '+n;}, noHits:'⚠️ Нема погодоци',
       },
       en: {
-        brand:'LawBase', addBtn:'Add', settingsBtn:'Settings',
+        brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
         searchPh:'Search by article/title (e.g. 12 or Article 12)',
         searchBtn:'Search', clearBtn:'Clear',
         fulltextPh:'Full-text search (e.g. sanctions)',
@@ -2158,7 +2150,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
       setQ('.brand','innerHTML','<i class="fas fa-scale-balanced"></i> '+L.brand);
       setH('addLawBtn','<i class="fas fa-plus"></i> '+L.addBtn);
-      setH('openSettings','<i class="fas fa-cog"></i> '+L.settingsBtn);
+      setH('openSettings','<i class="fas fa-cog"></i>');
       setP('searchInput',L.searchPh);
       setH('searchBtn','<i class="fas fa-search"></i> '+L.searchBtn);
       setH('clearSearchBtn','<i class="fas fa-times"></i> '+L.clearBtn);
