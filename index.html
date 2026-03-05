@@ -319,19 +319,19 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       font-weight: 700;
       letter-spacing: 0.5px;
     }
-    [data-style="corporate"] header .btn-ghost {
+    [data-style="corporate"] .app > header .btn-ghost {
       color: rgba(255,255,255,0.85);
       border-color: rgba(255,255,255,0.25);
     }
-    [data-style="corporate"] header .btn-ghost:hover {
+    [data-style="corporate"] .app > header .btn-ghost:hover {
       background: rgba(255,255,255,0.1);
     }
-    [data-style="corporate"] header #themeBtn,
-    [data-style="corporate"] header #openSettings {
+    [data-style="corporate"] .app > header #themeBtn,
+    [data-style="corporate"] .app > header #openSettings {
       color: rgba(255,255,255,0.85);
       border-color: rgba(255,255,255,0.2);
     }
-    [data-style="corporate"] header #addLawBtn {
+    [data-style="corporate"] .app > header #addLawBtn {
       background: var(--primary);
       color: #fff;
     }
@@ -1462,7 +1462,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.6.8</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v1.7.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
