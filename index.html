@@ -1332,220 +1332,290 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     #noteModal .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
     #noteModal .modal-actions button { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:0.85rem; }
 
-    /* ══════════════════════════════════════════════════
-       DASHBOARD — Google Keep stil
-    ══════════════════════════════════════════════════ */
-    .dashboard-view {
-      min-height: 100vh;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-    }
-    .db-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 20px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .db-title {
-      font-weight: 700;
-      font-size: 1.1rem;
-      color: var(--text);
-      flex: 1;
-      text-align: center;
-    }
-    .db-back { font-size: 0.85rem; }
+    /* ══════════════════════════════════════════════
+       LEGALBASE — vetëm content styles
+       Layout/header/tabs/controls = trashëgohen nga .app
+    ══════════════════════════════════════════════ */
 
-    .db-search-row {
-      padding: 14px 20px 6px;
-      max-width: 600px;
-      margin: 0 auto;
-      width: 100%;
-    }
-    .db-search-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-    .db-search-icon {
-      position: absolute;
-      left: 12px;
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
-    .db-search {
-      width: 100%;
-      padding: 9px 36px 9px 34px;
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      background: var(--panel);
-      color: var(--text);
-      font-size: 0.9rem;
-      outline: none;
-      transition: var(--transition);
-    }
-    .db-search:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
-    .db-search-clear {
-      position: absolute;
-      right: 10px;
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      padding: 4px;
-    }
-
-    /* Cards grid */
-    .db-grid {
-      padding: 16px 20px 40px;
-      columns: 4 240px;
-      column-gap: 14px;
-      max-width: 1600px;
-      margin: 0 auto;
-      width: 100%;
-    }
-    .db-card {
-      break-inside: avoid;
-      margin-bottom: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: box-shadow 0.15s, transform 0.15s;
-      position: relative;
-      background: var(--panel);
-    }
-    .db-card:hover {
-      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
-      transform: translateY(-2px);
-    }
-    .db-card[data-color="yellow"]  { background: #fff8c5; border-color: #f0e080; }
-    .db-card[data-color="green"]   { background: #d2f8d2; border-color: #90e090; }
-    .db-card[data-color="blue"]    { background: #c8e6ff; border-color: #80c0f0; }
-    .db-card[data-color="pink"]    { background: #ffd6e0; border-color: #f0a0b8; }
-    .db-card[data-color="purple"]  { background: #e8d5ff; border-color: #c090f0; }
-    [data-mode="dark"] .db-card[data-color="yellow"]  { background: #3d3400; border-color: #6a5a00; }
-    [data-mode="dark"] .db-card[data-color="green"]   { background: #0a2e0a; border-color: #1a5a1a; }
-    [data-mode="dark"] .db-card[data-color="blue"]    { background: #0a1e30; border-color: #1a4060; }
-    [data-mode="dark"] .db-card[data-color="pink"]    { background: #2e0a14; border-color: #5a1a28; }
-    [data-mode="dark"] .db-card[data-color="purple"]  { background: #1a0a2e; border-color: #3a1a5a; }
-    .db-card-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      color: var(--text);
-      margin-bottom: 8px;
-      word-break: break-word;
-    }
-    .db-card-body {
-      font-size: 0.85rem;
-      color: var(--muted);
-      line-height: 1.55;
-      word-break: break-word;
-      white-space: pre-wrap;
-      max-height: 200px;
+    /* Overlay .app mbi gjithçka */
+    #dashboardView.app {
       overflow: hidden;
-      -webkit-mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
-      mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
     }
-    .db-card-date {
-      font-size: 0.72rem;
-      color: #888;
-      margin-top: 10px;
-    }
-
-    /* Empty state */
-    .db-empty {
-      text-align: center;
-      padding: 80px 20px;
-      color: var(--muted);
-    }
-    .db-empty i { font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.3; }
-    .db-empty p { font-size: 1rem; }
-
-    /* Note card modal */
-    .note-card-modal {
-      border: none;
-      border-radius: 14px;
-      padding: 0;
-      width: min(560px, 95vw);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-      background: var(--panel);
-      color: var(--text);
-    }
-    .note-card-modal::backdrop { background: rgba(0,0,0,0.4); }
-    .ncm-head {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 16px 8px;
-      border-bottom: 1px solid var(--border);
-    }
-    .ncm-title-input {
+    #dashboardView .wrap {
+      overflow: hidden;
       flex: 1;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-size: 1rem;
-      font-weight: 700;
-      outline: none;
-      font-family: var(--font-body);
+      min-height: 0;
     }
-    .ncm-title-input::placeholder { color: var(--muted); font-weight: 400; }
-    .ncm-body {
-      width: 100%;
-      border: none;
-      background: transparent;
+    #dashboardView .main {
+      overflow: hidden;
+      flex: 1;
+      min-height: 0;
+    }
+    #dashboardView .articles-list {
+      max-height: unset;
+      flex: 1;
+      height: 100%;
+      overflow-y: auto;
+    }
+    #dashboardView .doc {
+      max-height: unset;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    /* ── Mobile: dashboard ── */
+    @media (max-width: 900px) {
+      /* Tabs strip: scroll horizontal, buton + Shto titull visible */
+      #dashboardView .law-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0 8px;
+        gap: 0;
+      }
+      #dashboardView .law-tabs::-webkit-scrollbar { display: none; }
+      #dashboardView #dbCatTabs {
+        flex-wrap: nowrap;
+        overflow-x: visible;
+      }
+
+      /* Controls: nje rresht i vetëm (row) jo kolona */
+      #dashboardView .controls {
+        flex-direction: row !important;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 6px 10px;
+      }
+      #dashboardView .controls input {
+        flex: 1;
+        min-width: 120px;
+      }
+
+      /* Main: sidebar sipër (e vogël), doc poshtë */
+      #dashboardView .main {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto 1fr;
+        overflow-y: auto;
+        gap: 0;
+        padding: 8px;
+      }
+
+      /* Sidebar: lartësi e kufizuar, scroll horizontal për items */
+      #dashboardView aside {
+        min-height: 0;
+        max-height: 35vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      #dashboardView .articles-list {
+        max-height: 35vh !important;
+        height: auto !important;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        gap: 6px;
+        padding: 8px;
+        scrollbar-width: thin;
+        margin: 0;
+        border-radius: var(--border-radius);
+        border-left: 1px solid var(--border) !important;
+        border-right: 1px solid var(--border) !important;
+        margin-bottom: 8px;
+      }
+      #dashboardView .articles-list .art-link {
+        flex-shrink: 0;
+        width: auto;
+        max-width: 160px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0;
+      }
+      #dashboardView .articles-list .empty {
+        flex-shrink: 0;
+        width: 100%;
+      }
+
+      /* Doc panel: merr hapësirën e mbetur */
+      #dashboardView .doc {
+        min-height: 200px;
+        flex: 1;
+        border-radius: var(--border-radius);
+        border-left: 1px solid var(--border) !important;
+        border-right: 1px solid var(--border) !important;
+        margin: 0;
+        padding: 12px !important;
+      }
+
+      /* Wrap: scroll i plotë */
+      #dashboardView .wrap {
+        overflow-y: auto;
+        flex: 1;
+        gap: 0;
+        padding: 0;
+      }
+    }
+
+    /* Titujt në listë — si .art-link */
+    .db-title-link {
+      display: block;
+      padding: 8px 12px;
+      margin: 4px 0;
+      border-radius: var(--border-radius);
+      background: var(--chip);
       color: var(--text);
-      font-size: 0.9rem;
+      text-decoration: none;
+      transition: var(--transition);
+      border: 1px solid var(--border);
+      font-size: 0.88rem;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
       font-family: var(--font-body);
-      line-height: 1.6;
-      padding: 14px 16px;
-      resize: vertical;
-      outline: none;
-      min-height: 160px;
       box-sizing: border-box;
     }
-    .ncm-colors {
+    .db-title-link:hover { transform: translateX(3px); box-shadow: var(--box-shadow); background: var(--panel); }
+    .db-title-link.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+    .db-title-link.db-match { border-color: var(--accent); background: var(--primary-soft); }
+    .db-add-title-item {
+      background: var(--primary) !important; color: #fff !important;
+      border-color: var(--primary) !important; font-weight: 600 !important;
+      display: flex !important; align-items: center; justify-content: center;
+      gap: 6px; margin-bottom: 8px !important; transform: none !important;
+    }
+    .db-add-title-item:hover { background: var(--primary-dark) !important; box-shadow: none !important; }
+
+    /* Content view/edit */
+    .db-note-title-view {
+      font-size: 1.25rem; font-weight: 700; color: var(--primary);
+      font-family: var(--font-heading); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .db-note-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 16px; }
+    .db-note-body-view { font-size: calc(var(--font-size-doc, 15px)); line-height: 1.85; color: var(--text); white-space: pre-wrap; word-wrap: break-word; }
+    .db-note-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 12px; padding-bottom: 4px; border-top: 1px solid var(--border); }
+    .db-edit-title {
+      display: block; width: 100%; font-size: 1.2rem; font-weight: 700;
+      border: none; border-bottom: 2px solid var(--border); background: transparent;
+      color: var(--text); padding: 4px 0 6px; outline: none;
+      font-family: var(--font-heading); margin-bottom: 12px; box-sizing: border-box;
+    }
+    .db-edit-title:focus { border-bottom-color: var(--primary); }
+    .db-edit-body {
+      display: block; width: 100%; border: 1px solid var(--border);
+      border-radius: var(--border-radius); background: var(--bg); color: var(--text);
+      font-size: calc(var(--font-size-doc, 15px)); font-family: var(--font-body);
+      line-height: 1.75; padding: 12px 14px; outline: none; resize: vertical;
+      min-height: 260px; box-sizing: border-box; margin-bottom: 8px;
+    }
+    .db-edit-body:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+    .db-edit-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
+
+    /* ── WYSIWYG Editor ── */
+    .db-editor-toolbar {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-top: 1px solid var(--border);
       flex-wrap: wrap;
-    }
-    .ncm-color-label { font-size: 0.8rem; color: var(--muted); }
-    .ncm-color {
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-    .ncm-color:hover { transform: scale(1.2); }
-    .ncm-color.active { border-color: var(--primary); transform: scale(1.1); }
-    .ncm-footer {
-      display: flex;
+      gap: 2px;
       align-items: center;
-      padding: 10px 16px;
-      border-top: 1px solid var(--border);
-      gap: 8px;
+      background: var(--chip);
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: var(--border-radius) var(--border-radius) 0 0;
+      padding: 4px 6px;
+    }
+    .db-tb-group {
+      display: flex;
+      gap: 1px;
+      align-items: center;
+    }
+    .db-tb-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+    .db-tb-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--text);
+      cursor: pointer;
+      padding: 4px 7px;
+      font-size: 0.82rem;
+      line-height: 1;
+      min-width: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .db-tb-btn:hover { background: var(--panel); border-color: var(--border); }
+    .db-tb-btn.active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+    .db-tb-select {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 0.78rem;
+      padding: 3px 4px;
+      cursor: pointer;
+      max-width: 90px;
+    }
+    .db-tb-color {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px;
+      cursor: pointer;
+      background: var(--panel);
+    }
+    .db-editor-body {
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--border-radius) var(--border-radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: calc(var(--font-size-doc, 15px));
+      font-family: var(--font-body);
+      line-height: 1.75;
+      padding: 12px 14px;
+      outline: none;
+      min-height: 220px;
+      max-height: 55vh;
+      overflow-y: auto;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .db-editor-body:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+    /* Rendered HTML content in view mode */
+    .db-note-body-view.db-rendered { white-space: normal; }
+    .db-note-body-view.db-rendered h1,.db-note-body-view.db-rendered h2,
+    .db-note-body-view.db-rendered h3,.db-note-body-view.db-rendered h4 {
+      color: var(--primary); margin: 12px 0 6px; font-family: var(--font-heading);
+    }
+    .db-note-body-view.db-rendered ul,.db-note-body-view.db-rendered ol {
+      padding-left: 20px; margin: 6px 0;
+    }
+    .db-note-body-view.db-rendered a { color: var(--primary); }
+    .db-note-body-view.db-rendered hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    /* Mobile toolbar: smaller */
+    @media (max-width: 900px) {
+      .db-tb-sep { display: none; }
+      .db-tb-btn { padding: 5px 6px; min-width: 32px; font-size: 0.85rem; }
+      .db-tb-select { max-width: 75px; font-size: 0.75rem; }
+      .db-editor-body { max-height: 40vh; }
     }
 
-    /* Mobile */
-    @media (max-width: 600px) {
-      .db-grid { columns: 2 160px; padding: 12px; }
-      .db-header { padding: 10px 12px; }
-      .db-back span { display: none; }
-    }
-
-    #noteDeleteBtn { background: var(--danger); color:#fff; margin-right:auto; }
-    #noteSaveBtn { background: var(--primary); color:#fff; }
-    #noteCancelBtn { background: var(--border); color: var(--text); }
+    /* Category manager */
+    .db-cat-item { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: var(--border-radius); border: 1px solid var(--border); background: var(--chip); margin-bottom: 6px; font-size: 0.85rem; color: var(--text); }
+    .db-cat-item span { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .db-cat-item button { background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; }
+    .db-cat-item button:hover { background: var(--border); color: var(--text); }
+    .db-cat-item .del:hover { color: var(--danger); }
 
     /* ── Reading Mode ─────────────────────────────────────────── */
     .reading-mode-bar {
@@ -1695,58 +1765,72 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
   </div>
 
   <!-- ═══════════════════════════════════════════════
-       DASHBOARD — Google Keep stil
+       LEGALBASE — kopje 1:1 e .app (LawBase)
   ═══════════════════════════════════════════════ -->
-  <div id="dashboardView" class="dashboard-view" style="display:none">
-    <div class="db-header">
-      <button id="dbBackBtn" class="btn btn-ghost db-back"><i class="fas fa-arrow-left"></i> <span id="lbl-back-laws">Kthehu tek Ligjet</span></button>
-      <div class="db-title"><i class="fas fa-sticky-note"></i> <span id="lbl-notes-title">Shënimet e mia</span></div>
-      <button id="dbAddBtn" class="btn btn-primary"><i class="fas fa-plus"></i> <span id="lbl-add-note">Shto</span></button>
-    </div>
+  <div id="dashboardView" class="app" style="display:none;position:fixed;inset:0;z-index:200">
 
-    <!-- Search bar -->
-    <div class="db-search-row">
-      <div class="db-search-wrap">
-        <i class="fas fa-search db-search-icon"></i>
-        <input id="dbSearchInput" type="text" class="db-search" placeholder="Kërko shënime..." />
-        <button id="dbSearchClear" class="db-search-clear" style="display:none"><i class="fas fa-times"></i></button>
+    <header>
+      <div class="nav">
+        <div class="nav-left">
+          <div class="brand"><i class="fas fa-scale-balanced"></i> LegalBase</div>
+        </div>
+        <div class="nav-right">
+          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu"><i class="fas fa-arrow-left"></i></button>
+          <button id="readingModeBtnDB" class="btn btn-ghost" title="Reading mode"><i class="fas fa-book-open"></i></button>
+          <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <div class="law-tabs" style="justify-content:space-between;align-items:center">
+        <div id="dbCatTabs" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1"></div>
+        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
+      </div>
+
+      <div class="controls" id="dbControlsPanel">
+        <input id="dbSearchInput" type="text" placeholder="Kërko në tekst..." />
+        <button id="dbSearchBtn" class="btn btn-primary"><i class="fas fa-search"></i> Kërko</button>
+        <button id="dbSearchNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i> Tjetri</button>
+        <button id="dbSearchClear" class="btn btn-ghost"><i class="fas fa-times"></i> Pastro</button>
+        <span id="dbSearchCount" class="hint"></span>
+        <div id="dbActiveTitle" class="hint"></div>
+      </div>
+
+      <div class="main">
+        <aside>
+          <div id="dbTitlesList" class="articles-list"></div>
+        </aside>
+        <section id="dbDoc" class="doc">
+          <div class="empty"><i class="fas fa-folder-open"></i><br>Zgjidh ose shto një titull</div>
+        </section>
       </div>
     </div>
 
-    <!-- Cards grid -->
-    <div id="dbGrid" class="db-grid"></div>
-
-    <!-- Empty state -->
-    <div id="dbEmpty" class="db-empty" style="display:none">
-      <i class="fas fa-sticky-note"></i>
-      <p id="lbl-no-notes">Nuk ka shënime ende. Shto shënimin e parë!</p>
-    </div>
   </div>
 
-  <!-- Modal për shtim/editim -->
-  <dialog id="noteCardModal" class="note-card-modal">
-    <div class="ncm-head">
-      <input id="ncmTitle" type="text" class="ncm-title-input" placeholder="Titulli..." maxlength="100" />
-      <button id="ncmClose" class="btn btn-ghost"><i class="fas fa-times"></i></button>
-    </div>
-    <textarea id="ncmBody" class="ncm-body" placeholder="Shkruaj këtu..." rows="8"></textarea>
-    <div class="ncm-colors">
-      <span class="ncm-color-label">Ngjyra:</span>
-      <button class="ncm-color active" data-color="default" style="background:var(--panel)" title="Default"></button>
-      <button class="ncm-color" data-color="yellow"  style="background:#fff8c5" title="E verdhë"></button>
-      <button class="ncm-color" data-color="green"   style="background:#d2f8d2" title="E gjelbër"></button>
-      <button class="ncm-color" data-color="blue"    style="background:#c8e6ff" title="E kaltër"></button>
-      <button class="ncm-color" data-color="pink"    style="background:#ffd6e0" title="Rozë"></button>
-      <button class="ncm-color" data-color="purple"  style="background:#e8d5ff" title="Vjollcë"></button>
-    </div>
-    <div class="ncm-footer">
-      <button id="ncmDelete" class="btn" style="color:var(--danger);background:transparent;border:1px solid var(--danger)" title="Fshi"><i class="fas fa-trash"></i></button>
-      <div style="display:flex;gap:8px;margin-left:auto">
-        <button id="ncmCancel" class="btn btn-ghost">Anulo</button>
-        <button id="ncmSave" class="btn btn-primary"><i class="fas fa-save"></i> Ruaj</button>
+  <!-- Settings drawer për Dashboard kategorite -->
+  <aside id="dbSettingsDrawer" class="drawer" aria-hidden="true" style="z-index:1010">
+    <header>
+      <strong><i class="fas fa-folder-open"></i> <span id="lbl-db-settings-title">Kategoritë</span></strong>
+      <div style="float:right"><button id="dbCloseSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
+    </header>
+    <div class="body">
+      <div class="group">
+        <h4><i class="fas fa-plus"></i> Shto kategori</h4>
+        <div class="row">
+          <input id="dbNewCatInput" type="text" class="form-control" placeholder="Emri i kategorisë..." maxlength="80" />
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button id="dbAddCatBtn" class="btn btn-primary" style="width:100%"><i class="fas fa-plus"></i> Shto</button>
+        </div>
+      </div>
+      <div class="group">
+        <h4><i class="fas fa-list"></i> <span id="lbl-manage-cats">Menaxho kategoritë</span></h4>
+        <div id="dbCatManagerList"></div>
       </div>
     </div>
-  </dialog>
+  </aside>
 
   <!-- Settings drawer -->
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -1825,7 +1909,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.3.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.7.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -2444,202 +2528,418 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     });
 
     // ══════════════════════════════════════════════
-    // DASHBOARD — Shënime Google Keep stil
+    // DASHBOARD v2 — identik me LegalBase layout
+    // Data: dbData = { cats: [ { id, name, titles: [ { id, title, body, updatedAt } ] } ] }
     // ══════════════════════════════════════════════
-    const dashboardView  = document.getElementById('dashboardView');
-    const appEl          = document.querySelector('.app');
-    const dbGrid         = document.getElementById('dbGrid');
-    const dbEmpty        = document.getElementById('dbEmpty');
-    const dbSearchInput  = document.getElementById('dbSearchInput');
-    const dbSearchClear  = document.getElementById('dbSearchClear');
-    const noteCardModal  = document.getElementById('noteCardModal');
-    const ncmTitle       = document.getElementById('ncmTitle');
-    const ncmBody        = document.getElementById('ncmBody');
-    const ncmSave        = document.getElementById('ncmSave');
-    const ncmCancel      = document.getElementById('ncmCancel');
-    const ncmDelete      = document.getElementById('ncmDelete');
+    const dashboardView   = document.getElementById('dashboardView');
+    const appEl           = document.querySelector('.app');
+    const dbCatTabsEl     = document.getElementById('dbCatTabs');
+    const dbTitlesListEl  = document.getElementById('dbTitlesList');
+    const dbDocEl         = document.getElementById('dbDoc');
+    const dbSettingsDrawer= document.getElementById('dbSettingsDrawer');
+    const dbCatManagerList= document.getElementById('dbCatManagerList');
+    const dbNewCatInput   = document.getElementById('dbNewCatInput');
 
-    let dbNotes = [];
-    let dbEditId = null;
-    let dbActiveColor = 'default';
+    let dbData      = { cats: [] };
+    let dbActiveCat = null;   // cat id
+    let dbActiveTitle= null;  // title id
+    let dbEditing   = false;
 
-    // Migrate any old localStorage notes to IndexedDB on first load
+    // ── Storage ──
+    const DB_NOTES_KEY = 'dashboard-notes';
+
     function dbMigrateFromLS(){
       try {
         const old = localStorage.getItem('db-notes');
         if(old){
           const parsed = JSON.parse(old);
-          if(Array.isArray(parsed) && parsed.length) return parsed;
+          if(Array.isArray(parsed) && parsed.length){
+            const titles = parsed.map(n=>({ id:n.id||dbUid(), title:n.title||'', body:n.body||'', updatedAt:n.updatedAt||Date.now() }));
+            return { cats:[{ id:dbUid(), name:'Të importuara', titles }] };
+          }
           localStorage.removeItem('db-notes');
         }
       } catch(e){}
       return null;
     }
 
-    const DB_NOTES_KEY = 'dashboard-notes';
     function dbSave(){
       openDB().then(db=>{
-        const tx=db.transaction('data','readwrite');
-        tx.objectStore('data').put(dbNotes, DB_NOTES_KEY);
-      }).catch(e=>console.error('dbSave error:',e));
+        db.transaction('data','readwrite').objectStore('data').put(dbData, DB_NOTES_KEY);
+      }).catch(e=>console.error('dbSave:',e));
     }
+
     function dbLoad(){
       return openDB().then(db=>new Promise(res=>{
         const req=db.transaction('data','readonly').objectStore('data').get(DB_NOTES_KEY);
         req.onsuccess=e=>{
-          let notes=e.target.result||null;
-          if(!notes){
-            // Try migrate from localStorage
-            const migrated=dbMigrateFromLS();
-            if(migrated){ notes=migrated; dbNotes=notes; dbSave(); localStorage.removeItem('db-notes'); }
-            else notes=[];
+          let d=e.target.result||null;
+          if(!d||!d.cats){
+            const m=dbMigrateFromLS();
+            if(m){ d=m; dbData=d; dbSave(); localStorage.removeItem('db-notes'); }
+            else d={cats:[]};
           }
-          dbNotes=notes;
+          dbData=d;
           res();
         };
         req.onerror=()=>res();
       }));
     }
 
-    function dbUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+    function dbUid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+    function dbFmtDate(ts){ return new Date(ts).toLocaleDateString('sq-AL',{day:'2-digit',month:'short',year:'numeric'}); }
+    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function dbFindCat(id){ return dbData.cats.find(c=>c.id===id); }
 
-    function dbFormatDate(ts) {
-      const d = new Date(ts);
-      return d.toLocaleDateString('sq-AL', {day:'2-digit', month:'short', year:'numeric'});
-    }
-
-    function dbRender(filter) {
-      const q = (filter || '').toLowerCase();
-      const filtered = q
-        ? dbNotes.filter(n => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
-        : dbNotes;
-      dbGrid.innerHTML = '';
-      if (!filtered.length) { dbEmpty.style.display = 'block'; return; }
-      dbEmpty.style.display = 'none';
-      // Sort: newest first
-      [...filtered].sort((a,b) => b.updatedAt - a.updatedAt).forEach(note => {
-        const card = document.createElement('div');
-        card.className = 'db-card';
-        card.dataset.id = note.id;
-        if (note.color && note.color !== 'default') card.dataset.color = note.color;
-        card.innerHTML = `
-          ${note.title ? `<div class="db-card-title">${escHtml(note.title)}</div>` : ''}
-          ${note.body  ? `<div class="db-card-body">${escHtml(note.body)}</div>` : ''}
-          <div class="db-card-date">${dbFormatDate(note.updatedAt)}</div>
-        `;
-        card.addEventListener('click', () => dbOpenModal(note.id));
-        dbGrid.appendChild(card);
+    // ── Render tabs (kategorite) ──
+    function dbRenderTabs(){
+      const el = document.getElementById('dbCatTabs');
+      el.innerHTML='';
+      dbData.cats.forEach(cat=>{
+        const tab=document.createElement('div');
+        tab.className='law-tab'+(dbActiveCat===cat.id?' active':'');
+        tab.innerHTML=`<span class="dot"></span><span class="title">${escH(cat.name)}</span>`;
+        tab.addEventListener('click',()=>{ dbActiveCat=cat.id; dbActiveTitle=null; dbEditing=false; dbRender(); });
+        el.appendChild(tab);
       });
     }
 
-    function escHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-
-    function dbOpenModal(id) {
-      dbEditId = id || null;
-      const note = id ? dbNotes.find(n => n.id === id) : null;
-      ncmTitle.value = note ? note.title : '';
-      ncmBody.value  = note ? note.body  : '';
-      dbActiveColor  = note ? (note.color || 'default') : 'default';
-      // Update color buttons
-      noteCardModal.querySelectorAll('.ncm-color').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.color === dbActiveColor);
-      });
-      // Apply color to modal bg
-      applyModalColor(dbActiveColor);
-      ncmDelete.style.display = id ? 'inline-flex' : 'none';
-      noteCardModal.showModal();
-      ncmTitle.focus();
-    }
-
-    function applyModalColor(color) {
-      const isDark = document.documentElement.getAttribute('data-mode') === 'dark';
-      const colors = isDark ? {
-        default: 'var(--panel)',
-        yellow:  '#3d3400',
-        green:   '#0a2e0a',
-        blue:    '#0a1e30',
-        pink:    '#2e0a14',
-        purple:  '#1a0a2e',
-      } : {
-        default: 'var(--panel)',
-        yellow:  '#fff8c5',
-        green:   '#d2f8d2',
-        blue:    '#c8e6ff',
-        pink:    '#ffd6e0',
-        purple:  '#e8d5ff',
-      };
-      noteCardModal.style.background = colors[color] || colors.default;
-      noteCardModal.style.color = 'var(--text)';
-    }
-
-    ncmSave.addEventListener('click', () => {
-      const title = ncmTitle.value.trim();
-      const body  = ncmBody.value.trim();
-      if (!title && !body) return;
-      if (dbEditId) {
-        const idx = dbNotes.findIndex(n => n.id === dbEditId);
-        if (idx > -1) { dbNotes[idx] = {...dbNotes[idx], title, body, color: dbActiveColor, updatedAt: Date.now()}; }
-      } else {
-        dbNotes.push({ id: dbUid(), title, body, color: dbActiveColor, createdAt: Date.now(), updatedAt: Date.now() });
+    // ── Render titles list (sidebar) ──
+    function dbRenderTitles(){
+      dbTitlesListEl.innerHTML='';
+      const L=window._dbLang||window._uiLang||{};
+      const cat=dbFindCat(dbActiveCat);
+      if(!cat){
+        const d=document.createElement('div');
+        d.className='empty'; d.innerHTML='<i class="fas fa-folder-open"></i><br>'+(L.dbNoCat||'Select a category');
+        dbTitlesListEl.appendChild(d); return;
       }
-      dbSave();
-      noteCardModal.close();
-      dbRender(dbSearchInput.value);
-    });
-
-    ncmDelete.addEventListener('click', () => {
-      if (!dbEditId) return;
-      const msg = (window._uiLang && window._uiLang.confirmDelete) || 'Delete this note?';
-      if (!confirm(msg)) return;
-      dbNotes = dbNotes.filter(n => n.id !== dbEditId);
-      dbSave();
-      noteCardModal.close();
-      dbRender(dbSearchInput.value);
-    });
-
-    ncmCancel.addEventListener('click', () => noteCardModal.close());
-    document.getElementById('ncmClose').addEventListener('click', () => noteCardModal.close());
-
-    // Color picker in modal
-    noteCardModal.querySelectorAll('.ncm-color').forEach(btn => {
-      btn.addEventListener('click', () => {
-        dbActiveColor = btn.dataset.color;
-        noteCardModal.querySelectorAll('.ncm-color').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        applyModalColor(dbActiveColor);
+      if(!cat.titles||!cat.titles.length){
+        const d=document.createElement('div');
+        d.className='empty'; d.innerHTML='<i class="fas fa-file-alt"></i><br>'+(L.dbNoTitles||'No titles');
+        dbTitlesListEl.appendChild(d); return;
+      }
+      cat.titles.forEach(t=>{
+        const link=document.createElement('a');
+        link.className='art-link'+(dbActiveTitle===t.id?' active':'');
+        link.textContent=t.title||(L.dbNoTitle||'(no title)');
+        link.href='#';
+        link.addEventListener('click',e=>{ e.preventDefault(); dbActiveTitle=t.id; dbEditing=false; dbRender(); });
+        dbTitlesListEl.appendChild(link);
       });
+    }
+
+    // ── Render doc (content) ──
+    function dbRenderDoc(){
+      dbDocEl.innerHTML='';
+      const L=window._dbLang||window._uiLang||{};
+      if(!dbActiveTitle){
+        const cat=dbFindCat(dbActiveCat);
+        const d=document.createElement('div');
+        d.className='empty';
+        d.innerHTML=cat
+          ? '<i class="fas fa-file-alt"></i><br>'+(L.dbSelectTitle||'Select or add a title')
+          : '<i class="fas fa-folder-open"></i><br>'+(L.dbNoCat||'Select a category');
+        dbDocEl.appendChild(d);
+        return;
+      }
+      const cat=dbFindCat(dbActiveCat);
+      if(!cat) return;
+      const t=cat.titles.find(x=>x.id===dbActiveTitle);
+      if(!t) return;
+
+      if(dbEditing){
+        dbDocEl.innerHTML=`
+          <input class="db-edit-title" id="dbEditTitleInp" type="text" value="${escH(t.title)}" placeholder="${escH(L.dbTitlePh||'Title...')}" maxlength="120" />
+          <div class="db-editor-toolbar" id="dbToolbar">
+            <div class="db-tb-group">
+              <button class="db-tb-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+              <button class="db-tb-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+              <button class="db-tb-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+              <button class="db-tb-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+            </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group">
+              <select class="db-tb-select" id="dbTbHeading" title="Heading">
+                <option value="p">Paragraph</option>
+                <option value="h1">H1</option>
+                <option value="h2">H2</option>
+                <option value="h3">H3</option>
+                <option value="h4">H4</option>
+              </select>
+              <select class="db-tb-select" id="dbTbFontSize" title="Font size">
+                <option value="3" selected>Normal</option>
+                <option value="1">Small</option>
+                <option value="4">Large</option>
+                <option value="5">Larger</option>
+                <option value="6">Huge</option>
+              </select>
+            </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group">
+              <button class="db-tb-btn" data-cmd="justifyLeft" title="Align left"><i class="fas fa-align-left"></i></button>
+              <button class="db-tb-btn" data-cmd="justifyCenter" title="Align center"><i class="fas fa-align-center"></i></button>
+              <button class="db-tb-btn" data-cmd="justifyRight" title="Align right"><i class="fas fa-align-right"></i></button>
+              <button class="db-tb-btn" data-cmd="justifyFull" title="Justify"><i class="fas fa-align-justify"></i></button>
+            </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group">
+              <button class="db-tb-btn" data-cmd="insertUnorderedList" title="Bullet list"><i class="fas fa-list-ul"></i></button>
+              <button class="db-tb-btn" data-cmd="insertOrderedList" title="Numbered list"><i class="fas fa-list-ol"></i></button>
+              <button class="db-tb-btn" data-cmd="indent" title="Indent"><i class="fas fa-indent"></i></button>
+              <button class="db-tb-btn" data-cmd="outdent" title="Outdent"><i class="fas fa-outdent"></i></button>
+            </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group">
+              <input type="color" class="db-tb-color" id="dbTbFgColor" title="Text color" value="#000000">
+              <input type="color" class="db-tb-color" id="dbTbBgColor" title="Highlight color" value="#ffff00">
+              <button class="db-tb-btn" data-cmd="removeFormat" title="Clear formatting"><i class="fas fa-remove-format"></i></button>
+            </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group">
+              <button class="db-tb-btn" id="dbTbLink" title="Insert link"><i class="fas fa-link"></i></button>
+              <button class="db-tb-btn" data-cmd="unlink" title="Remove link"><i class="fas fa-unlink"></i></button>
+              <button class="db-tb-btn" data-cmd="insertHorizontalRule" title="Horizontal line"><i class="fas fa-minus"></i></button>
+            </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group">
+              <button class="db-tb-btn" data-cmd="undo" title="Undo"><i class="fas fa-undo"></i></button>
+              <button class="db-tb-btn" data-cmd="redo" title="Redo"><i class="fas fa-redo"></i></button>
+            </div>
+          </div>
+          <div class="db-editor-body" id="dbEditBodyInp" contenteditable="true">${t.body||''}</div>
+          <div class="db-edit-actions">
+            <button class="btn btn-primary" id="dbSaveBtn"><i class="fas fa-save"></i> ${L.dbSave||'Save'}</button>
+            <button class="btn btn-ghost" id="dbCancelBtn">${L.dbCancel||'Cancel'}</button>
+            <button class="btn" style="margin-left:auto;color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
+          </div>`;
+
+        // ── Toolbar logic ──
+        const editor = document.getElementById('dbEditBodyInp');
+        const toolbar = document.getElementById('dbToolbar');
+
+        // Exec command buttons
+        toolbar.querySelectorAll('.db-tb-btn[data-cmd]').forEach(btn=>{
+          btn.addEventListener('mousedown', e=>{
+            e.preventDefault();
+            document.execCommand(btn.dataset.cmd, false, null);
+            editor.focus();
+            dbUpdateToolbarState();
+          });
+        });
+
+        // Heading select
+        document.getElementById('dbTbHeading').addEventListener('change', function(){
+          document.execCommand('formatBlock', false, this.value==='p'?'p':'h'+this.value.slice(1));
+          editor.focus();
+        });
+
+        // Font size
+        document.getElementById('dbTbFontSize').addEventListener('change', function(){
+          document.execCommand('fontSize', false, this.value);
+          editor.focus();
+        });
+
+        // Text color
+        document.getElementById('dbTbFgColor').addEventListener('input', function(){
+          document.execCommand('foreColor', false, this.value);
+          editor.focus();
+        });
+
+        // Highlight color
+        document.getElementById('dbTbBgColor').addEventListener('input', function(){
+          document.execCommand('hiliteColor', false, this.value);
+          editor.focus();
+        });
+
+        // Link
+        document.getElementById('dbTbLink').addEventListener('mousedown', e=>{
+          e.preventDefault();
+          const url = prompt('URL:');
+          if(url) document.execCommand('createLink', false, url);
+          editor.focus();
+        });
+
+        // Update toolbar active states
+        function dbUpdateToolbarState(){
+          ['bold','italic','underline','strikeThrough'].forEach(cmd=>{
+            const btn = toolbar.querySelector('[data-cmd="'+cmd+'"]');
+            if(btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+          });
+        }
+        editor.addEventListener('keyup', dbUpdateToolbarState);
+        editor.addEventListener('mouseup', dbUpdateToolbarState);
+        editor.addEventListener('selectionchange', dbUpdateToolbarState);
+
+        document.getElementById('dbSaveBtn').addEventListener('click',()=>{
+          t.title=document.getElementById('dbEditTitleInp').value.trim()||(L.dbNoTitle||'(no title)');
+          t.body=document.getElementById('dbEditBodyInp').innerHTML;
+          t.updatedAt=Date.now();
+          dbEditing=false; dbSave(); dbRender();
+        });
+        document.getElementById('dbCancelBtn').addEventListener('click',()=>{ dbEditing=false; dbRenderDoc(); });
+        document.getElementById('dbDelBtn').addEventListener('click',()=>{
+          if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
+          cat.titles=cat.titles.filter(x=>x.id!==t.id);
+          dbActiveTitle=null; dbEditing=false; dbSave(); dbRender();
+        });
+        document.getElementById('dbEditTitleInp').focus();
+      } else {
+        dbDocEl.innerHTML=`
+          <div class="db-note-title-view">${escH(t.title||(L.dbNoTitle||'(no title)'))}</div>
+          <div class="db-note-meta"><i class="fas fa-clock" style="opacity:.5"></i> ${dbFmtDate(t.updatedAt)}</div>
+          <div class="db-note-body-view db-rendered">${t.body||''}</div>
+          <div class="db-note-actions">
+            <button class="btn btn-primary" id="dbEditBtn"><i class="fas fa-pen"></i> ${L.dbEdit||'Edit'}</button>
+            <button class="btn" style="color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
+          </div>`;
+        document.getElementById('dbEditBtn').addEventListener('click',()=>{ dbEditing=true; dbRenderDoc(); });
+        document.getElementById('dbDelBtn').addEventListener('click',()=>{
+          if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
+          cat.titles=cat.titles.filter(x=>x.id!==t.id);
+          dbActiveTitle=null; dbSave(); dbRender();
+        });
+      }
+    }
+
+    function dbRender(){
+      dbRenderTabs(); dbRenderTitles(); dbRenderDoc();
+      const L=window._dbLang||window._uiLang||{};
+      const el = document.getElementById('dbActiveTitle');
+      if(el){
+        const cat = dbFindCat(dbActiveCat);
+        const noTitle = L.dbNoTitle||'(no title)';
+        const t = cat && dbActiveTitle && cat.titles.find(x=>x.id===dbActiveTitle);
+        el.textContent = cat ? (t ? `${L.dbActive||'Active:'} ${cat.name} › ${t.title||noTitle}` : `${L.dbActive||'Active:'} ${cat.name}`) : '';
+      }
+      if(typeof dbApplySearch==='function') dbApplySearch();
+    }
+
+    // ── New title ──
+    function dbNewTitle(catId){
+      const cat=dbFindCat(catId); if(!cat) return;
+      const t={id:dbUid(),title:'',body:'',updatedAt:Date.now()};
+      cat.titles=(cat.titles||[]);
+      cat.titles.unshift(t);
+      dbActiveCat=catId; dbActiveTitle=t.id; dbEditing=true;
+      dbSave(); dbRender();
+    }
+
+    // ── Category settings drawer ──
+    function dbRenderCatManager(){
+      dbCatManagerList.innerHTML='';
+      if(!dbData.cats.length){
+        dbCatManagerList.innerHTML='<div style="font-size:0.8rem;color:var(--muted);text-align:center;padding:10px">Nuk ka kategori</div>';
+        return;
+      }
+      dbData.cats.forEach((cat,i)=>{
+        const item=document.createElement('div');
+        item.className='db-cat-item';
+        item.innerHTML=`
+          <i class="fas fa-folder" style="color:var(--primary);flex-shrink:0"></i>
+          <span>${escH(cat.name)}</span>
+          <button class="del" title="${(window._dbLang||{}).dbDelete||'Delete'}"><i class="fas fa-trash"></i></button>`;
+        item.querySelector('.del').addEventListener('click',()=>{
+          const L=window._dbLang||window._uiLang||{};
+          if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
+          dbData.cats.splice(i,1);
+          if(dbActiveCat===cat.id){ dbActiveCat=null; dbActiveTitle=null; }
+          dbSave(); dbRenderCatManager(); dbRender();
+        });
+        dbCatManagerList.appendChild(item);
+      });
+    }
+
+
+    document.getElementById('dbAddCatBtn').addEventListener('click',()=>{
+      const name=dbNewCatInput.value.trim();
+      if(!name) return;
+      const cat={id:dbUid(),name,titles:[]};
+      dbData.cats.push(cat);
+      dbActiveCat=cat.id;
+      dbNewCatInput.value='';
+      dbSave(); dbRenderCatManager(); dbRender();
+    });
+    dbNewCatInput.addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('dbAddCatBtn').click(); });
+
+    // Settings drawer open/close
+    document.getElementById('dbOpenSettings').addEventListener('click',()=>{
+      dbRenderCatManager();
+      dbSettingsDrawer.setAttribute('aria-hidden','false');
+      dbSettingsDrawer.classList.add('open');
+    });
+    document.getElementById('dbCloseSettings').addEventListener('click',()=>{
+      dbSettingsDrawer.setAttribute('aria-hidden','true');
+      dbSettingsDrawer.classList.remove('open');
     });
 
-    // Search
-    dbSearchInput.addEventListener('input', () => {
-      const q = dbSearchInput.value;
-      dbSearchClear.style.display = q ? 'block' : 'none';
-      dbRender(q);
+    // ── Search in sidebar ──
+    const dbSearchInputEl = document.getElementById('dbSearchInput');
+    const dbSearchCountEl = document.getElementById('dbSearchCount');
+    let dbSearchQuery = '';
+
+    let dbSearchHitIdx = 0;
+    let dbSearchHits = [];
+
+    function dbApplySearch(){
+      const q = dbSearchQuery.toLowerCase().trim();
+      const links = dbTitlesListEl.querySelectorAll('.art-link');
+      dbSearchHits = [];
+      links.forEach(link => {
+        const matches = !q || link.textContent.toLowerCase().includes(q);
+        link.style.display = matches ? '' : 'none';
+        link.classList.toggle('db-match', !!(q && matches));
+        if(matches && q) dbSearchHits.push(link);
+      });
+      dbSearchHitIdx = 0;
+      const L=window._dbLang||window._uiLang||{};
+      dbSearchCountEl.textContent = q ? ((L.hits||function(n){return n+' results';})(dbSearchHits.length)) : '';
+    }
+
+    dbSearchInputEl.addEventListener('input', () => {
+      dbSearchQuery = dbSearchInputEl.value;
+      document.getElementById('dbSearchClear').style.display = dbSearchQuery ? '' : 'none';
+      dbApplySearch();
     });
-    dbSearchClear.addEventListener('click', () => {
-      dbSearchInput.value = '';
-      dbSearchClear.style.display = 'none';
-      dbRender('');
+    document.getElementById('dbSearchBtn').addEventListener('click', () => { dbSearchQuery = dbSearchInputEl.value; dbApplySearch(); });
+    document.getElementById('dbSearchNextBtn').addEventListener('click', () => {
+      if(!dbSearchHits.length) return;
+      dbSearchHitIdx = (dbSearchHitIdx + 1) % dbSearchHits.length;
+      dbSearchHits[dbSearchHitIdx].scrollIntoView({block:'nearest'});
+      dbSearchHits[dbSearchHitIdx].click();
+    });
+    document.getElementById('dbSearchClear').addEventListener('click', () => {
+      dbSearchInputEl.value = ''; dbSearchQuery = '';
+      document.getElementById('dbSearchClear').style.display = 'none';
+      dbSearchCountEl.textContent = '';
+      dbApplySearch();
     });
 
-    // Add button
-    document.getElementById('dbAddBtn').addEventListener('click', () => dbOpenModal(null));
+    // ── "Shto titull" button in header ──
+    document.getElementById('dbAddTitleBtn').addEventListener('click', () => {
+      if(dbActiveCat) {
+        dbNewTitle(dbActiveCat);
+      } else if(dbData.cats.length > 0) {
+        dbActiveCat = dbData.cats[0].id;
+        dbNewTitle(dbActiveCat);
+        dbRender();
+      } else {
+        alert('Fillimisht shto një kategori nga ⚙️');
+      }
+    });
 
-    // Back to laws
+    // ── Back to laws ──
     document.getElementById('dbBackBtn').addEventListener('click', () => {
       dashboardView.style.display = 'none';
       appEl.style.display = '';
     });
 
-    // Dashboard toggle from header
+    // ── Dashboard toggle from header ──
     document.getElementById('dashboardBtn').addEventListener('click', () => {
-      // Exit reading mode first if active
       if(document.body.classList.contains('reading-mode')) leaveReadingMode();
       appEl.style.display = 'none';
       dashboardView.style.display = 'flex';
-      dbRender(dbSearchInput.value);
+      dbRender();
     });
 
     // Reading Mode
@@ -3009,6 +3309,15 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         confirmDelete:'Të fshihet ky shënim?',
         goToArt:'↗ Shko te neni',
         exitReading:'Dil nga leximi',
+        // LegalBase
+        dbAddTitle:'Shto titull', dbBack:'Kthehu', dbSettings:'Cilësimet',
+        dbSearchPh:'Kërko në tekst...', dbSearchBtn:'Kërko', dbNext:'Tjetri', dbClear:'Pastro',
+        dbActive:'Aktiv:', dbNoCat:'Zgjidh një kategori', dbNoTitles:'Nuk ka tituj',
+        dbSelectTitle:'Zgjidh ose shto një titull',
+        dbCatsTitle:'Kategoritë', dbAddCat:'Shto kategori', dbManageCats:'Menaxho kategoritë',
+        dbEdit:'Edito', dbDelete:'Fshi', dbSave:'Ruaj', dbCancel:'Anulo',
+        dbTitlePh:'Titulli...', dbConfirmDel:'Të fshihet?',
+        dbNoTitle:'(pa titull)',
       },
       mk: {
         brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
@@ -3031,6 +3340,15 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         confirmDelete:'Да се избрише оваа белешка?',
         goToArt:'↗ Оди до членот',
         exitReading:'Излез од читање',
+        // LegalBase
+        dbAddTitle:'Додај наслов', dbBack:'Назад', dbSettings:'Поставки',
+        dbSearchPh:'Пребарај во текст...', dbSearchBtn:'Пребарај', dbNext:'Наредно', dbClear:'Исчисти',
+        dbActive:'Активен:', dbNoCat:'Избери категорија', dbNoTitles:'Нема наслови',
+        dbSelectTitle:'Избери или додај наслов',
+        dbCatsTitle:'Категории', dbAddCat:'Додај категорија', dbManageCats:'Управувај со категории',
+        dbEdit:'Уреди', dbDelete:'Избриши', dbSave:'Зачувај', dbCancel:'Откажи',
+        dbTitlePh:'Наслов...', dbConfirmDel:'Да се избрише?',
+        dbNoTitle:'(без наслов)',
       },
       en: {
         brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
@@ -3053,6 +3371,15 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         confirmDelete:'Delete this note?',
         goToArt:'↗ Go to article',
         exitReading:'Exit Reading Mode',
+        // LegalBase
+        dbAddTitle:'Add title', dbBack:'Back', dbSettings:'Settings',
+        dbSearchPh:'Search in text...', dbSearchBtn:'Search', dbNext:'Next', dbClear:'Clear',
+        dbActive:'Active:', dbNoCat:'Select a category', dbNoTitles:'No titles',
+        dbSelectTitle:'Select or add a title',
+        dbCatsTitle:'Categories', dbAddCat:'Add category', dbManageCats:'Manage categories',
+        dbEdit:'Edit', dbDelete:'Delete', dbSave:'Save', dbCancel:'Cancel',
+        dbTitlePh:'Title...', dbConfirmDel:'Delete this?',
+        dbNoTitle:'(no title)',
       }
     };
 
@@ -3099,6 +3426,24 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       setH('saveLawBtn','<i class="fas fa-save"></i> '+L.saveBtn);
       setH('artPopup-goto', L.goToArt||'↗ Go to article');
       setH('exitReadingMode', '<i class="fas fa-times"></i> '+(L.exitReading||'Exit Reading Mode'));
+
+      // ── LegalBase i18n ──
+      var dbAddTitleEl = document.getElementById('dbAddTitleBtn');
+      if(dbAddTitleEl) dbAddTitleEl.querySelector('.title').innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddTitle||L.addBtn);
+      setH('dbBackBtn', '<i class="fas fa-arrow-left"></i>');
+      setH('dbOpenSettings', '<i class="fas fa-cog"></i>');
+      setP('dbSearchInput', L.dbSearchPh||L.fulltextPh);
+      setH('dbSearchBtn', '<i class="fas fa-search"></i> '+(L.dbSearchBtn||L.searchBtn));
+      setH('dbSearchNextBtn', '<i class="fas fa-arrow-down"></i> '+(L.dbNext||L.nextBtn));
+      setH('dbSearchClear', '<i class="fas fa-times"></i> '+(L.dbClear||L.clearBtn));
+      var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong');
+      if(dbSettingsH) dbSettingsH.innerHTML = '<i class="fas fa-folder-open"></i> '+(L.dbCatsTitle||'Categories');
+      var dbAddCatGrp = document.querySelector('#dbSettingsDrawer .group h4');
+      if(dbAddCatGrp) dbAddCatGrp.innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddCat||'Add category');
+      var dbManageGrp = document.querySelectorAll('#dbSettingsDrawer .group h4')[1];
+      if(dbManageGrp) dbManageGrp.innerHTML = '<i class="fas fa-list"></i> '+(L.dbManageCats||'Manage categories');
+      // Store for use in JS
+      window._dbLang = L;
 
       if(typeof renderAll==='function') renderAll();
     }
