@@ -696,6 +696,102 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       padding: 12px;
     }
 
+    /* Cross-reference clickable numbers */
+    .xref-num {
+      display: inline-block;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      border-radius: 4px;
+      padding: 0 5px;
+      font-size: 0.82em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      line-height: 1.5;
+      text-decoration: none;
+    }
+    .xref-num:hover {
+      background: var(--primary);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* Article preview popup */
+    #artPopup-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 1999;
+      display: none;
+    }
+    #artPopup-backdrop.open { display: block; }
+    #artPopup {
+      position: fixed;
+      z-index: 2000;
+      width: fit-content;
+      max-width: min(90vw, 960px);
+      max-height: 80vh;
+      min-width: 360px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      box-shadow: 0 8px 48px rgba(0,0,0,0.3);
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #artPopup.open { display: flex; }
+    #artPopup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--chip);
+      flex-shrink: 0;
+    }
+    #artPopup-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--primary);
+      font-family: var(--font-heading);
+    }
+    #artPopup-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 1.1rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    #artPopup-close:hover { background: var(--border); color: var(--text); }
+    #artPopup-body {
+      overflow-y: auto;
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      flex: 1 1 auto;
+    }
+    #artPopup-footer {
+      padding: 8px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--chip);
+      flex-shrink: 0;
+    }
+    #artPopup-goto {
+      font-size: 0.8rem;
+      padding: 5px 10px;
+    }
+
     .empty {
       border: 2px dashed var(--border);
       padding: 24px;
@@ -1235,6 +1331,218 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
     #noteModal .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
     #noteModal .modal-actions button { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:0.85rem; }
+
+    /* ══════════════════════════════════════════════════
+       DASHBOARD — Google Keep stil
+    ══════════════════════════════════════════════════ */
+    .dashboard-view {
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+    }
+    .db-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .db-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      flex: 1;
+      text-align: center;
+    }
+    .db-back { font-size: 0.85rem; }
+
+    .db-search-row {
+      padding: 14px 20px 6px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .db-search-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .db-search-icon {
+      position: absolute;
+      left: 12px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .db-search {
+      width: 100%;
+      padding: 9px 36px 9px 34px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: var(--transition);
+    }
+    .db-search:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+    .db-search-clear {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    /* Cards grid */
+    .db-grid {
+      padding: 16px 20px 40px;
+      columns: 4 240px;
+      column-gap: 14px;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .db-card {
+      break-inside: avoid;
+      margin-bottom: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s;
+      position: relative;
+      background: var(--panel);
+    }
+    .db-card:hover {
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+    .db-card[data-color="yellow"]  { background: #fff8c5; border-color: #f0e080; }
+    .db-card[data-color="green"]   { background: #d2f8d2; border-color: #90e090; }
+    .db-card[data-color="blue"]    { background: #c8e6ff; border-color: #80c0f0; }
+    .db-card[data-color="pink"]    { background: #ffd6e0; border-color: #f0a0b8; }
+    .db-card[data-color="purple"]  { background: #e8d5ff; border-color: #c090f0; }
+    [data-mode="dark"] .db-card[data-color="yellow"]  { background: #3d3400; border-color: #6a5a00; }
+    [data-mode="dark"] .db-card[data-color="green"]   { background: #0a2e0a; border-color: #1a5a1a; }
+    [data-mode="dark"] .db-card[data-color="blue"]    { background: #0a1e30; border-color: #1a4060; }
+    [data-mode="dark"] .db-card[data-color="pink"]    { background: #2e0a14; border-color: #5a1a28; }
+    [data-mode="dark"] .db-card[data-color="purple"]  { background: #1a0a2e; border-color: #3a1a5a; }
+    .db-card-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+      margin-bottom: 8px;
+      word-break: break-word;
+    }
+    .db-card-body {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.55;
+      word-break: break-word;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+      mask-image: linear-gradient(to bottom, black 75%, transparent 100%);
+    }
+    .db-card-date {
+      font-size: 0.72rem;
+      color: #888;
+      margin-top: 10px;
+    }
+
+    /* Empty state */
+    .db-empty {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+    .db-empty i { font-size: 3rem; margin-bottom: 16px; display: block; opacity: 0.3; }
+    .db-empty p { font-size: 1rem; }
+
+    /* Note card modal */
+    .note-card-modal {
+      border: none;
+      border-radius: 14px;
+      padding: 0;
+      width: min(560px, 95vw);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      background: var(--panel);
+      color: var(--text);
+    }
+    .note-card-modal::backdrop { background: rgba(0,0,0,0.4); }
+    .ncm-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 16px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .ncm-title-input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 700;
+      outline: none;
+      font-family: var(--font-body);
+    }
+    .ncm-title-input::placeholder { color: var(--muted); font-weight: 400; }
+    .ncm-body {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: var(--font-body);
+      line-height: 1.6;
+      padding: 14px 16px;
+      resize: vertical;
+      outline: none;
+      min-height: 160px;
+      box-sizing: border-box;
+    }
+    .ncm-colors {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .ncm-color-label { font-size: 0.8rem; color: var(--muted); }
+    .ncm-color {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .ncm-color:hover { transform: scale(1.2); }
+    .ncm-color.active { border-color: var(--primary); transform: scale(1.1); }
+    .ncm-footer {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      gap: 8px;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .db-grid { columns: 2 160px; padding: 12px; }
+      .db-header { padding: 10px 12px; }
+      .db-back span { display: none; }
+    }
+
     #noteDeleteBtn { background: var(--danger); color:#fff; margin-right:auto; }
     #noteSaveBtn { background: var(--primary); color:#fff; }
     #noteCancelBtn { background: var(--border); color: var(--text); }
@@ -1344,6 +1652,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
+          <button id="dashboardBtn" class="btn btn-ghost" title="Shënime"><i class="fas fa-sticky-note"></i></button>
           <button id="readingModeBtn" class="btn btn-ghost" title="Reading mode"><i class="fas fa-book-open"></i></button>
           <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
@@ -1384,6 +1693,60 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       </div>
     </div>
   </div>
+
+  <!-- ═══════════════════════════════════════════════
+       DASHBOARD — Google Keep stil
+  ═══════════════════════════════════════════════ -->
+  <div id="dashboardView" class="dashboard-view" style="display:none">
+    <div class="db-header">
+      <button id="dbBackBtn" class="btn btn-ghost db-back"><i class="fas fa-arrow-left"></i> <span id="lbl-back-laws">Kthehu tek Ligjet</span></button>
+      <div class="db-title"><i class="fas fa-sticky-note"></i> <span id="lbl-notes-title">Shënimet e mia</span></div>
+      <button id="dbAddBtn" class="btn btn-primary"><i class="fas fa-plus"></i> <span id="lbl-add-note">Shto</span></button>
+    </div>
+
+    <!-- Search bar -->
+    <div class="db-search-row">
+      <div class="db-search-wrap">
+        <i class="fas fa-search db-search-icon"></i>
+        <input id="dbSearchInput" type="text" class="db-search" placeholder="Kërko shënime..." />
+        <button id="dbSearchClear" class="db-search-clear" style="display:none"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+
+    <!-- Cards grid -->
+    <div id="dbGrid" class="db-grid"></div>
+
+    <!-- Empty state -->
+    <div id="dbEmpty" class="db-empty" style="display:none">
+      <i class="fas fa-sticky-note"></i>
+      <p id="lbl-no-notes">Nuk ka shënime ende. Shto shënimin e parë!</p>
+    </div>
+  </div>
+
+  <!-- Modal për shtim/editim -->
+  <dialog id="noteCardModal" class="note-card-modal">
+    <div class="ncm-head">
+      <input id="ncmTitle" type="text" class="ncm-title-input" placeholder="Titulli..." maxlength="100" />
+      <button id="ncmClose" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+    </div>
+    <textarea id="ncmBody" class="ncm-body" placeholder="Shkruaj këtu..." rows="8"></textarea>
+    <div class="ncm-colors">
+      <span class="ncm-color-label">Ngjyra:</span>
+      <button class="ncm-color active" data-color="default" style="background:var(--panel)" title="Default"></button>
+      <button class="ncm-color" data-color="yellow"  style="background:#fff8c5" title="E verdhë"></button>
+      <button class="ncm-color" data-color="green"   style="background:#d2f8d2" title="E gjelbër"></button>
+      <button class="ncm-color" data-color="blue"    style="background:#c8e6ff" title="E kaltër"></button>
+      <button class="ncm-color" data-color="pink"    style="background:#ffd6e0" title="Rozë"></button>
+      <button class="ncm-color" data-color="purple"  style="background:#e8d5ff" title="Vjollcë"></button>
+    </div>
+    <div class="ncm-footer">
+      <button id="ncmDelete" class="btn" style="color:var(--danger);background:transparent;border:1px solid var(--danger)" title="Fshi"><i class="fas fa-trash"></i></button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button id="ncmCancel" class="btn btn-ghost">Anulo</button>
+        <button id="ncmSave" class="btn btn-primary"><i class="fas fa-save"></i> Ruaj</button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- Settings drawer -->
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -1462,7 +1825,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.0.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.3.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -1742,7 +2105,50 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       const key=law.id+'_'+(law.updatedAt||0);
       if(!_docCache[key]){
         const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+esc((a.text||'').trim())+'</pre></article>').join('');
+
+        // Keywords that signal a cross-reference line (MK/SQ/EN)
+        const xrefKeywords = /спомнат|спомнуваат|споменат|спомнати|përmendet|përmendes|is mentioned|are mentioned/i;
+        // A line that is ONLY numbers separated by spaces
+        const numsOnlyRe = /^\s*(\d+(?:\s+\d+)*)\s*$/;
+
+        function makeLinked(numsStr){
+          return numsStr.trim().split(/\s+/)
+            .map(n=>`<span class="xref-num" data-artnum="${n}">${n}</span>`)
+            .join(' ');
+        }
+
+        function renderText(raw){
+          const lines=(raw||'').trim().split('\n');
+          const out=[];
+          let i=0;
+          while(i<lines.length){
+            const line=lines[i];
+
+            // Case 1: "...спомнуваат членовите:" — label line ending with colon, nums on next line
+            if(xrefKeywords.test(line) && /:\s*$/.test(line.trimEnd())){
+              const next=lines[i+1]||'';
+              const nm=next.match(numsOnlyRe);
+              if(nm){
+                out.push(`<span class="xref-line">${esc(line)}\n${makeLinked(nm[1])}</span>`);
+                i+=2; continue;
+              }
+            }
+
+            // Case 2: "...спомнат во членовите: 386 387 394" — label + nums on same line
+            if(xrefKeywords.test(line)){
+              const m=line.match(/^(.+?:\s*)(\d[\d\s]+)$/);
+              if(m){
+                out.push(`<span class="xref-line">${esc(m[1])}${makeLinked(m[2])}</span>`);
+                i++; continue;
+              }
+            }
+
+            out.push(esc(line));
+            i++;
+          }
+          return out.join('\n');
+        }
+        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+renderText(a.text||'')+'</pre></article>').join('');
       }
       docEl.innerHTML=_docCache[key];
     }
@@ -1760,9 +2166,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const row=document.createElement('div'); row.className='law-item';
         const left=document.createElement('div'); left.style.display='grid'; left.style.gap='6px';
         const name=document.createElement('input'); name.type='text'; name.value=l.title; name.placeholder='Title';
-        name.addEventListener('change',()=>{ l.title=name.value.trim()||'Untitled'; l.updatedAt=Date.now(); renderTabs(); saveToStorage(); });
+        name.addEventListener('change',()=>{ l.title=name.value.trim()||'Untitled'; l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderTabs(); saveToStorage(); });
+        name.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); name.blur(); }});
         const alt=document.createElement('input'); alt.type='text'; alt.value=l.alt||''; alt.placeholder='Description / ALT';
-        alt.addEventListener('change',()=>{ l.alt=alt.value.trim(); l.updatedAt=Date.now(); renderDoc(); renderTabs(); saveToStorage(); });
+        alt.addEventListener('change',()=>{ l.alt=alt.value.trim(); l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderDoc(); renderTabs(); saveToStorage(); });
+        alt.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); alt.blur(); }});
         left.appendChild(name); left.appendChild(alt);
 
         const acts=document.createElement('div'); acts.className='law-actions';
@@ -2035,6 +2443,205 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       applyFontSize(FONT_DEFAULT);
     });
 
+    // ══════════════════════════════════════════════
+    // DASHBOARD — Shënime Google Keep stil
+    // ══════════════════════════════════════════════
+    const dashboardView  = document.getElementById('dashboardView');
+    const appEl          = document.querySelector('.app');
+    const dbGrid         = document.getElementById('dbGrid');
+    const dbEmpty        = document.getElementById('dbEmpty');
+    const dbSearchInput  = document.getElementById('dbSearchInput');
+    const dbSearchClear  = document.getElementById('dbSearchClear');
+    const noteCardModal  = document.getElementById('noteCardModal');
+    const ncmTitle       = document.getElementById('ncmTitle');
+    const ncmBody        = document.getElementById('ncmBody');
+    const ncmSave        = document.getElementById('ncmSave');
+    const ncmCancel      = document.getElementById('ncmCancel');
+    const ncmDelete      = document.getElementById('ncmDelete');
+
+    let dbNotes = [];
+    let dbEditId = null;
+    let dbActiveColor = 'default';
+
+    // Migrate any old localStorage notes to IndexedDB on first load
+    function dbMigrateFromLS(){
+      try {
+        const old = localStorage.getItem('db-notes');
+        if(old){
+          const parsed = JSON.parse(old);
+          if(Array.isArray(parsed) && parsed.length) return parsed;
+          localStorage.removeItem('db-notes');
+        }
+      } catch(e){}
+      return null;
+    }
+
+    const DB_NOTES_KEY = 'dashboard-notes';
+    function dbSave(){
+      openDB().then(db=>{
+        const tx=db.transaction('data','readwrite');
+        tx.objectStore('data').put(dbNotes, DB_NOTES_KEY);
+      }).catch(e=>console.error('dbSave error:',e));
+    }
+    function dbLoad(){
+      return openDB().then(db=>new Promise(res=>{
+        const req=db.transaction('data','readonly').objectStore('data').get(DB_NOTES_KEY);
+        req.onsuccess=e=>{
+          let notes=e.target.result||null;
+          if(!notes){
+            // Try migrate from localStorage
+            const migrated=dbMigrateFromLS();
+            if(migrated){ notes=migrated; dbNotes=notes; dbSave(); localStorage.removeItem('db-notes'); }
+            else notes=[];
+          }
+          dbNotes=notes;
+          res();
+        };
+        req.onerror=()=>res();
+      }));
+    }
+
+    function dbUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+    function dbFormatDate(ts) {
+      const d = new Date(ts);
+      return d.toLocaleDateString('sq-AL', {day:'2-digit', month:'short', year:'numeric'});
+    }
+
+    function dbRender(filter) {
+      const q = (filter || '').toLowerCase();
+      const filtered = q
+        ? dbNotes.filter(n => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
+        : dbNotes;
+      dbGrid.innerHTML = '';
+      if (!filtered.length) { dbEmpty.style.display = 'block'; return; }
+      dbEmpty.style.display = 'none';
+      // Sort: newest first
+      [...filtered].sort((a,b) => b.updatedAt - a.updatedAt).forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'db-card';
+        card.dataset.id = note.id;
+        if (note.color && note.color !== 'default') card.dataset.color = note.color;
+        card.innerHTML = `
+          ${note.title ? `<div class="db-card-title">${escHtml(note.title)}</div>` : ''}
+          ${note.body  ? `<div class="db-card-body">${escHtml(note.body)}</div>` : ''}
+          <div class="db-card-date">${dbFormatDate(note.updatedAt)}</div>
+        `;
+        card.addEventListener('click', () => dbOpenModal(note.id));
+        dbGrid.appendChild(card);
+      });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function dbOpenModal(id) {
+      dbEditId = id || null;
+      const note = id ? dbNotes.find(n => n.id === id) : null;
+      ncmTitle.value = note ? note.title : '';
+      ncmBody.value  = note ? note.body  : '';
+      dbActiveColor  = note ? (note.color || 'default') : 'default';
+      // Update color buttons
+      noteCardModal.querySelectorAll('.ncm-color').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.color === dbActiveColor);
+      });
+      // Apply color to modal bg
+      applyModalColor(dbActiveColor);
+      ncmDelete.style.display = id ? 'inline-flex' : 'none';
+      noteCardModal.showModal();
+      ncmTitle.focus();
+    }
+
+    function applyModalColor(color) {
+      const isDark = document.documentElement.getAttribute('data-mode') === 'dark';
+      const colors = isDark ? {
+        default: 'var(--panel)',
+        yellow:  '#3d3400',
+        green:   '#0a2e0a',
+        blue:    '#0a1e30',
+        pink:    '#2e0a14',
+        purple:  '#1a0a2e',
+      } : {
+        default: 'var(--panel)',
+        yellow:  '#fff8c5',
+        green:   '#d2f8d2',
+        blue:    '#c8e6ff',
+        pink:    '#ffd6e0',
+        purple:  '#e8d5ff',
+      };
+      noteCardModal.style.background = colors[color] || colors.default;
+      noteCardModal.style.color = 'var(--text)';
+    }
+
+    ncmSave.addEventListener('click', () => {
+      const title = ncmTitle.value.trim();
+      const body  = ncmBody.value.trim();
+      if (!title && !body) return;
+      if (dbEditId) {
+        const idx = dbNotes.findIndex(n => n.id === dbEditId);
+        if (idx > -1) { dbNotes[idx] = {...dbNotes[idx], title, body, color: dbActiveColor, updatedAt: Date.now()}; }
+      } else {
+        dbNotes.push({ id: dbUid(), title, body, color: dbActiveColor, createdAt: Date.now(), updatedAt: Date.now() });
+      }
+      dbSave();
+      noteCardModal.close();
+      dbRender(dbSearchInput.value);
+    });
+
+    ncmDelete.addEventListener('click', () => {
+      if (!dbEditId) return;
+      const msg = (window._uiLang && window._uiLang.confirmDelete) || 'Delete this note?';
+      if (!confirm(msg)) return;
+      dbNotes = dbNotes.filter(n => n.id !== dbEditId);
+      dbSave();
+      noteCardModal.close();
+      dbRender(dbSearchInput.value);
+    });
+
+    ncmCancel.addEventListener('click', () => noteCardModal.close());
+    document.getElementById('ncmClose').addEventListener('click', () => noteCardModal.close());
+
+    // Color picker in modal
+    noteCardModal.querySelectorAll('.ncm-color').forEach(btn => {
+      btn.addEventListener('click', () => {
+        dbActiveColor = btn.dataset.color;
+        noteCardModal.querySelectorAll('.ncm-color').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyModalColor(dbActiveColor);
+      });
+    });
+
+    // Search
+    dbSearchInput.addEventListener('input', () => {
+      const q = dbSearchInput.value;
+      dbSearchClear.style.display = q ? 'block' : 'none';
+      dbRender(q);
+    });
+    dbSearchClear.addEventListener('click', () => {
+      dbSearchInput.value = '';
+      dbSearchClear.style.display = 'none';
+      dbRender('');
+    });
+
+    // Add button
+    document.getElementById('dbAddBtn').addEventListener('click', () => dbOpenModal(null));
+
+    // Back to laws
+    document.getElementById('dbBackBtn').addEventListener('click', () => {
+      dashboardView.style.display = 'none';
+      appEl.style.display = '';
+    });
+
+    // Dashboard toggle from header
+    document.getElementById('dashboardBtn').addEventListener('click', () => {
+      // Exit reading mode first if active
+      if(document.body.classList.contains('reading-mode')) leaveReadingMode();
+      appEl.style.display = 'none';
+      dashboardView.style.display = 'flex';
+      dbRender(dbSearchInput.value);
+    });
+
     // Reading Mode
     const readingModeBtn = document.getElementById('readingModeBtn');
     const exitReadingMode = document.getElementById('exitReadingMode');
@@ -2119,7 +2726,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     themeBtn.addEventListener('click', ()=>{
       const style=localStorage.getItem('theme-style')||'classic';
-      applyTheme(style, mode==='dark'?'light':'dark');
+      const curMode=localStorage.getItem('theme-mode')||'light';
+      applyTheme(style, curMode==='dark'?'light':'dark');
     });
 
     // Theme picker
@@ -2151,7 +2759,76 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }});
 
 
-    (async ()=>{ initTheme(); initFontSize(); await loadFromStorage(); docxAvailable = await window.__docxReady; renderAll(); })();
+    (async ()=>{ initTheme(); initFontSize(); await loadFromStorage(); await dbLoad(); docxAvailable = await window.__docxReady; renderAll(); })();
+  </script>
+
+  <!-- Article Cross-Reference Popup -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const popup    = document.getElementById('artPopup');
+    const popTitle = document.getElementById('artPopup-title');
+    const popBody  = document.getElementById('artPopup-body');
+    const popClose = document.getElementById('artPopup-close');
+    const popGoto  = document.getElementById('artPopup-goto');
+    const docEl    = document.getElementById('doc');
+
+    if(!popup || !docEl) return;
+
+    const backdrop = document.getElementById('artPopup-backdrop');
+    let _gotoIndex = null;
+
+    function openPopup(artNum, anchorEl){
+      const state = window._appState;
+      if(!state) return;
+      const law = state.laws && state.laws.find(l=>l.id===state.activeId);
+      if(!law) return;
+
+      const n = parseInt(artNum, 10);
+      const art = law.articles.find(a => a.index === n);
+      if(!art) return;
+
+      _gotoIndex = n;
+      popTitle.textContent = art.title || ('Article ' + n);
+      popBody.textContent  = (art.text || '').trim();
+      popup.classList.add('open');
+      if(backdrop) backdrop.classList.add('open');
+    }
+
+    function closePopup(){
+      popup.classList.remove('open');
+      if(backdrop) backdrop.classList.remove('open');
+      _gotoIndex = null;
+    }
+
+    popGoto.addEventListener('click', ()=>{
+      if(_gotoIndex === null) return;
+      const target = docEl.querySelector(`.article[data-index="${_gotoIndex}"]`);
+      if(target){
+        target.scrollIntoView({behavior:'instant', block:'start'});
+        target.classList.add('highlight');
+        setTimeout(()=>target.classList.remove('highlight'), 1200);
+      }
+      closePopup();
+    });
+
+    popClose.addEventListener('click', closePopup);
+    if(backdrop) backdrop.addEventListener('click', closePopup);
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePopup(); });
+
+    document.addEventListener('click', e=>{
+      if(popup.classList.contains('open') && !popup.contains(e.target) && !e.target.classList.contains('xref-num')){
+        closePopup();
+      }
+    });
+
+    // Delegate click on xref-num spans inside doc
+    docEl.addEventListener('click', e=>{
+      const xref = e.target.closest('.xref-num');
+      if(!xref) return;
+      e.stopPropagation();
+      openPopup(xref.dataset.artnum, xref);
+    });
+  });
   </script>
 
 
@@ -2329,6 +3006,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         mobileSrch:'Kërko',
         active:'Aktiv:', hits:function(n){return 'Gjithsej: '+n+' — Kliko "Tjetri"';},
         hitNav:function(i,n){return 'Rezultati '+i+' nga '+n;}, noHits:'⚠️ Nuk ka rezultate',
+        confirmDelete:'Të fshihet ky shënim?',
+        goToArt:'↗ Shko te neni',
+        exitReading:'Dil nga leximi',
       },
       mk: {
         brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
@@ -2348,6 +3028,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         mobileSrch:'Пребарувач',
         active:'Активен:', hits:function(n){return 'Вкупно: '+n+' — Кликни „Наредно"';},
         hitNav:function(i,n){return 'Погодок '+i+' од '+n;}, noHits:'⚠️ Нема погодоци',
+        confirmDelete:'Да се избрише оваа белешка?',
+        goToArt:'↗ Оди до членот',
+        exitReading:'Излез од читање',
       },
       en: {
         brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
@@ -2367,6 +3050,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         mobileSrch:'Search',
         active:'Active:', hits:function(n){return 'Total: '+n+' — Click "Next"';},
         hitNav:function(i,n){return 'Result '+i+' of '+n;}, noHits:'⚠️ No results found',
+        confirmDelete:'Delete this note?',
+        goToArt:'↗ Go to article',
+        exitReading:'Exit Reading Mode',
       }
     };
 
@@ -2411,6 +3097,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       setP('formTitle',L.modalLabelTitle);
       setH('cancelLaw','<i class="fas fa-times"></i> '+L.cancelBtn);
       setH('saveLawBtn','<i class="fas fa-save"></i> '+L.saveBtn);
+      setH('artPopup-goto', L.goToArt||'↗ Go to article');
+      setH('exitReadingMode', '<i class="fas fa-times"></i> '+(L.exitReading||'Exit Reading Mode'));
 
       if(typeof renderAll==='function') renderAll();
     }
@@ -2424,6 +3112,19 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     });
   })();
   </script>
+
+  <div id="artPopup-backdrop"></div>
+  <!-- Article Preview Popup (cross-reference) -->
+  <div id="artPopup" role="dialog" aria-modal="true" aria-label="Article preview">
+    <div id="artPopup-header">
+      <span id="artPopup-title"></span>
+      <button id="artPopup-close" title="Close">✕</button>
+    </div>
+    <div id="artPopup-body"></div>
+    <div id="artPopup-footer">
+      <button id="artPopup-goto" class="btn btn-primary artPopup-goto">↗ Go to article</button>
+    </div>
+  </div>
 
   <!-- Annotation Modal -->
   <div id="noteModal" role="dialog" aria-modal="true">
