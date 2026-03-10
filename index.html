@@ -47,16 +47,27 @@
 
     function registerSW(){
       if(!('serviceWorker' in navigator)) return;
+      // Minimal SW — just makes page installable as PWA
       const swCode = `
-const CACHE='lawbase-v2';
-const CDNS=['https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css','https://unpkg.com/mammoth/mammoth.browser.min.js'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CDNS).catch(()=>{})).then(()=>self.skipWaiting()));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(cached=>{if(cached)return cached;return fetch(e.request).then(resp=>{if(resp&&resp.status===200&&resp.type!=='opaque'){const clone=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,clone));}return resp;}).catch(()=>cached||new Response('Offline',{status:503}));})  );});
-      `;
+const CACHE='lawbase-v3';
+self.addEventListener('install',e=>{ self.skipWaiting(); });
+self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
+self.addEventListener('fetch',e=>{
+  if(e.request.method!=='GET') return;
+  // Network first, fall back to cache
+  e.respondWith(
+    fetch(e.request).then(resp=>{
+      if(resp && resp.status===200){
+        const clone=resp.clone();
+        caches.open(CACHE).then(c=>c.put(e.request,clone));
+      }
+      return resp;
+    }).catch(()=> caches.match(e.request))
+  );
+});`;
       const swBlob = new Blob([swCode], {type:'application/javascript'});
       navigator.serviceWorker.register(URL.createObjectURL(swBlob), {scope: './'})
-        .then(()=>console.log('✅ SW registered')).catch(e=>console.warn('SW error:',e));
+        .then(()=>console.log('✅ SW registered')).catch(e=>console.warn('SW:',e));
     }
 
     let deferredPrompt = null;
@@ -100,11 +111,38 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       setTimeout(showiOSHint, 1500);
     });
     window.addEventListener('appinstalled', () => { const b=document.getElementById('pwaInstallBanner'); if(b)b.remove(); });
+
+    // ── Offline/Online indicator ──
+    function showOfflineBanner(offline){
+      let bar = document.getElementById('offlineBar');
+      if(!bar){
+        bar = document.createElement('div');
+        bar.id = 'offlineBar';
+        bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;text-align:center;font-size:0.8rem;font-weight:600;padding:5px 12px;transition:opacity 0.3s;';
+        document.body.appendChild(bar);
+      }
+      if(offline){
+        bar.textContent = '📴 Offline — po punoni me të dhënat lokale';
+        bar.style.background = '#e63946';
+        bar.style.color = '#fff';
+        bar.style.opacity = '1';
+        bar.style.display = 'block';
+      } else {
+        bar.textContent = '✅ Online';
+        bar.style.background = '#2dc653';
+        bar.style.color = '#fff';
+        bar.style.opacity = '1';
+        setTimeout(()=>{ bar.style.opacity='0'; setTimeout(()=>bar.style.display='none',400); }, 2500);
+      }
+    }
+    window.addEventListener('offline', ()=>showOfflineBanner(true));
+    window.addEventListener('online',  ()=>showOfflineBanner(false));
+    if(!navigator.onLine) showOfflineBanner(true);
   })();
   </script>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Google Fonts removed — using system Arial -->
   <style>
     /* ══════════════════════════════════════════════════════════════
        THEME SYSTEM — data-style + data-mode (light|dark)
@@ -112,8 +150,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     :root {
       --border-radius: 8px;
       --transition:    all 0.18s ease;
-      --font-body:     'Segoe UI', system-ui, sans-serif;
-      --font-heading:  'Segoe UI', system-ui, sans-serif;
+      --font-body:     Arial, sans-serif;
+      --font-heading:  Arial, sans-serif;
     }
 
     /* ══ CLASSIC light ══ */
@@ -130,8 +168,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #e1e5eb;
       --text:         #1a1d2e;
       --muted:        #6c757d;
-      --font-body:    'Segoe UI', system-ui, sans-serif;
-      --font-heading: 'Segoe UI', system-ui, sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 8px;
     }
     [data-style="classic"][data-mode="dark"] {
@@ -147,8 +185,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #2e3347;
       --text:         #e2e5f0;
       --muted:        #7a80a0;
-      --font-body:    'Segoe UI', system-ui, sans-serif;
-      --font-heading: 'Segoe UI', system-ui, sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 8px;
     }
 
@@ -166,8 +204,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #DDD9D0;
       --text:         #1E1C18;
       --muted:        #7A776E;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Serif Display', serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 3px;
     }
     [data-style="legal"][data-mode="dark"] {
@@ -183,8 +221,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #2E2A22;
       --text:         #EAE6DC;
       --muted:        #6A6660;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Serif Display', serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 3px;
     }
 
@@ -202,8 +240,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #D5D3EE;
       --text:         #1A1830;
       --muted:        #7874A8;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Sans', sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 6px;
     }
     [data-style="midnight"][data-mode="dark"] {
@@ -219,8 +257,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #232236;
       --text:         #E4E2F5;
       --muted:        #5A5880;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Sans', sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 6px;
     }
 
@@ -238,8 +276,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #CDD1F5;
       --text:         #1E2060;
       --muted:        #7B82C0;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Sans', sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 14px;
     }
     [data-style="soft"][data-mode="dark"] {
@@ -255,8 +293,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #282A45;
       --text:         #DDE0F8;
       --muted:        #6668A0;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Sans', sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 14px;
     }
 
@@ -274,8 +312,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #dde1e7;
       --text:         #1a1f36;
       --muted:        #697386;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Sans', sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 4px;
       /* Corporate-specific */
       --corp-header:  #1a3a5c;
@@ -295,8 +333,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       --border:       #30363d;
       --text:         #c9d1d9;
       --muted:        #6e7681;
-      --font-body:    'DM Sans', sans-serif;
-      --font-heading: 'DM Sans', sans-serif;
+      --font-body:    Arial, sans-serif;
+      --font-heading: Arial, sans-serif;
       --border-radius: 4px;
       --corp-header:  #0d1117;
       --corp-sidebar: #161b22;
@@ -411,7 +449,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: var(--font-body, 'Segoe UI', system-ui, sans-serif);
+      font-family: var(--font-body, Arial, sans-serif);
     }
 
     body {
@@ -685,7 +723,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       text-align: justify;
       text-justify: inter-word;
       line-height: 1.6;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: Arial, sans-serif;
       font-size: var(--font-size-doc, 15px);
       color: var(--text);
     }
@@ -1603,6 +1641,40 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     .db-note-body-view.db-rendered a { color: var(--primary); }
     .db-note-body-view.db-rendered hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
 
+    /* Category header in search results */
+    .db-search-cat-hdr {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      padding: 10px 10px 4px 10px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .db-search-cat-hdr:first-child { border-top: none; margin-top: 0; }
+
+    /* Search highlight inside note body */
+    .db-srch-hl {
+      background: rgba(255, 214, 0, 0.45);
+      color: inherit !important;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+    [data-mode="dark"] .db-srch-hl {
+      background: rgba(255, 200, 0, 0.35);
+      color: inherit !important;
+    }
+
+    /* Override inline color:black/color:red etc nga Word/docx ne dark mode */
+    [data-mode="dark"] .db-note-body-view *,
+    [data-mode="dark"] .db-note-body-view.db-rendered * { color: var(--text) !important; }
+    [data-mode="dark"] .db-note-body-view a,
+    [data-mode="dark"] .db-note-body-view.db-rendered a { color: var(--primary) !important; }
+
+    /* Po ashtu per LawBase article (per doc te importuar) */
+    [data-mode="dark"] .article pre * { color: var(--text) !important; }
+
     /* ── Referenca (Law links) ── */
     .db-refs-section {
       margin: 12px 0 4px;
@@ -2113,7 +2185,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.9.2</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.9.6</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2193,7 +2265,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.9.2</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.9.6</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -3036,6 +3108,50 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     function dbRenderTitles(){
       dbTitlesListEl.innerHTML='';
       const L=window._dbLang||window._uiLang||{};
+      const q = (dbSearchQuery||'').toLowerCase().trim();
+
+      // In search mode: show ALL titles from ALL cats with category label
+      if(q){
+        let totalTitles = 0;
+        (dbData.cats||[]).forEach(cat=>{
+          (cat.titles||[]).forEach(t=>{ totalTitles++; });
+        });
+        if(!totalTitles){
+          const d=document.createElement('div');
+          d.className='empty'; d.innerHTML='<i class="fas fa-file-alt"></i><br>'+(L.dbNoTitles||'No titles');
+          dbTitlesListEl.appendChild(d); return;
+        }
+        (dbData.cats||[]).forEach(cat=>{
+          if(!cat.titles||!cat.titles.length) return;
+          // Category header
+          const hdr=document.createElement('div');
+          hdr.className='db-search-cat-hdr';
+          hdr.textContent=cat.name;
+          dbTitlesListEl.appendChild(hdr);
+          cat.titles.forEach(t=>{
+            const link=document.createElement('a');
+            link.className='art-link'+(dbActiveTitle===t.id?' active':'');
+            link.dataset.tid=t.id;
+            link.dataset.catId=cat.id;
+            link.textContent=t.title||(L.dbNoTitle||'(no title)');
+            link.href='#';
+            link.addEventListener('click',e=>{
+              e.preventDefault();
+              dbActiveCat=cat.id;
+              dbActiveTitle=t.id;
+              dbEditing=false;
+              dbRenderDoc();
+              dbTitlesListEl.querySelectorAll('.art-link').forEach(l=>l.classList.remove('active'));
+              link.classList.add('active');
+              if(q) setTimeout(()=>dbHighlightInDoc(q),60);
+            });
+            dbTitlesListEl.appendChild(link);
+          });
+        });
+        return;
+      }
+
+      // Normal mode: show only active category
       const cat=dbFindCat(dbActiveCat);
       if(!cat){
         const d=document.createElement('div');
@@ -3051,6 +3167,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const link=document.createElement('a');
         link.className='art-link'+(dbActiveTitle===t.id?' active':'');
         link.dataset.tid=t.id;
+        link.dataset.catId=cat.id;
         link.textContent=t.title||(L.dbNoTitle||'(no title)');
         link.href='#';
         link.addEventListener('click',e=>{ e.preventDefault(); dbActiveTitle=t.id; dbEditing=false; dbRender(); });
@@ -3532,7 +3649,13 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const t = cat && dbActiveTitle && cat.titles.find(x=>x.id===dbActiveTitle);
         el.textContent = cat ? (t ? `${L.dbActive||'Active:'} ${cat.name} > ${t.title||noTitle}` : `${L.dbActive||'Active:'} ${cat.name}`) : '';
       }
-      if(typeof dbApplySearch==='function') dbApplySearch();
+      if(typeof dbApplySearch==='function'){
+        dbApplySearch();
+        // Highlight search term in the currently open note
+        if(dbSearchQuery && dbSearchQuery.trim()){
+          setTimeout(()=>dbHighlightInDoc(dbSearchQuery.trim()), 50);
+        }
+      }
     }
 
     // ── New title ──
@@ -3657,37 +3780,85 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     let dbSearchHitIdx = 0;
     let dbSearchHits = [];
 
+    // Global search index: titleId -> title object (across ALL cats)
+    function dbBuildSearchIndex(){
+      const idx = {};
+      (dbData.cats||[]).forEach(cat=>{
+        (cat.titles||[]).forEach(t=>{ idx[t.id] = { t, cat }; });
+      });
+      return idx;
+    }
+
     function dbApplySearch(){
       const q = dbSearchQuery.toLowerCase().trim();
       const links = dbTitlesListEl.querySelectorAll('.art-link');
       dbSearchHits = [];
-      // Build body index for fast lookup
-      const cat = dbFindCat(dbActiveCat);
-      const titlesMap = {};
-      if(cat) cat.titles.forEach(t=>{ titlesMap[t.id] = t; });
+
+      if(!q){
+        links.forEach(link=>{ link.style.display=''; link.classList.remove('db-match','db-match-body'); });
+        dbSearchCountEl.textContent = '';
+        return;
+      }
+
+      // Build index across ALL cats so cross-category search works
+      const idx = dbBuildSearchIndex();
+
       links.forEach(link => {
-        if(!q){ link.style.display=''; link.classList.remove('db-match'); return; }
         const titleId = link.dataset.tid;
-        const t = titlesMap[titleId];
+        const entry = idx[titleId];
+        const t = entry && entry.t;
         const inTitle = link.textContent.toLowerCase().includes(q);
-        const inBody  = t ? (t.body||'').replace(/<[^>]+>/g,'').toLowerCase().includes(q) : false;
+        const bodyText = t ? (t.body||'').replace(/<[^>]+>/g,'') : '';
+        const inBody  = bodyText.toLowerCase().includes(q);
         const matches = inTitle || inBody;
         link.style.display = matches ? '' : 'none';
         link.classList.toggle('db-match', matches);
-        link.classList.toggle('db-match-body', !inTitle && inBody);
+        link.classList.toggle('db-match-body', !!(inBody && !inTitle));
         if(matches) dbSearchHits.push(link);
       });
+
       dbSearchHitIdx = 0;
       const L=window._dbLang||window._uiLang||{};
-      dbSearchCountEl.textContent = q ? ((L.hits||function(n){return n+' results';})(dbSearchHits.length)) : '';
+      dbSearchCountEl.textContent = (L.hits||function(n){return n+' rezultate';})(dbSearchHits.length);
+    }
+
+    // Highlight search term inside rendered note body
+    function dbHighlightInDoc(q){
+      if(!q) return;
+      const bodyEl = dbDocEl.querySelector('.db-note-body-view');
+      if(!bodyEl) return;
+      // Walk text nodes and wrap matches
+      const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+      function walk(node){
+        if(node.nodeType===3){
+          const text = node.textContent;
+          if(re.test(text)){
+            re.lastIndex=0;
+            const span = document.createElement('span');
+            span.innerHTML = text.replace(re,'<mark class="db-srch-hl">$1</mark>');
+            node.parentNode.replaceChild(span, node);
+          }
+        } else if(node.nodeType===1 && !['SCRIPT','STYLE','MARK'].includes(node.tagName)){
+          Array.from(node.childNodes).forEach(walk);
+        }
+      }
+      walk(bodyEl);
+      // Scroll first highlight into view
+      const first = bodyEl.querySelector('.db-srch-hl');
+      if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
     }
 
     dbSearchInputEl.addEventListener('input', () => {
       dbSearchQuery = dbSearchInputEl.value;
       document.getElementById('dbSearchClear').style.display = dbSearchQuery ? '' : 'none';
+      dbRenderTitles(); // re-render list (all cats in search mode, active cat otherwise)
       dbApplySearch();
     });
-    document.getElementById('dbSearchBtn').addEventListener('click', () => { dbSearchQuery = dbSearchInputEl.value; dbApplySearch(); });
+    document.getElementById('dbSearchBtn').addEventListener('click', () => {
+      dbSearchQuery = dbSearchInputEl.value;
+      dbRenderTitles();
+      dbApplySearch();
+    });
     document.getElementById('dbSearchNextBtn').addEventListener('click', () => {
       if(!dbSearchHits.length) return;
       dbSearchHitIdx = (dbSearchHitIdx + 1) % dbSearchHits.length;
@@ -3698,6 +3869,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       dbSearchInputEl.value = ''; dbSearchQuery = '';
       document.getElementById('dbSearchClear').style.display = 'none';
       dbSearchCountEl.textContent = '';
+      dbRenderTitles(); // restore normal category view
       dbApplySearch();
     });
 
