@@ -2383,68 +2383,120 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       })).catch(e=>console.error('loadFromStorage error:',e));
     }
 
-    // Export/Import
-    function exportAll(){
-      // Load all annotations then export together
-      openDB().then(db=>new Promise(res=>{
-        const req=db.transaction('annotations','readonly').objectStore('annotations').getAll();
-        req.onsuccess=e=>res(e.target.result||[]);
-        req.onerror=()=>res([]);
-      })).then(()=>{
-        // Get all annotation keys too
-        return openDB().then(db=>new Promise(res=>{
-          const tx=db.transaction('annotations','readonly');
-          const store=tx.objectStore('annotations');
-          const annotations={};
-          const reqKeys=store.getAllKeys();
-          reqKeys.onsuccess=ek=>{
-            const keys=ek.target.result||[];
-            const reqVals=store.getAll();
-            reqVals.onsuccess=ev=>{
-              const vals=ev.target.result||[];
-              keys.forEach((k,i)=>{if(vals[i]) annotations[k]=vals[i];});
-              res(annotations);
-            };
-          };
-        }));
-      }).then(annotations=>{
-        const data={version:2,exportedAt:new Date().toISOString(),activeId:state.activeId,
-          laws:state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()})),
-          annotations,
-          legalbase: window._dbData || null};
-        const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-        const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lawbase_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    // ── Export / Import ──
+    // Helper: wrap an IndexedDB transaction in a Promise that resolves on oncomplete
+    function dbTx(db, stores, mode, fn){
+      return new Promise((res, rej)=>{
+        const tx = db.transaction(stores, mode);
+        tx.oncomplete = ()=>res();
+        tx.onerror = tx.onabort = e=>rej(e.target.error||e);
+        fn(tx);
       });
     }
+
+    async function exportAll(){
+      try {
+        const db = await openDB();
+
+        // Read annotations in ONE transaction (keys + values together)
+        const annotations = await new Promise((res, rej)=>{
+          const tx  = db.transaction('annotations', 'readonly');
+          const st  = tx.objectStore('annotations');
+          let keys=[], vals=[];
+          const rk = st.getAllKeys(); rk.onsuccess = e=>{ keys=e.target.result||[]; };
+          const rv = st.getAll();     rv.onsuccess = e=>{ vals=e.target.result||[]; };
+          tx.oncomplete = ()=>{
+            const map={};
+            keys.forEach((k,i)=>{ if(vals[i]!==undefined) map[k]=vals[i]; });
+            res(map);
+          };
+          tx.onerror = e=>rej(e.target.error);
+        });
+
+        // Read LegalBase data from IndexedDB (source of truth, not in-memory)
+        const legalbase = await new Promise((res, rej)=>{
+          const req = db.transaction('data','readonly').objectStore('data').get('dashboard-notes');
+          req.onsuccess = e=>res(e.target.result||null);
+          req.onerror   = e=>rej(e.target.error);
+        });
+
+        const payload = {
+          version:    3,
+          exportedAt: new Date().toISOString(),
+          activeId:   state.activeId,
+          laws:       state.laws.map(l=>({
+                        id: l.id, title: l.title, alt: l.alt||'',
+                        content: l.content, updatedAt: l.updatedAt||Date.now()
+                      })),
+          annotations,
+          legalbase
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = 'lawbase_export.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      } catch(e){ console.error('exportAll:', e); alert('Export failed.'); }
+    }
+
     async function importAll(file){
-      try{
-        const text=await file.text(); const data=JSON.parse(text);
-        if(!data || !Array.isArray(data.laws)) throw new Error('invalid');
-        state.laws=data.laws.map(l=>({id:l.id||uid(),title:l.title||'Untitled',alt:l.alt||'',content:l.content||'',updatedAt:l.updatedAt||Date.now(),articles:splitIntoArticles(l.content||'')}));
+      const L = window._uiLang || {};
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if(!data || !Array.isArray(data.laws)) throw new Error('invalid format');
+
+        const db = await openDB();
+
+        // ── 1. Restore laws into memory + IndexedDB ──
+        state.laws = data.laws.map(l=>({
+          id:        l.id || uid(),
+          title:     l.title || 'Untitled',
+          alt:       l.alt || '',
+          content:   l.content || '',
+          updatedAt: l.updatedAt || Date.now(),
+          articles:  splitIntoArticles(l.content || '')
+        }));
         const restoredId = state.laws.find(x=>x.id===data.activeId)?.id;
-        state.activeId = restoredId || state.laws[0]?.id || null;
-        // Restore annotations if present
-        if(data.annotations && typeof data.annotations==='object'){
-          const db=await openDB();
-          const tx=db.transaction('annotations','readwrite');
-          const store=tx.objectStore('annotations');
-          store.clear();
-          Object.entries(data.annotations).forEach(([k,v])=>store.put(v,k));
+        state.activeId   = restoredId || state.laws[0]?.id || null;
+
+        // Save laws to IndexedDB (await tx.oncomplete)
+        await dbTx(db, DB_STORE, 'readwrite', tx=>{
+          const minimal = state.laws.map(l=>({
+            id:l.id, title:l.title, alt:l.alt||'', content:l.content, updatedAt:l.updatedAt
+          }));
+          tx.objectStore(DB_STORE).put({laws:minimal, activeId:state.activeId}, DB_KEY);
+        });
+
+        // ── 2. Restore annotations (await oncomplete before continuing) ──
+        if(data.annotations && typeof data.annotations === 'object' && Object.keys(data.annotations).length){
+          await dbTx(db, 'annotations', 'readwrite', tx=>{
+            const st = tx.objectStore('annotations');
+            st.clear();
+            Object.entries(data.annotations).forEach(([k,v])=>st.put(v, k));
+          });
         }
-        renderAll(); saveToStorage();
-        // Restore LegalBase notes if present
-        if(data.legalbase && data.legalbase.cats){
-          openDB().then(db=>{
-            return new Promise((res,rej)=>{
-              const req = db.transaction('data','readwrite').objectStore('data').put(data.legalbase, 'dashboard-notes');
-              req.onsuccess = res; req.onerror = rej;
-            });
-          }).then(()=>{
-            if(window._dbReload) return window._dbReload();
-          }).catch(e=>console.error('legalbase restore:',e));
+
+        // ── 3. Restore LegalBase notes (await oncomplete before _dbReload) ──
+        if(data.legalbase && data.legalbase.cats && data.legalbase.cats.length){
+          await dbTx(db, 'data', 'readwrite', tx=>{
+            tx.objectStore('data').put(data.legalbase, 'dashboard-notes');
+          });
+          // Now reload LegalBase from DB (data is guaranteed written)
+          if(typeof window._dbReload === 'function') await window._dbReload();
         }
-        alert(((window._uiLang&&window._uiLang.importOk)||function(n){return 'Import complete. Loaded '+n+' laws.';})(state.laws.length));
-      }catch(e){ alert((window._uiLang&&window._uiLang.importFail)||'Import failed. Valid JSON format?'); }
+
+        // ── 4. Render UI ──
+        renderAll();
+
+        const ok = L.importOk || function(n){ return 'Import i kryer. U ngarkuan '+n+' ligje.'; };
+        alert(ok(state.laws.length));
+      } catch(e){
+        console.error('importAll:', e);
+        alert(L.importFail || 'Importi deshtoi. Formati JSON i vlefshëm?');
+      }
     }
 
     // Render
