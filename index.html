@@ -2113,7 +2113,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.8.9</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.9.1</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2193,7 +2193,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.8.9</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.9.1</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -2413,11 +2413,20 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           tx.onerror = e=>rej(e.target.error);
         });
 
-        // Read LegalBase data from IndexedDB (source of truth, not in-memory)
+        // Read LegalBase data — DB first, fall back to in-memory if DB is empty/missing
         const legalbase = await new Promise((res, rej)=>{
           const req = db.transaction('data','readonly').objectStore('data').get('dashboard-notes');
-          req.onsuccess = e=>res(e.target.result||null);
-          req.onerror   = e=>rej(e.target.error);
+          req.onsuccess = e=>{
+            const fromDB = e.target.result;
+            // Use DB value if it has actual cats, otherwise fall back to in-memory
+            if(fromDB && fromDB.cats && fromDB.cats.length){
+              res(fromDB);
+            } else {
+              const mem = window._dbData;
+              res((mem && mem.cats && mem.cats.length) ? mem : (fromDB || null));
+            }
+          };
+          req.onerror = e=>rej(e.target.error);
         });
 
         const payload = {
@@ -2479,20 +2488,30 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           });
         }
 
-        // ── 3. Restore LegalBase notes (await oncomplete before _dbReload) ──
-        if(data.legalbase && data.legalbase.cats && data.legalbase.cats.length){
+        // ── 3. Restore LegalBase notes ──
+        const lb = data.legalbase;
+        if(lb && lb.cats && Array.isArray(lb.cats) && lb.cats.length){
+          // Force write to DB and wait for completion
           await dbTx(db, 'data', 'readwrite', tx=>{
-            tx.objectStore('data').put(data.legalbase, 'dashboard-notes');
+            tx.objectStore('data').put(lb, 'dashboard-notes');
           });
-          // Now reload LegalBase from DB (data is guaranteed written)
-          if(typeof window._dbReload === 'function') await window._dbReload();
+          // Reload LegalBase memory + UI
+          if(typeof window._dbReload === 'function'){
+            await window._dbReload();
+          }
+        } else {
+          console.warn('importAll: legalbase missing or empty in JSON', lb);
         }
 
         // ── 4. Render UI ──
         renderAll();
 
-        const ok = L.importOk || function(n){ return 'Import i kryer. U ngarkuan '+n+' ligje.'; };
-        alert(ok(state.laws.length));
+        const lbCats  = (data.legalbase && data.legalbase.cats) ? data.legalbase.cats.length : 0;
+        const lbTitles = (data.legalbase && data.legalbase.cats)
+          ? data.legalbase.cats.reduce((s,c)=>s+(c.titles?c.titles.length:0), 0) : 0;
+        const okMsg = (L.importOk || function(n){ return 'Import i kryer. U ngarkuan '+n+' ligje.'; })(state.laws.length)
+          + (lbCats ? '\nLegalBase: '+lbCats+' kategori, '+lbTitles+' tituj.' : '\n⚠️ LegalBase: nuk u gjet asnjë kategori në JSON.');
+        alert(okMsg);
       } catch(e){
         console.error('importAll:', e);
         alert(L.importFail || 'Importi deshtoi. Formati JSON i vlefshëm?');
