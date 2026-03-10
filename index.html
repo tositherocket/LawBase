@@ -2113,7 +2113,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.9.1</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.9.2</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2193,7 +2193,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.9.1</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.9.2</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -2490,17 +2490,14 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
         // ── 3. Restore LegalBase notes ──
         const lb = data.legalbase;
+        console.log('importAll legalbase:', lb ? 'cats='+((lb.cats&&lb.cats.length)||0) : 'null');
         if(lb && lb.cats && Array.isArray(lb.cats) && lb.cats.length){
-          // Force write to DB and wait for completion
           await dbTx(db, 'data', 'readwrite', tx=>{
             tx.objectStore('data').put(lb, 'dashboard-notes');
           });
-          // Reload LegalBase memory + UI
           if(typeof window._dbReload === 'function'){
             await window._dbReload();
           }
-        } else {
-          console.warn('importAll: legalbase missing or empty in JSON', lb);
         }
 
         // ── 4. Render UI ──
@@ -3744,11 +3741,17 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     });
 
     // ── Dashboard toggle from header ──
-    document.getElementById('dashboardBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
+    document.getElementById('dashboardBtn').addEventListener('click', () => {
+      setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
       if(document.body.classList.contains('reading-mode')) leaveReadingMode();
       appEl.style.display = 'none';
       dashboardView.style.display = 'flex';
-      dbRender();
+      // If no cats loaded in memory yet, reload from DB first (e.g. after import)
+      if(!dbData.cats || !dbData.cats.length){
+        dbLoad().then(()=>dbRender());
+      } else {
+        dbRender();
+      }
     });
 
     // Reading Mode
