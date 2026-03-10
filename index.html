@@ -33,7 +33,7 @@
     function injectManifest(icon192, icon512){
       const manifest = {
         name: 'LawBase', short_name: 'LawBase',
-        description: 'LawBase — Search and browse laws',
+        description: 'LawBase -- Search and browse laws',
         start_url: '.', display: 'standalone',
         background_color: '#f5f7fb', theme_color: '#4361ee', orientation: 'any',
         icons: [
@@ -1602,6 +1602,209 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
     .db-note-body-view.db-rendered a { color: var(--primary); }
     .db-note-body-view.db-rendered hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+    /* ── Referenca (Law links) ── */
+    .db-refs-section {
+      margin: 12px 0 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .db-refs-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 2px;
+      flex-basis: 100%;
+    }
+    .db-ref-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--primary-soft);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      border-radius: 20px;
+      padding: 3px 10px 3px 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      text-decoration: none;
+      max-width: 100%;
+    }
+    .db-ref-chip:hover { background: var(--primary); color: #fff; }
+    .db-ref-chip .chip-del {
+      margin-left: 4px;
+      opacity: 0.5;
+      font-size: 0.9rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 2px;
+    }
+    .db-ref-chip .chip-del:hover { opacity: 1; }
+    .db-ref-add-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .db-ref-add-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ── Ref Picker Modal ── */
+    #dbRefModal {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    #dbRefModal.open { display: flex; }
+    #dbRefModal .ref-modal-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      width: 100%;
+      max-width: 520px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+    #dbRefModal .ref-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    #dbRefModal .ref-modal-body {
+      padding: 12px 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    #dbRefModal .ref-step-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    #dbRefModal .ref-law-item,
+    #dbRefModal .ref-art-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: background 0.12s;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+    }
+    #dbRefModal .ref-law-item:hover,
+    #dbRefModal .ref-art-item:hover { background: var(--chip); border-color: var(--border); }
+    #dbRefModal .ref-law-item.selected,
+    #dbRefModal .ref-art-item.selected { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+    #dbRefModal .ref-search {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.88rem;
+    }
+    #dbRefModal .ref-search:focus { outline: none; border-color: var(--primary); }
+    #dbRefModal .ref-modal-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+    @media (max-width: 900px) {
+      .db-ref-chip { font-size: 0.82rem; padding: 4px 10px; }
+    }
+
+    /* ── Article ref badge (LawBase side) ── */
+    .art-ref-badge {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      border-left: 2px solid var(--border);
+      border-radius: 0;
+      padding: 2px 8px;
+      margin: 2px 0 6px;
+      line-height: 1.4;
+      opacity: 0.7;
+      transition: opacity 0.15s;
+    }
+    .art-ref-badge:hover { opacity: 1; }
+    .art-ref-badge i { color: var(--muted); margin-right: 3px; font-size: 0.68rem; }
+    .art-ref-note-chip {
+      display: inline-block;
+      background: transparent;
+      color: var(--primary);
+      border-radius: 0;
+      padding: 0;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.72rem;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: opacity 0.1s;
+    }
+    .art-ref-note-chip:hover { opacity: 0.7; }
+
+    /* ── Popup refs bar ── */
+    .popup-refs-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+      padding: 8px 16px;
+      background: var(--primary-soft);
+      border-top: 1px solid var(--primary);
+      font-size: 0.78rem;
+    }
+    .popup-refs-label { color: var(--primary); font-weight: 600; flex-shrink: 0; }
+    .popup-ref-note {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      padding: 2px 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.74rem;
+      transition: opacity 0.1s;
+    }
+    .popup-ref-note:hover { opacity: 0.82; }
     /* Mobile toolbar: smaller */
     @media (max-width: 900px) {
       .db-tb-sep { display: none; }
@@ -1677,6 +1880,35 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     body.reading-mode .back-to-top {
       bottom: 16px;
     }
+
+    /* ── LegalBase Reading Mode ── */
+    #dashboardView.reading-mode-db header,
+    #dashboardView.reading-mode-db .law-tabs,
+    #dashboardView.reading-mode-db .controls,
+    #dashboardView.reading-mode-db aside {
+      display: none !important;
+    }
+    #dashboardView.reading-mode-db {
+      padding-top: 44px;
+    }
+    #dashboardView.reading-mode-db .wrap {
+      padding: 0;
+      gap: 0;
+    }
+    #dashboardView.reading-mode-db .main {
+      grid-template-columns: 1fr !important;
+      gap: 0;
+    }
+    #dashboardView.reading-mode-db .doc {
+      max-height: 100vh;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+      padding: 24px clamp(12px, 3vw, 40px);
+      max-width: 100%;
+      width: 100%;
+      margin: 0;
+    }
 </style>
 
   <!-- Auto-load Mammoth with CDN fallback -->
@@ -1722,8 +1954,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
-          <button id="dashboardBtn" class="btn btn-ghost" title="Shënime"><i class="fas fa-sticky-note"></i></button>
-          <button id="readingModeBtn" class="btn btn-ghost" title="Reading mode"><i class="fas fa-book-open"></i></button>
+          <button id="dashboardBtn" class="btn btn-ghost" title=""><i class="fas fa-sticky-note"></i> LegalBase</button>
+          <button id="readingModeBtn" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i> Reading</button>
           <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
       </div>
@@ -1735,13 +1967,13 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
       <!-- Controls (dual search panel) -->
       <div class="controls" id="controlsPanel">
-        <input id="searchInput" type="text" placeholder="Search by article/title (e.g. 12 or Article 12)" />
+        <input id="searchInput" type="text" placeholder="" />
         <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
         <button id="clearSearchBtn" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
 
         <span class="divider"></span>
 
-        <input id="fulltextInput" type="text" placeholder="Full-text search (e.g. penalty sanctions)" />
+        <input id="fulltextInput" type="text" placeholder="" />
         <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
         <button id="fulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i> Next</button>
         <button id="fulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
@@ -1754,11 +1986,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       <div class="main">
         <aside>
           <div id="articlesList" class="articles-list">
-            <div class="empty"><i class="fas fa-file-alt"></i><br>Articles will appear when you select a law.</div>
+            <div class="empty" id="articlesEmptyMsg"><i class="fas fa-file-alt"></i><br></div>
           </div>
         </aside>
         <section id="doc" class="doc">
-          <div class="empty"><i class="fas fa-folder-open"></i><br>No active law. Add one and select a tab to view.</div>
+          <div class="empty" id="docEmptyMsg"><i class="fas fa-folder-open"></i><br></div>
         </section>
       </div>
     </div>
@@ -1775,8 +2007,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           <div class="brand"><i class="fas fa-scale-balanced"></i> LegalBase</div>
         </div>
         <div class="nav-right">
-          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu"><i class="fas fa-arrow-left"></i></button>
-          <button id="readingModeBtnDB" class="btn btn-ghost" title="Reading mode"><i class="fas fa-book-open"></i></button>
+          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu"><i class="fas fa-arrow-left"></i> LawBase</button>
+          <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i> Reading</button>
           <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
         </div>
       </div>
@@ -1809,27 +2041,79 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
   </div>
 
-  <!-- Settings drawer për Dashboard kategorite -->
+  <!-- Ref Picker Modal -->
+  <div id="dbRefModal" role="dialog" aria-modal="true">
+    <div class="ref-modal-box">
+      <div class="ref-modal-head">
+        <span id="dbRefModalTitle"><i class="fas fa-link"></i> Shto referencë</span>
+        <button class="btn btn-ghost" id="dbRefModalClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="ref-modal-body" id="dbRefModalBody">
+        <!-- filled by JS -->
+      </div>
+      <div class="ref-modal-footer">
+        <button class="btn btn-ghost" id="dbRefModalCancel">Anulo</button>
+        <button class="btn btn-primary" id="dbRefModalConfirm" disabled><i class="fas fa-check"></i> Shto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings drawer për Dashboard -->
   <aside id="dbSettingsDrawer" class="drawer" aria-hidden="true" style="z-index:1010">
     <header>
-      <strong><i class="fas fa-folder-open"></i> <span id="lbl-db-settings-title">Kategoritë</span></strong>
+      <strong id="dbSettingsTitle"><i class="fas fa-cog"></i> <span>Cilësimet</span></strong>
       <div style="float:right"><button id="dbCloseSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
     </header>
     <div class="body">
+      <!-- Kategoritë -->
       <div class="group">
-        <h4><i class="fas fa-plus"></i> Shto kategori</h4>
+        <h4 id="dbGrpCatAdd"><i class="fas fa-plus"></i> Shto kategori</h4>
         <div class="row">
-          <input id="dbNewCatInput" type="text" class="form-control" placeholder="Emri i kategorisë..." maxlength="80" />
+          <input id="dbNewCatInput" type="text" class="form-control" placeholder="" maxlength="80" />
         </div>
         <div class="row" style="margin-top:6px">
           <button id="dbAddCatBtn" class="btn btn-primary" style="width:100%"><i class="fas fa-plus"></i> Shto</button>
         </div>
       </div>
       <div class="group">
-        <h4><i class="fas fa-list"></i> <span id="lbl-manage-cats">Menaxho kategoritë</span></h4>
+        <h4 id="dbGrpCatManage"><i class="fas fa-list"></i> Menaxho kategoritë</h4>
         <div id="dbCatManagerList"></div>
       </div>
+      <!-- Tema — identike me LawBase -->
+      <div class="group">
+        <h4 id="dbGrpTheme"><i class="fas fa-palette"></i> Theme</h4>
+        <div class="theme-mode-row">
+          <button class="theme-mode-btn db-theme-mode-btn active" data-mode="light"><i class="fas fa-sun"></i> Light</button>
+          <button class="theme-mode-btn db-theme-mode-btn" data-mode="dark"><i class="fas fa-moon"></i> Dark</button>
+        </div>
+        <div class="theme-picker">
+          <button class="theme-opt db-theme-opt active" data-style="classic"><span class="theme-swatch" id="db-sw-classic"></span><span>Classic</span></button>
+          <button class="theme-opt db-theme-opt" data-style="legal"><span class="theme-swatch" id="db-sw-legal"></span><span>Legal</span></button>
+          <button class="theme-opt db-theme-opt" data-style="midnight"><span class="theme-swatch" id="db-sw-midnight"></span><span>Midnight</span></button>
+          <button class="theme-opt db-theme-opt" data-style="soft"><span class="theme-swatch" id="db-sw-soft"></span><span>Soft</span></button>
+          <button class="theme-opt db-theme-opt" data-style="corporate"><span class="theme-swatch" id="db-sw-corporate"></span><span>Corporate</span></button>
+        </div>
+        <div class="font-size-row">
+          <span class="font-size-label" id="db-lbl-font-size">Text size</span>
+          <div class="font-size-controls">
+            <button id="dbFontDecBtn" class="btn btn-ghost font-btn" title="Smaller">A−</button>
+            <span id="dbFontSizeDisplay" class="font-size-val">15px</span>
+            <button id="dbFontIncBtn" class="btn btn-ghost font-btn" title="Larger">A+</button>
+            <button id="dbFontResetBtn" class="btn btn-ghost font-btn" title="Reset">↺</button>
+          </div>
+        </div>
+      </div>
+      <!-- Gjuha -->
+      <div class="group">
+        <h4 id="dbGrpLang"><i class="fas fa-language"></i> Language</h4>
+        <div class="row">
+          <button class="btn btn-ghost lang-btn" data-lang="sq">🇦🇱 Shqip</button>
+          <button class="btn btn-ghost lang-btn" data-lang="mk">🇲🇰 Македонски</button>
+          <button class="btn btn-ghost lang-btn" data-lang="en">🇬🇧 English</button>
+        </div>
+      </div>
     </div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.8.9</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -1909,22 +2193,22 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.7.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.8.9</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
   <dialog id="lawModal">
     <form method="dialog">
       <div class="modal-head">
-        <div style="font-weight:700" id="lawModalTitle"><i class="fas fa-plus"></i> Add law</div>
+        <div style="font-weight:700" id="lawModalTitle"><i class="fas fa-plus"></i> </div>
         <button type="button" id="closeLawModal" class="btn btn-ghost"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
         <label><i class="fas fa-heading"></i> Title</label>
-        <div class="row"><input id="formTitle" type="text" placeholder="E.g. Law on Obligations" /></div>
+        <div class="row"><input id="formTitle" type="text" placeholder="" /></div>
 
-        <label><i class="fas fa-info-circle"></i> Description / ALT (e.g. "Official Gazette no. 12/2024" or URL)</label>
-        <div class="row"><input id="formAlt" type="text" placeholder="Official Gazette no. … or https://..." /></div>
+        <label id="formAltLbl"><i class="fas fa-info-circle"></i> </label>
+        <div class="row"><input id="formAlt" type="text" placeholder="" /></div>
 
         <label><i class="fas fa-file-upload"></i> Document</label>
         <div class="row file">
@@ -1933,7 +2217,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         </div>
 
         <label><i class="fas fa-paste"></i> Or paste text</label>
-        <div class="row"><textarea id="formText" placeholder="Paste text here"></textarea></div>
+        <div class="row"><textarea id="formText" placeholder=""></textarea></div>
 
         <div class="row">
           <div class="hint"><i class="fas fa-eye"></i> Preview (first 300 characters):</div>
@@ -1997,7 +2281,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     let currentSearchResults = [];
     let currentSearchIndex = -1;
 
-    // Theme system — style + mode
+    // Theme system -- style + mode
     const STYLES = ['classic','legal','midnight','soft','corporate'];
     const SWATCHES = {
       classic:   {light:['#f5f7fb','#4361ee'], dark:['#0f1117','#7b96ff']},
@@ -2045,21 +2329,21 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     const uid = () => Math.random().toString(36).slice(2,9);
     const updatePreview = (text) => { formPreview.textContent = (text || '').slice(0,300); };
 
-    // Split text by articles — supports MK (Член/чл), AL (Neni/neni.), SR (Član/čl), EN (Article)
+    // Split text by articles -- supports MK (Член/чл), AL (Neni/neni.), SR (Član/čl), EN (Article)
     function splitIntoArticles(raw){
       const lines=(raw||'').replace(/\r/g,'').split('\n'); const articles=[]; let current={index:null,title:'',text:[]};
       const commit=()=>{ if(current.index!==null) articles.push({index:current.index,title:current.title,text:current.text.join('\n')}); };
       for(const line of lines){
         // MK: Член/чл, AL: Neni/neni, SR: Član/čl, EN: Article/Art
         const m=line.match(/^\s*(Член|чл\.?|Neni|neni\.?|Član|čl\.?|Article|Art\.?)\s*(\d+)\s*\.?\s*(.*)$/i);
-        if(m){ commit(); current={index:parseInt(m[2],10), title:(m[1] + ' ' + m[2] + (m[3] ? ' — ' + m[3] : '')), text:[]}; }
+        if(m){ commit(); current={index:parseInt(m[2],10), title:(m[1] + ' ' + m[2] + (m[3] ? ' -- ' + m[3] : '')), text:[]}; }
         else { current.text.push(line); }
       }
       commit(); if(!articles.length) articles.push({index:0,title:'Text',text:raw});
       return articles;
     }
 
-    // Persistence — IndexedDB (no 5MB limit, no compression needed)
+    // Persistence -- IndexedDB (no 5MB limit, no compression needed)
     const DB_NAME='lawbase_db', DB_STORE='data', DB_KEY='state';
     let _db=null;
     function openDB(){
@@ -2126,7 +2410,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       }).then(annotations=>{
         const data={version:2,exportedAt:new Date().toISOString(),activeId:state.activeId,
           laws:state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()})),
-          annotations};
+          annotations,
+          legalbase: window._dbData || null};
         const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
         const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='lawbase_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       });
@@ -2146,14 +2431,26 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           store.clear();
           Object.entries(data.annotations).forEach(([k,v])=>store.put(v,k));
         }
-        renderAll(); saveToStorage(); alert('Import complete. Loaded ' + state.laws.length + ' laws.');
-      }catch(e){ alert('Import failed. Valid JSON format?'); }
+        renderAll(); saveToStorage();
+        // Restore LegalBase notes if present
+        if(data.legalbase && data.legalbase.cats){
+          openDB().then(db=>{
+            return new Promise((res,rej)=>{
+              const req = db.transaction('data','readwrite').objectStore('data').put(data.legalbase, 'dashboard-notes');
+              req.onsuccess = res; req.onerror = rej;
+            });
+          }).then(()=>{
+            if(window._dbReload) return window._dbReload();
+          }).catch(e=>console.error('legalbase restore:',e));
+        }
+        alert(((window._uiLang&&window._uiLang.importOk)||function(n){return 'Import complete. Loaded '+n+' laws.';})(state.laws.length));
+      }catch(e){ alert((window._uiLang&&window._uiLang.importFail)||'Import failed. Valid JSON format?'); }
     }
 
     // Render
     function renderTabs(){
       lawTabs.innerHTML='';
-      if(!state.laws.length){ const e=document.createElement('div'); e.className='hint'; e.textContent='No laws — click "Add".'; lawTabs.appendChild(e); return; }
+      if(!state.laws.length){ const e=document.createElement('div'); e.className='hint'; e.textContent=(window._uiLang&&window._uiLang.noLawsTab)||'No laws -- click "Add".';  lawTabs.appendChild(e); return; }
       state.laws.forEach(law=>{
         const el=document.createElement('div');
         el.className='law-tab'+(law.id===state.activeId?' active':'');
@@ -2166,7 +2463,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     function renderMembers(){
       articlesList.innerHTML='';
       const law=state.laws.find(l=>l.id===state.activeId);
-      if(!law){ const e=document.createElement('div'); e.className='empty'; e.textContent='Articles will appear when you select a law.'; articlesList.appendChild(e); return; }
+      if(!law){ const e=document.createElement('div'); e.className='empty'; e.textContent=(window._uiLang&&window._uiLang.articlesEmptyJs)||'Articles will appear when you select a law.'; articlesList.appendChild(e); return; }
       law.articles.forEach(a=>{
         const link=document.createElement('a'); link.href='javascript:void(0)'; link.className='art-link'; link.textContent=a.title;
         link.addEventListener('click',()=>{
@@ -2182,10 +2479,10 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     function renderDoc(){
       const law=state.laws.find(l=>l.id===state.activeId);
       if(!law){
-        docEl.innerHTML='<div class="empty">No active law. Add one and select a tab to view.</div>';
+        docEl.innerHTML='<div class="empty">'+(( window._uiLang&&window._uiLang.docEmptyJs)||'No active law. Add one and select a tab to view.')+'</div>';
         activeTitle.textContent=''; return;
       }
-      activeTitle.textContent=(window._uiLang&&window._uiLang.active||'Active: ')+law.title+(law.alt?' — '+law.alt:'');
+      activeTitle.textContent=(window._uiLang&&window._uiLang.active||'Active: ')+law.title+(law.alt?' -- '+law.alt:'');
       const key=law.id+'_'+(law.updatedAt||0);
       if(!_docCache[key]){
         const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -2208,7 +2505,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           while(i<lines.length){
             const line=lines[i];
 
-            // Case 1: "...спомнуваат членовите:" — label line ending with colon, nums on next line
+            // Case 1: "...спомнуваат членовите:" -- label line ending with colon, nums on next line
             if(xrefKeywords.test(line) && /:\s*$/.test(line.trimEnd())){
               const next=lines[i+1]||'';
               const nm=next.match(numsOnlyRe);
@@ -2218,7 +2515,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
               }
             }
 
-            // Case 2: "...спомнат во членовите: 386 387 394" — label + nums on same line
+            // Case 2: "...спомнат во членовите: 386 387 394" -- label + nums on same line
             if(xrefKeywords.test(line)){
               const m=line.match(/^(.+?:\s*)(\d[\d\s]+)$/);
               if(m){
@@ -2235,7 +2532,44 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+renderText(a.text||'')+'</pre></article>').join('');
       }
       docEl.innerHTML=_docCache[key];
+
+      // ── Inject ref badges from LegalBase notes ──
+      const dbD = window._dbData;
+      if(dbD && dbD.cats){
+        // Build index: artIndex → [{catName,title,catId,id}]
+        const refMap = {};
+        dbD.cats.forEach(cat=>{
+          (cat.titles||[]).forEach(t=>{
+            (t.refs||[]).forEach(r=>{
+              if(r.lawId!==law.id) return;
+              if(!refMap[r.artIndex]) refMap[r.artIndex]=[];
+              refMap[r.artIndex].push({catName:cat.name, title:t.title, catId:cat.id, id:t.id});
+            });
+          });
+        });
+        const L = window._uiLang||{};
+        Object.keys(refMap).forEach(idx=>{
+          const art = docEl.querySelector(`.article[data-index="${idx}"]`);
+          if(!art) return;
+          const notes = refMap[idx];
+          const bar = document.createElement('div');
+          bar.className = 'art-ref-badge';
+          bar.innerHTML = `<i class="fas fa-paperclip"></i> ${L.dbRefFrom||'Referenced in'}: `
+            + notes.map(n=>`<span class="art-ref-note-chip" data-cat="${escH(n.catId)}" data-tid="${escH(n.id)}">${escH(n.catName)} > ${escH(n.title||(L.dbNoTitle||'(no title)'))}</span>`).join(', ');
+          art.querySelector('h3').insertAdjacentElement('afterend', bar);
+          bar.querySelectorAll('.art-ref-note-chip').forEach(chip=>{
+            chip.addEventListener('click',()=>{
+              const appElR = document.querySelector('.app:not(#dashboardView)');
+              const dvR = document.getElementById('dashboardView');
+              if(appElR) appElR.style.display='none';
+              if(dvR) dvR.style.display='flex';
+              window._dbActivateCat && window._dbActivateCat(chip.dataset.cat, chip.dataset.tid);
+            });
+          });
+        });
+      }
     }
+    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function renderAll(){ renderTabs(); renderMembers(); renderDoc(); renderLawsManager(); }
 
     function setActive(id){
@@ -2243,16 +2577,17 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       renderTabs(); renderMembers(); renderDoc();
       saveToStorage();
     }
+    window.setActive = setActive;
 
     function renderLawsManager(){
-      lawsManager.innerHTML=''; if(!state.laws.length){ lawsManager.innerHTML='<div class="hint">No laws.</div>'; return; }
+      lawsManager.innerHTML=''; if(!state.laws.length){ lawsManager.innerHTML='<div class="hint">'+(( window._uiLang&&window._uiLang.noLaws)||'No laws.')+'</div>'; return; }
       state.laws.slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(l=>{
         const row=document.createElement('div'); row.className='law-item';
         const left=document.createElement('div'); left.style.display='grid'; left.style.gap='6px';
-        const name=document.createElement('input'); name.type='text'; name.value=l.title; name.placeholder='Title';
-        name.addEventListener('change',()=>{ l.title=name.value.trim()||'Untitled'; l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderTabs(); saveToStorage(); });
+        const name=document.createElement('input'); name.type='text'; name.value=l.title; name.placeholder=(window._uiLang&&window._uiLang.titlePh)||'Title';
+        name.addEventListener('change',()=>{ l.title=name.value.trim()||((window._uiLang&&window._uiLang.untitled)||'Untitled'); l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderTabs(); saveToStorage(); });
         name.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); name.blur(); }});
-        const alt=document.createElement('input'); alt.type='text'; alt.value=l.alt||''; alt.placeholder='Description / ALT';
+        const alt=document.createElement('input'); alt.type='text'; alt.value=l.alt||''; alt.placeholder=(window._uiLang&&window._uiLang.altPh)||'Description / ALT';
         alt.addEventListener('change',()=>{ l.alt=alt.value.trim(); l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderDoc(); renderTabs(); saveToStorage(); });
         alt.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); alt.blur(); }});
         left.appendChild(name); left.appendChild(alt);
@@ -2261,9 +2596,9 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const openBtn=document.createElement('button'); openBtn.className='btn btn-ghost'; openBtn.innerHTML='<i class="fas fa-folder-open"></i>';
         openBtn.addEventListener('click',()=>{ setActive(l.id); drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); });
         const editBtn=document.createElement('button'); editBtn.className='btn btn-ghost'; editBtn.innerHTML='<i class="fas fa-edit"></i>';
-        editBtn.addEventListener('click',()=>{ editId=l.id; lawModalTitle.textContent='Edit law'; formTitle.value=l.title; formAlt.value=l.alt||''; formText.value=l.content||''; updatePreview(l.content||''); formFile.value=''; lawModal.showModal(); });
+        editBtn.addEventListener('click',()=>{ editId=l.id; lawModalTitle.textContent=(window._uiLang&&window._uiLang.modalEditTitle)||'Edit law'; formTitle.value=l.title; formAlt.value=l.alt||''; formText.value=l.content||''; updatePreview(l.content||''); formFile.value=''; lawModal.showModal(); });
         const delBtn=document.createElement('button'); delBtn.className='btn btn-ghost'; delBtn.innerHTML='<i class="fas fa-trash"></i>';
-        delBtn.addEventListener('click',()=>{ if(confirm('Are you sure you want to delete this law?')){
+        delBtn.addEventListener('click',()=>{ if(confirm((window._uiLang&&window._uiLang.deleteConfirm)||'Are you sure you want to delete this law?')){
           const i=state.laws.findIndex(x=>x.id===l.id);
           if(i>=0) state.laws.splice(i,1);
           if(state.activeId===l.id) state.activeId=state.laws[0]?.id||null;
@@ -2292,7 +2627,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
       if (ext==='docx' || type==='application/vnd.openxmlformats-officedocument.wordprocessingml.document'){
         if (!docxAvailable || !window.mammoth){
-          alert('DOCX unavailable — library not loaded. Wait 2-3 sec and try again.');
+          alert((window._uiLang&&window._uiLang.docxLib)||'DOCX unavailable -- library not loaded. Wait 2-3 sec and try again.');
           return '';
         }
         try{
@@ -2302,22 +2637,22 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           return result.value || '';
         }catch(e){ 
           console.error('DOCX parsing error:', e);
-          alert('Failed to read .docx. Use .txt or copy/paste.'); 
+          alert((window._uiLang&&window._uiLang.docxFail)||'Failed to read .docx. Use .txt or copy/paste.'); 
           return ''; 
         }
       }
 
-      alert('Unsupported format. Use .docx/.txt/.md/.html or copy/paste.');
+      alert((window._uiLang&&window._uiLang.unsupported)||'Unsupported format. Use .docx/.txt/.md/.html or copy/paste.');
       return '';
     }
 
     // Add/Edit flows
-    function openAddModal(){ editId=null; lawModalTitle.textContent='Add law'; formTitle.value=''; formAlt.value=''; formText.value=''; formFile.value=''; updatePreview(''); lawModal.showModal(); }
+    function openAddModal(){ editId=null; lawModalTitle.textContent=(window._uiLang&&window._uiLang.modalAddTitle)||'Add law'; formTitle.value=''; formAlt.value=''; formText.value=''; formFile.value=''; updatePreview(''); lawModal.showModal(); }
     async function persistLawFromForm(){
-      const title=(formTitle.value||'').trim(); if(!title){ alert('Please enter a title.'); return; }
+      const title=(formTitle.value||'').trim(); if(!title){ alert((window._uiLang&&window._uiLang.enterTitle)||'Please enter a title.'); return; }
       let raw=(formText.value||'').trim();
       if(!raw && formFile.files && formFile.files[0]) raw=await extractTextFromFile(formFile.files[0]);
-      if(!raw){ alert('Please enter text or upload a file.'); return; }
+      if(!raw){ alert((window._uiLang&&window._uiLang.enterText)||'Please enter text or upload a file.'); return; }
       const alt=(formAlt.value||'').trim();
 
       if(editId){
@@ -2368,7 +2703,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       return dp[m][n];
     }
 
-    // Full-text search (highlight all) — supports fuzzy
+    // Full-text search (highlight all) -- supports fuzzy
     function highlightAll(root, query){
       if(!query) return 0;
       const isFuzzy = query.length >= 4;
@@ -2476,7 +2811,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     clearSearchBtn.addEventListener('click', ()=>{ searchInput.value=''; docEl.querySelectorAll('.highlight').forEach(el=>el.classList.remove('highlight')); });
     searchInput.addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ e.preventDefault(); searchActive(); }});
 
-    // Instant search — scroll direkt ndërkohë që shkruan
+    // Instant search -- scroll direkt ndërkohë që shkruan
     let _searchDebounce = null;
     searchInput.addEventListener('input', () => {
       clearTimeout(_searchDebounce);
@@ -2528,11 +2863,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     });
 
     // ══════════════════════════════════════════════
-    // DASHBOARD v2 — identik me LegalBase layout
+    // DASHBOARD v2 -- identik me LegalBase layout
     // Data: dbData = { cats: [ { id, name, titles: [ { id, title, body, updatedAt } ] } ] }
     // ══════════════════════════════════════════════
     const dashboardView   = document.getElementById('dashboardView');
-    const appEl           = document.querySelector('.app');
+    const appEl           = document.querySelector('.app:not(#dashboardView)');
     const dbCatTabsEl     = document.getElementById('dbCatTabs');
     const dbTitlesListEl  = document.getElementById('dbTitlesList');
     const dbDocEl         = document.getElementById('dbDoc');
@@ -2541,9 +2876,27 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     const dbNewCatInput   = document.getElementById('dbNewCatInput');
 
     let dbData      = { cats: [] };
+    // Expose for cross-reference lookup from LawBase
+    Object.defineProperty(window, '_dbData', { get:()=>dbData });
     let dbActiveCat = null;   // cat id
     let dbActiveTitle= null;  // title id
     let dbEditing   = false;
+
+    // Expose activation function for cross-app navigation
+    window._dbActivateCat = function(catId, titleId){
+      dbActiveCat = catId; dbActiveTitle = titleId; dbEditing = false;
+      dbRender();
+    };
+    // Expose reload for import restore
+    window._dbReload = function(){
+      return dbLoad().then(()=>{
+        if(dbData.cats && dbData.cats.length){
+          dbActiveCat = dbData.cats[0].id;
+          dbActiveTitle = (dbData.cats[0].titles&&dbData.cats[0].titles.length) ? dbData.cats[0].titles[0].id : null;
+        }
+        dbRender();
+      });
+    };
 
     // ── Storage ──
     const DB_NOTES_KEY = 'dashboard-notes';
@@ -2564,6 +2917,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     function dbSave(){
+      // Invalidate LawBase doc cache so ref badges re-render
+      if(window._docCache) Object.keys(window._docCache).forEach(k=>delete window._docCache[k]);
       openDB().then(db=>{
         db.transaction('data','readwrite').objectStore('data').put(dbData, DB_NOTES_KEY);
       }).catch(e=>console.error('dbSave:',e));
@@ -2580,6 +2935,11 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
             else d={cats:[]};
           }
           dbData=d;
+          if(dbData.cats && dbData.cats.length && !dbActiveCat){
+            dbActiveCat = dbData.cats[0].id;
+            const firstCat = dbData.cats[0];
+            if(firstCat.titles && firstCat.titles.length) dbActiveTitle = firstCat.titles[0].id;
+          }
           res();
         };
         req.onerror=()=>res();
@@ -2587,8 +2947,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     }
 
     function dbUid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-    function dbFmtDate(ts){ return new Date(ts).toLocaleDateString('sq-AL',{day:'2-digit',month:'short',year:'numeric'}); }
-    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function dbFmtDate(ts){ return new Date(ts).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function dbFindCat(id){ return dbData.cats.find(c=>c.id===id); }
 
     // ── Render tabs (kategorite) ──
@@ -2622,6 +2982,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       cat.titles.forEach(t=>{
         const link=document.createElement('a');
         link.className='art-link'+(dbActiveTitle===t.id?' active':'');
+        link.dataset.tid=t.id;
         link.textContent=t.title||(L.dbNoTitle||'(no title)');
         link.href='#';
         link.addEventListener('click',e=>{ e.preventDefault(); dbActiveTitle=t.id; dbEditing=false; dbRender(); });
@@ -2706,9 +3067,14 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
               <button class="db-tb-btn" data-cmd="undo" title="Undo"><i class="fas fa-undo"></i></button>
               <button class="db-tb-btn" data-cmd="redo" title="Redo"><i class="fas fa-redo"></i></button>
             </div>
+            <div class="db-tb-sep"></div>
+            <div class="db-tb-group" id="dbRefsEditGroup">
+              <button class="db-tb-btn" id="dbTbRefBtn" title="Add reference" style="color:var(--primary);font-weight:700"><i class="fas fa-link"></i> <span id="dbTbRefCount"></span></button>
+            </div>
           </div>
           <div class="db-editor-body" id="dbEditBodyInp" contenteditable="true">${t.body||''}</div>
-          <div class="db-edit-actions">
+          <div class="db-word-count" id="dbWordCount"></div>
+          <div class="db-edit-actions"><span id="dbAutoSaveInd" class="db-autosave-ind"></span>
             <button class="btn btn-primary" id="dbSaveBtn"><i class="fas fa-save"></i> ${L.dbSave||'Save'}</button>
             <button class="btn btn-ghost" id="dbCancelBtn">${L.dbCancel||'Cancel'}</button>
             <button class="btn" style="margin-left:auto;color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
@@ -2771,11 +3137,44 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         editor.addEventListener('mouseup', dbUpdateToolbarState);
         editor.addEventListener('selectionchange', dbUpdateToolbarState);
 
-        document.getElementById('dbSaveBtn').addEventListener('click',()=>{
-          t.title=document.getElementById('dbEditTitleInp').value.trim()||(L.dbNoTitle||'(no title)');
-          t.body=document.getElementById('dbEditBodyInp').innerHTML;
-          t.updatedAt=Date.now();
-          dbEditing=false; dbSave(); dbRender();
+        // Auto-save with 2s debounce
+        let _dbAutoSaveTimer = null;
+        function dbAutoSave(){
+          clearTimeout(_dbAutoSaveTimer);
+          _dbAutoSaveTimer = setTimeout(()=>{
+            const titleEl = document.getElementById('dbEditTitleInp');
+            const bodyEl  = document.getElementById('dbEditBodyInp');
+            if(!titleEl || !bodyEl) return;
+            t.title = titleEl.value.trim() || (L.dbNoTitle||'(no title)');
+            t.body  = bodyEl.innerHTML;
+            t.updatedAt = Date.now();
+            dbSave();
+            // Show subtle saved indicator
+            const ind = document.getElementById('dbAutoSaveInd');
+            if(ind){ ind.dataset.txt=(L.dbSaved||'Ruajtur'); ind.classList.add('saved'); setTimeout(()=>ind.classList.remove('saved'), 1200); }
+          }, 2000);
+        }
+        editor.addEventListener('input', ()=>{ dbAutoSave(); dbUpdateWordCount(); });
+        function dbUpdateWordCount(){
+          const text = (editor.innerText||'').trim();
+          const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+          const chars = text.length;
+          const wc = document.getElementById('dbWordCount');
+          if(wc) wc.textContent = words + ' fjalë · ' + chars + ' karaktere';
+        }
+        dbUpdateWordCount();
+        document.getElementById('dbEditTitleInp').addEventListener('input', dbAutoSave);
+
+        document.getElementById('dbSaveBtn').addEventListener('click', function(){
+          const titleEl = document.getElementById('dbEditTitleInp');
+          const bodyEl  = document.getElementById('dbEditBodyInp');
+          if(!titleEl || !bodyEl){ dbEditing=false; dbRender(); return; }
+          t.title = titleEl.value.trim() || (L.dbNoTitle||'(no title)');
+          t.body  = bodyEl.innerHTML;
+          t.updatedAt = Date.now();
+          dbEditing = false;
+          dbSave();
+          dbRender();
         });
         document.getElementById('dbCancelBtn').addEventListener('click',()=>{ dbEditing=false; dbRenderDoc(); });
         document.getElementById('dbDelBtn').addEventListener('click',()=>{
@@ -2783,23 +3182,276 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           cat.titles=cat.titles.filter(x=>x.id!==t.id);
           dbActiveTitle=null; dbEditing=false; dbSave(); dbRender();
         });
+        // Ref button in toolbar
+        const refBtn = document.getElementById('dbTbRefBtn');
+        const refCountEl = document.getElementById('dbTbRefCount');
+        function dbUpdateRefCount(){
+          const cnt = (t.refs||[]).length;
+          if(refCountEl) refCountEl.textContent = cnt ? '('+cnt+')' : '';
+          if(refBtn) refBtn.title = (L.dbAddRef||'Add reference') + (cnt ? ' · '+cnt : '');
+        }
+        dbUpdateRefCount();
+        if(refBtn){
+          refBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); });
+          refBtn.addEventListener('click', e=>{
+            e.preventDefault(); e.stopPropagation();
+            const editorEl = document.getElementById('dbEditBodyInp');
+            const titleInp = document.getElementById('dbEditTitleInp');
+            if(editorEl) t.body = editorEl.innerHTML;
+            if(titleInp) t.title = titleInp.value.trim() || (L.dbNoTitle||'(no title)');
+            dbOpenRefPicker(t, ()=>{
+              dbUpdateRefCount();
+            });
+          });
+        }
         document.getElementById('dbEditTitleInp').focus();
       } else {
+        // ── Build refs section HTML (view mode - chips only, no add button) ──
+        const refs = t.refs||[];
+        let refsHtml = '';
+        if(refs.length){
+          refsHtml = `<div class="db-refs-section" id="dbRefsSection">
+            <span class="db-refs-label"><i class="fas fa-link"></i> ${L.dbRefs||'References'}</span>`;
+          refs.forEach((r,i)=>{
+            const law = window._appState && window._appState.laws.find(l=>l.id===r.lawId);
+            const lawName = law ? law.title : (r.lawTitle||'?');
+            const artLabel = r.artTitle || (((L.articleWord||'Article')+' '+r.artIndex));
+            refsHtml += `<span class="db-ref-chip" data-ref-i="${i}" title="${escH(lawName+' > '+artLabel)}">
+              <i class="fas fa-gavel" style="font-size:0.7rem"></i>
+              <span>${escH(lawName)} <b>></b> ${escH(artLabel)}</span>
+            </span>`;
+          });
+          refsHtml += `</div>`;
+        }
+
         dbDocEl.innerHTML=`
           <div class="db-note-title-view">${escH(t.title||(L.dbNoTitle||'(no title)'))}</div>
           <div class="db-note-meta"><i class="fas fa-clock" style="opacity:.5"></i> ${dbFmtDate(t.updatedAt)}</div>
+          ${refsHtml}
           <div class="db-note-body-view db-rendered">${t.body||''}</div>
           <div class="db-note-actions">
             <button class="btn btn-primary" id="dbEditBtn"><i class="fas fa-pen"></i> ${L.dbEdit||'Edit'}</button>
-            <button class="btn" style="color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
+            <button class="btn btn-ghost" id="dbDupBtn" title="${L.dbDuplicate||'Duplicate'}"><i class="fas fa-copy"></i></button>
+            <button class="btn btn-ghost" id="dbPrintBtn" title="${L.dbPrint||'Print'}"><i class="fas fa-print"></i></button>
+            <button class="btn" style="margin-left:auto;color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
           </div>`;
         document.getElementById('dbEditBtn').addEventListener('click',()=>{ dbEditing=true; dbRenderDoc(); });
+        document.getElementById('dbPrintBtn').addEventListener('click',()=>{
+          const cat2 = dbFindCat(dbActiveCat);
+          const win = window.open('','_blank','width=800,height=600');
+          const refsHtml = (t.refs&&t.refs.length)
+            ? '<div class="refs"><b>Referenca:</b> '+t.refs.map(r=>escH(r.lawTitle)+' &rsaquo; '+escH(r.artTitle||'')).join(', ')+'</div>'
+            : '';
+          const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+escH(t.title||'')+'</title>'
+            + '<style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:20px;color:#111}'
+            + 'h1{font-size:1.5rem;margin-bottom:4px;border-bottom:2px solid #333;padding-bottom:8px}'
+            + '.meta{font-size:0.8rem;color:#666;margin-bottom:24px}'
+            + '.refs{font-size:0.85rem;color:#444;margin-bottom:16px;padding:8px;border-left:3px solid #888}'
+            + '.body{line-height:1.7}@media print{body{margin:0;padding:0}}</style></head><body>'
+            + '<h1>'+escH(t.title||'')+'</h1>'
+            + '<div class="meta">'+(cat2?escH(cat2.name)+' &middot; ':'')+dbFmtDate(t.updatedAt)+'</div>'
+            + refsHtml
+            + '<div class="body">'+(t.body||'')+'</div>'
+            + '</body></html>';
+          win.document.write(html);
+          win.document.close();
+          setTimeout(()=>{ win.focus(); win.print(); }, 400);
+        });
+        document.getElementById('dbDupBtn').addEventListener('click',()=>{
+          const dup = JSON.parse(JSON.stringify(t));
+          dup.id = dbUid(); dup.title = (t.title||'') + ' (2)'; dup.updatedAt = Date.now();
+          cat.titles.splice(cat.titles.indexOf(t)+1, 0, dup);
+          dbActiveTitle = dup.id;
+          dbSave(); dbRender();
+        });
         document.getElementById('dbDelBtn').addEventListener('click',()=>{
           if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
           cat.titles=cat.titles.filter(x=>x.id!==t.id);
           dbActiveTitle=null; dbSave(); dbRender();
         });
+
+        // Ref chip click → open law at article
+        dbDocEl.querySelectorAll('.db-ref-chip').forEach(chip=>{
+          chip.addEventListener('click', e=>{
+            const i = parseInt(chip.dataset.refI);
+            const r = (t.refs||[])[i]; if(!r) return;
+            typeof dbLeaveReading==='function' && dbLeaveReading();
+            const appEl2 = document.querySelector('.app:not(#dashboardView)');
+            const dv = document.getElementById('dashboardView');
+            if(appEl2) appEl2.style.display='flex';
+            if(dv) dv.style.display='none';
+            if(window._appState && window.setActive){
+              window.setActive(r.lawId);
+              setTimeout(()=>{
+                const docPanel = document.getElementById('doc');
+                if(docPanel){
+                  const target = docPanel.querySelector('[data-index="'+r.artIndex+'"]');
+                  if(target){ target.scrollIntoView({behavior:'instant',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1500); }
+                }
+              }, 250);
+            }
+          });
+        });
       }
+    }
+
+    // ── Ref Picker ──
+    function dbOpenRefPicker(t, onDone){
+      const L = window._dbLang||window._uiLang||{};
+      const modal = document.getElementById('dbRefModal');
+      const body  = document.getElementById('dbRefModalBody');
+      const confirmBtn = document.getElementById('dbRefModalConfirm');
+      const titleEl = document.getElementById('dbRefModalTitle');
+      titleEl.innerHTML = '<i class="fas fa-link"></i> '+(L.dbAddRef||'Add reference');
+      document.getElementById('dbRefModalCancel').textContent = L.dbCancel||'Cancel';
+      confirmBtn.innerHTML = '<i class="fas fa-check"></i> '+(L.dbSave||'Add');
+      confirmBtn.disabled = true;
+
+      const laws = (window._appState&&window._appState.laws)||[];
+      let selLawId = null, selArtIndex = null, selArtTitle = null;
+
+      function renderExisting(){
+        const refs = t.refs||[];
+        if(!refs.length) return '';
+        let h = '<div style="margin-bottom:12px">';
+        h += '<div class="ref-step-label" style="margin-bottom:6px"><i class="fas fa-check-circle" style="color:var(--primary)"></i> '+(L.dbRefs||'References')+'</div>';
+        refs.forEach((r,i)=>{
+          const law = laws.find(l=>l.id===r.lawId);
+          const lawName = law ? law.title : (r.lawTitle||'?');
+          const artLabel = r.artTitle||(((L.articleWord||'Art.')+' '+r.artIndex));
+          h += '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--chip);border-radius:var(--border-radius);margin-bottom:4px;font-size:0.82rem">';
+          h += '<i class="fas fa-gavel" style="color:var(--primary);flex-shrink:0;font-size:0.72rem"></i>';
+          h += '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escH(lawName)+' > '+escH(artLabel)+'</span>';
+          h += '<button class="db-tb-btn ref-del-existing" data-del-i="'+i+'" title="'+(L.dbDelete||'Delete')+'" style="color:var(--danger);font-size:0.8rem;padding:2px 5px">✕</button>';
+          h += '</div>';
+        });
+        h += '<hr style="border:none;border-top:1px solid var(--border);margin:10px 0"></div>';
+        return h;
+      }
+
+      function renderStep1(){
+        body.innerHTML = renderExisting()
+          + '<div class="ref-step-label"><i class="fas fa-gavel"></i> '+(L.drawerLawsH||'Laws')+' -- '+(L.dbRefPickLaw||'choose a law')+'</div>'
+          + '<input class="ref-search" id="dbRefSearch" placeholder="'+(L.searchPh||'Search...')+'" />'
+          + '<div id="dbRefLawList"></div>';
+        // Delete existing ref buttons
+        body.querySelectorAll('.ref-del-existing').forEach(btn=>{
+          btn.addEventListener('click', e=>{
+            e.stopPropagation();
+            const i = parseInt(btn.dataset.delI);
+            t.refs = (t.refs||[]).filter((_,idx)=>idx!==i);
+            dbSave(); if(onDone) onDone();
+            renderStep1();
+          });
+        });
+        function renderLaws(q){
+          const list = document.getElementById('dbRefLawList');
+          if(!list) return;
+          list.innerHTML='';
+          const filtered = laws.filter(l=>!q||l.title.toLowerCase().includes(q.toLowerCase()));
+          if(!filtered.length){ list.innerHTML='<div style="color:var(--muted);font-size:0.85rem;padding:8px">'+(L.noLaws||'No laws.')+'</div>'; return; }
+          filtered.forEach(law=>{
+            const item = document.createElement('div');
+            item.className='ref-law-item'+(selLawId===law.id?' selected':'');
+            item.innerHTML=`<i class="fas fa-gavel" style="color:var(--primary);flex-shrink:0"></i><span>${escH(law.title)}</span>`;
+            item.addEventListener('click',()=>{
+              selLawId=law.id; selArtIndex=null; selArtTitle=null;
+              confirmBtn.disabled=true;
+              renderStep2(law);
+            });
+            list.appendChild(item);
+          });
+        }
+        renderLaws('');
+        const srch = document.getElementById('dbRefSearch');
+        if(srch) srch.addEventListener('input',function(){ renderLaws(this.value); });
+      }
+
+      function renderStep2(law){
+        body.innerHTML = ''
+          + '<button class="db-ref-add-btn" id="dbRefBack" style="margin-bottom:10px"><i class="fas fa-arrow-left"></i> '+(L.dbBack||'Back')+'</button>'
+          + '<div class="ref-step-label"><i class="fas fa-list-ol"></i> '+escH(law.title)+' -- '+(L.dbRefPickArt||'choose an article')+'</div>'
+          + '<input class="ref-search" id="dbRefArtSearch" placeholder="'+(L.searchPh||'Search...')+'" />'
+          + '<div id="dbRefArtList"></div>';
+        document.getElementById('dbRefBack').addEventListener('click', ()=>{
+          selArtIndex=null; selArtTitle=null;
+          renderStep1();
+          updateConfirmLabel();
+        });
+        function renderArts(q){
+          const list = document.getElementById('dbRefArtList');
+          if(!list) return;
+          list.innerHTML='';
+          const arts = law.articles||[];
+          const filtered = arts.filter(a=>!q||(a.title||'').toLowerCase().includes(q.toLowerCase())||String(a.index).includes(q));
+          // Mark already-added refs
+          const added = new Set((t.refs||[]).filter(r=>r.lawId===law.id).map(r=>r.artIndex));
+          filtered.forEach(art=>{
+            const isAdded = added.has(art.index);
+            const item=document.createElement('div');
+            item.className='ref-art-item'+(selArtIndex===art.index?' selected':'')+(isAdded?' selected':'');
+            item.style.opacity = isAdded?'0.5':'1';
+            item.innerHTML=`<i class="fas fa-file-alt" style="color:var(--muted);flex-shrink:0;font-size:0.8rem"></i><span>${escH(art.title||(((L.articleWord||'Art.')+' '+art.index)))}</span>${isAdded?'<span style="margin-left:auto;font-size:0.72rem;color:var(--primary)">✓</span>':''}`;
+            if(!isAdded) item.addEventListener('click',()=>{
+              selArtIndex=art.index;
+              selArtTitle=art.title||(((L.articleWord||'Art.')+' '+art.index));
+              list.querySelectorAll('.ref-art-item').forEach(el=>el.classList.toggle('selected',el===item));
+              updateConfirmLabel();
+            });
+            list.appendChild(item);
+          });
+          if(!filtered.length) list.innerHTML='<div style="color:var(--muted);font-size:0.85rem;padding:8px">-</div>';
+        }
+        renderArts('');
+        const srch = document.getElementById('dbRefArtSearch');
+        if(srch) srch.addEventListener('input',function(){ renderArts(this.value); });
+      }
+
+      renderStep1();
+      modal.classList.add('open');
+      setTimeout(()=>{ const s=document.getElementById('dbRefSearch'); if(s) s.focus(); }, 50);
+
+      function closeModal(){
+        modal.classList.remove('open');
+        selLawId=null; selArtIndex=null;
+        modal.onclick = null;
+        if(onDone) onDone();
+      }
+      document.getElementById('dbRefModalClose').onclick = closeModal;
+      document.getElementById('dbRefModalCancel').onclick = closeModal;
+      modal.onclick = (e)=>{ if(e.target===modal) closeModal(); };
+      function escHandler(e){ if(e.key==='Escape'){ closeModal(); document.removeEventListener('keydown',escHandler); } }
+      document.addEventListener('keydown', escHandler);
+
+      // "Save" button = close modal (refs already saved live)
+      // "Add" button = add selected article then stay open for more
+      confirmBtn.onclick = (e)=>{
+        e.stopPropagation();
+        if(selLawId && selArtIndex!==null){
+          // Add the selected ref then reset selection
+          const law = laws.find(l=>l.id===selLawId);
+          if(!t.refs) t.refs=[];
+          const dup = t.refs.find(r=>r.lawId===selLawId&&r.artIndex===selArtIndex);
+          if(!dup) t.refs.push({ lawId:selLawId, lawTitle:law?law.title:'', artIndex:selArtIndex, artTitle:selArtTitle||'' });
+          dbSave();
+          selLawId=null; selArtIndex=null; confirmBtn.disabled=true;
+          renderStep1();
+        } else {
+          // No selection -- just close
+          closeModal();
+        }
+      };
+
+      // Separate close/done button label logic
+      function updateConfirmLabel(){
+        if(selLawId!==null && selArtIndex!==null){
+          confirmBtn.innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddRef||'Add');
+        } else {
+          confirmBtn.innerHTML = '<i class="fas fa-check"></i> '+(L.dbSave||'Done');
+        }
+        confirmBtn.disabled = false;
+      }
+      updateConfirmLabel();
     }
 
     function dbRender(){
@@ -2810,7 +3462,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         const cat = dbFindCat(dbActiveCat);
         const noTitle = L.dbNoTitle||'(no title)';
         const t = cat && dbActiveTitle && cat.titles.find(x=>x.id===dbActiveTitle);
-        el.textContent = cat ? (t ? `${L.dbActive||'Active:'} ${cat.name} › ${t.title||noTitle}` : `${L.dbActive||'Active:'} ${cat.name}`) : '';
+        el.textContent = cat ? (t ? `${L.dbActive||'Active:'} ${cat.name} > ${t.title||noTitle}` : `${L.dbActive||'Active:'} ${cat.name}`) : '';
       }
       if(typeof dbApplySearch==='function') dbApplySearch();
     }
@@ -2865,6 +3517,18 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     // Settings drawer open/close
     document.getElementById('dbOpenSettings').addEventListener('click',()=>{
       dbRenderCatManager();
+      // Sync theme/font state from LawBase drawer
+      const curMode = document.querySelector('.theme-mode-btn.active');
+      document.querySelectorAll('.db-theme-mode-btn').forEach(b=>{
+        b.classList.toggle('active', curMode && b.dataset.mode===curMode.dataset.mode);
+      });
+      const curStyle = document.querySelector('.theme-opt.active:not(.db-theme-opt)');
+      document.querySelectorAll('.db-theme-opt').forEach(b=>{
+        b.classList.toggle('active', curStyle && b.dataset.style===curStyle.dataset.style);
+      });
+      const fsd = document.getElementById('fontSizeDisplay');
+      const dbFsd = document.getElementById('dbFontSizeDisplay');
+      if(fsd && dbFsd) dbFsd.textContent = fsd.textContent;
       dbSettingsDrawer.setAttribute('aria-hidden','false');
       dbSettingsDrawer.classList.add('open');
     });
@@ -2872,6 +3536,50 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       dbSettingsDrawer.setAttribute('aria-hidden','true');
       dbSettingsDrawer.classList.remove('open');
     });
+
+    // DB theme buttons -- delegate to LawBase theme system
+    document.querySelectorAll('.db-theme-mode-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const mirror = document.querySelector('.theme-mode-btn[data-mode="'+btn.dataset.mode+'"]');
+        if(mirror) mirror.click();
+        document.querySelectorAll('.db-theme-mode-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      });
+    });
+    document.querySelectorAll('.db-theme-opt').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const mirror = document.querySelector('.theme-opt:not(.db-theme-opt)[data-style="'+btn.dataset.style+'"]');
+        if(mirror) mirror.click();
+        document.querySelectorAll('.db-theme-opt').forEach(b=>b.classList.toggle('active',b===btn));
+      });
+    });
+    // DB font buttons -- delegate to LawBase font system
+    document.getElementById('dbFontDecBtn').addEventListener('click',()=>{ document.getElementById('fontDecBtn').click(); document.getElementById('dbFontSizeDisplay').textContent=document.getElementById('fontSizeDisplay').textContent; });
+    document.getElementById('dbFontIncBtn').addEventListener('click',()=>{ document.getElementById('fontIncBtn').click(); document.getElementById('dbFontSizeDisplay').textContent=document.getElementById('fontSizeDisplay').textContent; });
+    document.getElementById('dbFontResetBtn').addEventListener('click',()=>{ document.getElementById('fontResetBtn').click(); document.getElementById('dbFontSizeDisplay').textContent=document.getElementById('fontSizeDisplay').textContent; });
+
+    // ── LegalBase Reading Mode ──
+    let dbReadingMode = false;
+    function dbEnterReading(){
+      const cat = dbFindCat(dbActiveCat);
+      const t = cat && dbActiveTitle && cat.titles.find(x=>x.id===dbActiveTitle);
+      if(!t) return;
+      dbReadingMode = true;
+      dashboardView.classList.add('reading-mode-db');
+      readingModeBar.style.display = 'flex';
+      readingModeTitle.textContent = '📖 ' + (cat.name||'') + ' > ' + (t.title||'');
+      document.getElementById('readingModeBtnDB').innerHTML='<i class="fas fa-book-open" style="color:var(--primary)"></i>';
+    }
+    function dbLeaveReading(){
+      dbReadingMode = false;
+      dashboardView.classList.remove('reading-mode-db');
+      readingModeBar.style.display = 'none';
+      document.getElementById('readingModeBtnDB').innerHTML='<i class="fas fa-book-open"></i> '+(window._dbLang&&window._dbLang.readingModeBtn||'Reading');
+    }
+    document.getElementById('readingModeBtnDB').addEventListener('click',()=>{
+      dbReadingMode ? dbLeaveReading() : dbEnterReading();
+    });
+    // Exit reading mode bar also works for DB
+    document.getElementById('exitReadingMode').addEventListener('click', dbLeaveReading);
 
     // ── Search in sidebar ──
     const dbSearchInputEl = document.getElementById('dbSearchInput');
@@ -2885,11 +3593,21 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       const q = dbSearchQuery.toLowerCase().trim();
       const links = dbTitlesListEl.querySelectorAll('.art-link');
       dbSearchHits = [];
+      // Build body index for fast lookup
+      const cat = dbFindCat(dbActiveCat);
+      const titlesMap = {};
+      if(cat) cat.titles.forEach(t=>{ titlesMap[t.id] = t; });
       links.forEach(link => {
-        const matches = !q || link.textContent.toLowerCase().includes(q);
+        if(!q){ link.style.display=''; link.classList.remove('db-match'); return; }
+        const titleId = link.dataset.tid;
+        const t = titlesMap[titleId];
+        const inTitle = link.textContent.toLowerCase().includes(q);
+        const inBody  = t ? (t.body||'').replace(/<[^>]+>/g,'').toLowerCase().includes(q) : false;
+        const matches = inTitle || inBody;
         link.style.display = matches ? '' : 'none';
-        link.classList.toggle('db-match', !!(q && matches));
-        if(matches && q) dbSearchHits.push(link);
+        link.classList.toggle('db-match', matches);
+        link.classList.toggle('db-match-body', !inTitle && inBody);
+        if(matches) dbSearchHits.push(link);
       });
       dbSearchHitIdx = 0;
       const L=window._dbLang||window._uiLang||{};
@@ -2924,18 +3642,38 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         dbNewTitle(dbActiveCat);
         dbRender();
       } else {
-        alert('Fillimisht shto një kategori nga ⚙️');
+        alert((window._dbLang&&window._dbLang.noCatFirst)||'First add a category via ⚙️');
       }
     });
 
     // ── Back to laws ──
-    document.getElementById('dbBackBtn').addEventListener('click', () => {
+    // ── Keyboard shortcuts (LegalBase) ──
+    document.addEventListener('keydown', e => {
+      const db = document.getElementById('dashboardView');
+      if(!db || db.style.display === 'none') return;  // only when LegalBase visible
+      if((e.ctrlKey||e.metaKey) && e.key === 's'){
+        e.preventDefault();
+        const saveBtn = document.getElementById('dbSaveBtn');
+        if(saveBtn) saveBtn.click();
+      }
+      if((e.ctrlKey||e.metaKey) && e.key === 'n'){
+        e.preventDefault();
+        document.getElementById('dbAddTitleBtn').click();
+      }
+      if((e.ctrlKey||e.metaKey) && e.key === 'f'){
+        e.preventDefault();
+        const si = document.getElementById('dbSearchInput');
+        if(si){ si.focus(); si.select(); }
+      }
+    });
+
+    document.getElementById('dbBackBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
       dashboardView.style.display = 'none';
       appEl.style.display = '';
     });
 
     // ── Dashboard toggle from header ──
-    document.getElementById('dashboardBtn').addEventListener('click', () => {
+    document.getElementById('dashboardBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
       if(document.body.classList.contains('reading-mode')) leaveReadingMode();
       appEl.style.display = 'none';
       dashboardView.style.display = 'flex';
@@ -2967,8 +3705,8 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
       document.body.classList.add('reading-mode');
       readingModeBar.style.display = 'flex';
-      readingModeTitle.textContent = '📖 ' + law.title + (law.alt ? ' — ' + law.alt : '');
-      readingModeBtn.innerHTML = '<i class="fas fa-book-open" style="color:var(--primary)"></i>';
+      readingModeTitle.textContent = '📖 ' + law.title + (law.alt ? ' -- ' + law.alt : '');
+      readingModeBtn.innerHTML = '<i class="fas fa-book-open" style="color:var(--primary)"></i> '+(window._uiLang&&window._uiLang.readingModeBtn||'Reading');
 
       // Scroll tek neni pas reflow
       let frames = 0;
@@ -2999,7 +3737,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
       document.body.classList.remove('reading-mode');
       readingModeBar.style.display = 'none';
-      readingModeBtn.innerHTML = '<i class="fas fa-book-open"></i>';
+      readingModeBtn.innerHTML = '<i class="fas fa-book-open"></i> '+(window._uiLang&&window._uiLang.readingModeBtn||'Reading');
 
       // Rikthe pozicionin pas reflow
       let frames = 0;
@@ -3019,10 +3757,12 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     readingModeBtn.addEventListener('click', toggleReadingMode);
     exitReadingMode.addEventListener('click', leaveReadingMode);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') leaveReadingMode(); });
-
-    // Exit reading mode when law changes
-    const _origSetActive = setActive;
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape'){
+        if(dbReadingMode) dbLeaveReading();
+        else leaveReadingMode();
+      }
+    });
 
     themeBtn.addEventListener('click', ()=>{
       const style=localStorage.getItem('theme-style')||'classic';
@@ -3049,7 +3789,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     exportBtn.addEventListener('click', exportAll);
     importBtn.addEventListener('click', ()=> importFile.click());
     importFile.addEventListener('change', ()=>{ const f=importFile.files&&importFile.files[0]; if(f) importAll(f); importFile.value=''; });
-    clearAllBtn.addEventListener('click', ()=>{ if(confirm('Are you sure you want to clear everything?')){
+    clearAllBtn.addEventListener('click', ()=>{ if(confirm((window._uiLang&&window._uiLang.clearConfirm)||'Are you sure you want to clear everything?')){
       state.laws=[]; state.activeId=null; renderAll(); saveToStorage();
       // Also clear all annotations
       openDB().then(db=>{
@@ -3058,6 +3798,26 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       });
     }});
 
+
+    // Save on page unload (catches browser close, refresh, tab close)
+    window.addEventListener('beforeunload', ()=>{
+      // Sync editor content if editing
+      if(typeof dbEditing !== 'undefined' && dbEditing){
+        const titleEl = document.getElementById('dbEditTitleInp');
+        const bodyEl  = document.getElementById('dbEditBodyInp');
+        const cat = typeof dbFindCat !== 'undefined' && dbFindCat(dbActiveCat);
+        if(cat && typeof dbActiveTitle !== 'undefined'){
+          const t = cat.titles.find(x=>x.id===dbActiveTitle);
+          if(t){
+            if(titleEl) t.title = titleEl.value.trim() || '(no title)';
+            if(bodyEl)  t.body  = bodyEl.innerHTML;
+            t.updatedAt = Date.now();
+          }
+        }
+      }
+      // Synchronous save not possible with IndexedDB, but trigger anyway
+      if(typeof dbSave !== 'undefined') dbSave();
+    });
 
     (async ()=>{ initTheme(); initFontSize(); await loadFromStorage(); await dbLoad(); docxAvailable = await window.__docxReady; renderAll(); })();
   </script>
@@ -3088,8 +3848,45 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       if(!art) return;
 
       _gotoIndex = n;
-      popTitle.textContent = art.title || ('Article ' + n);
+      popTitle.textContent = art.title || (((window._uiLang&&window._uiLang.articleWord)||'Article') + ' ' + n);
       popBody.textContent  = (art.text || '').trim();
+
+      // ── Show "referenced from notes" ──
+      const dbData = window._dbData;
+      let notesRef = [];
+      if(dbData && dbData.cats){
+        dbData.cats.forEach(cat=>{
+          (cat.titles||[]).forEach(t=>{
+            if((t.refs||[]).some(r=>r.lawId===law.id&&r.artIndex===n)){
+              notesRef.push({ catName:cat.name, title:t.title, id:t.id, catId:cat.id });
+            }
+          });
+        });
+      }
+      // Remove old refs bar if present
+      const oldBar = popup.querySelector('.popup-refs-bar');
+      if(oldBar) oldBar.remove();
+      if(notesRef.length){
+        const bar = document.createElement('div');
+        bar.className='popup-refs-bar';
+        const L = window._uiLang||{};
+        bar.innerHTML = `<span class="popup-refs-label"><i class="fas fa-paperclip"></i> ${L.dbRefFrom||'Referenced in'}:</span> `
+          + notesRef.map(n=>`<span class="popup-ref-note" data-cat="${escH(n.catId)}" data-tid="${escH(n.id)}">${escH(n.catName)} > ${escH(n.title||(L.dbNoTitle||'(no title)'))}</span>`).join('');
+        // Insert after popBody
+        popBody.insertAdjacentElement('afterend', bar);
+        bar.querySelectorAll('.popup-ref-note').forEach(el=>{
+          el.addEventListener('click',()=>{
+            closePopup();
+            // Switch to LegalBase and open that note
+            const appElP = document.querySelector('.app:not(#dashboardView)');
+            const dv = document.getElementById('dashboardView');
+            if(appElP) appElP.style.display='none';
+            if(dv){ dv.style.display='flex'; }
+            window._dbActivateCat && window._dbActivateCat(el.dataset.cat, el.dataset.tid);
+          });
+        });
+      }
+
       popup.classList.add('open');
       if(backdrop) backdrop.classList.add('open');
     }
@@ -3148,13 +3945,13 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
 
     let expanded = false;
     let lastY = 0;
-    let ticking = false;   // rAF throttle — parandalon glitch gjatë scroll rapid
+    let ticking = false;   // rAF throttle -- parandalon glitch gjatë scroll rapid
 
     function setExpanded(v){
       expanded = v;
       toggle.setAttribute('aria-expanded', v ? 'true' : 'false');
       if(v){
-        // Hiq hidden PARA se të shtosh fixed — kështu transition funksionon
+        // Hiq hidden PARA se të shtosh fixed -- kështu transition funksionon
         controls.classList.remove('mobile-hidden');
         // Forced reflow për të aktivizuar transition fade-in
         void controls.offsetHeight;
@@ -3194,7 +3991,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           controls.classList.remove('mobile-hidden');
         }
       } else {
-        // Lart pragut — gjithmonë shfaq controls, fshih sticky
+        // Lart pragut -- gjithmonë shfaq controls, fshih sticky
         sticky.classList.remove('on');
         sticky.setAttribute('aria-hidden','true');
         controls.classList.remove('mobile-hidden');
@@ -3244,8 +4041,12 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     let currentContainer = null;
 
     function findContainer(){
-      // Desktop often scrolls inside .doc (right panel).
-      return document.querySelector('.doc') || document.getElementById('doc') || null;
+      // If LegalBase is visible, use its doc panel
+      const db = document.getElementById('dashboardView');
+      if(db && db.style.display !== 'none'){
+        return document.getElementById('dbDoc') || null;
+      }
+      return document.getElementById('doc') || null;
     }
 
     function readScrollTop(){
@@ -3277,6 +4078,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
     btn.addEventListener('click', scrollToTop);
     window.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', function(){ bind(); update(); });
+    window._backToTopBind = bind;
 
     // Bind after load - only rebind when doc panel changes
     window.addEventListener('load', bind);
@@ -3304,11 +4106,16 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         modalLabelPaste:'Ose ngjit tekstin', modalFileHint:'.txt/.md/.html/.docx (lokal)',
         modalPreview:'👁 Pamja paraprake (300 karakterët e parë):',
         mobileSrch:'Kërko',
-        active:'Aktiv:', hits:function(n){return 'Gjithsej: '+n+' — Kliko "Tjetri"';},
+        active:'Aktiv:', hits:function(n){return 'Gjithsej: '+n+' -- Kliko "Tjetri"';},
         hitNav:function(i,n){return 'Rezultati '+i+' nga '+n;}, noHits:'⚠️ Nuk ka rezultate',
         confirmDelete:'Të fshihet ky shënim?',
         goToArt:'↗ Shko te neni',
         exitReading:'Dil nga leximi',
+        noLaws:'Nuk ka ligje.',
+        articlesEmpty:'Nenet do të shfaqen kur të zgjedhni një ligj.',
+        docEmpty:'Nuk ka ligj aktiv. Shto një dhe zgjedh skedën.',
+        drawerLawsHint:'Riemërtimi, redaktimi dhe fshirja bëhen këtu.',
+        fontSizeLabel:'Madhësia e tekstit',
         // LegalBase
         dbAddTitle:'Shto titull', dbBack:'Kthehu', dbSettings:'Cilësimet',
         dbSearchPh:'Kërko në tekst...', dbSearchBtn:'Kërko', dbNext:'Tjetri', dbClear:'Pastro',
@@ -3318,6 +4125,32 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         dbEdit:'Edito', dbDelete:'Fshi', dbSave:'Ruaj', dbCancel:'Anulo',
         dbTitlePh:'Titulli...', dbConfirmDel:'Të fshihet?',
         dbNoTitle:'(pa titull)',
+        // Extra keys
+        noLawsTab:'Nuk ka ligje -- kliko "Shto".',
+        articlesEmptyJs:'Nenet do të shfaqen kur të zgjedhni një ligj.',
+        docEmptyJs:'Nuk ka ligj aktiv. Shto një dhe zgjedh skedën.',
+        modalEditTitle:'Edito ligjin', modalAddTitle:'Shto ligj',
+        formTitlePh:'P.sh. Ligji për Detyrimet', formAltPh:'Gazeta Zyrtare nr. … ose https://...',
+        formAltLabel:'Përshkrimi / ALT (p.sh. "Gazeta Zyrtare nr. 12/2024" ose URL)',
+        formTextPh:'Ngjit tekstin këtu',
+        deleteConfirm:'Jeni të sigurt që doni ta fshini këtë ligj?',
+        clearConfirm:'Jeni të sigurt që doni të pastroni gjithçka?',
+        importOk:function(n){return 'Import i kryer. U ngarkuan '+n+' ligje.';},
+        importFail:'Importi dështoi. Formati JSON i vlefshëm?',
+        docxFail:'Dështoi leximi i .docx. Përdorni .txt ose kopjo/ngjit.',
+        docxLib:'DOCX i padisponueshëm -- biblioteka nuk u ngarkua. Prisni 2-3 sek dhe provoni përsëri.',
+        unsupported:'Format i pambështetur. Përdorni .docx/.txt/.md/.html ose kopjo/ngjit.',
+        enterTitle:'Ju lutemi shkruani një titull.',
+        enterText:'Ju lutemi shkruani tekst ose ngarkoni një skedar.',
+        untitled:'Pa titull', titlePh:'Titulli',
+        altPh:'Përshkrimi / ALT',
+        articleWord:'Neni',
+        addNote:'Shto shënim', editNote:'Edito shënimin',
+        dashTitle:'Shënime', readingModeTitleBtn:'Mënyra e leximit', readingModeBtn:'Reading',
+        catPh:'Emri i kategorisë...',
+        noCatFirst:'Fillimisht shto një kategori nga ⚙️',
+        dbDuplicate:'Kopjo notën', dbPrint:'Printo', dbSaved:'Ruajtur automatikisht',
+        dbRefs:'Referenca', dbAddRef:'Shto referencë', dbRefPickLaw:'zgjedh ligjin', dbRefPickArt:'zgjedh nenin', dbRefFrom:'Referuar në',
       },
       mk: {
         brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
@@ -3335,11 +4168,16 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         modalLabelPaste:'Или залепи текст', modalFileHint:'.txt/.md/.html/.docx (локално)',
         modalPreview:'👁 Преглед (првите 300 знаци):',
         mobileSrch:'Пребарувач',
-        active:'Активен:', hits:function(n){return 'Вкупно: '+n+' — Кликни „Наредно"';},
+        active:'Активен:', hits:function(n){return 'Вкупно: '+n+' -- Кликни „Наредно"';},
         hitNav:function(i,n){return 'Погодок '+i+' од '+n;}, noHits:'⚠️ Нема погодоци',
         confirmDelete:'Да се избрише оваа белешка?',
         goToArt:'↗ Оди до членот',
         exitReading:'Излез од читање',
+        noLaws:'Нема закони.',
+        articlesEmpty:'Членовите ќе се прикажат кога ќе изберете закон.',
+        docEmpty:'Нема активен закон. Додај еден и избери картичка.',
+        drawerLawsHint:'Преименување, уредување и бришење се прават овде.',
+        fontSizeLabel:'Големина на текстот',
         // LegalBase
         dbAddTitle:'Додај наслов', dbBack:'Назад', dbSettings:'Поставки',
         dbSearchPh:'Пребарај во текст...', dbSearchBtn:'Пребарај', dbNext:'Наредно', dbClear:'Исчисти',
@@ -3349,6 +4187,32 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         dbEdit:'Уреди', dbDelete:'Избриши', dbSave:'Зачувај', dbCancel:'Откажи',
         dbTitlePh:'Наслов...', dbConfirmDel:'Да се избрише?',
         dbNoTitle:'(без наслов)',
+        // Extra keys
+        noLawsTab:'Нема закони -- кликни „Додај".',
+        articlesEmptyJs:'Членовите ќе се прикажат кога ќе изберете закон.',
+        docEmptyJs:'Нема активен закон. Додај еден и избери картичка.',
+        modalEditTitle:'Уреди закон', modalAddTitle:'Додај закон',
+        formTitlePh:'Пр. Закон за облигации', formAltPh:'Сл. весник бр. … или https://...',
+        formAltLabel:'Опис / ALT (пр. „Сл. весник бр. 12/2024" или URL)',
+        formTextPh:'Залепи текст овде',
+        deleteConfirm:'Дали сте сигурни дека сакате да го избришете овој закон?',
+        clearConfirm:'Дали сте сигурни дека сакате да ја исчистите сè?',
+        importOk:function(n){return 'Увозот е завршен. Вчитани '+n+' закони.';},
+        importFail:'Увозот не успеа. Валиден JSON формат?',
+        docxFail:'Читањето на .docx не успеа. Користете .txt или копирај/залепи.',
+        docxLib:'DOCX недостапен -- библиотеката не е вчитана. Почекај 2-3 сек и обиди се повторно.',
+        unsupported:'Неподдржан формат. Користете .docx/.txt/.md/.html или копирај/залепи.',
+        enterTitle:'Ве молиме внесете наслов.',
+        enterText:'Ве молиме внесете текст или прикачете датотека.',
+        untitled:'Без наслов', titlePh:'Наслов',
+        altPh:'Опис / ALT',
+        articleWord:'Член',
+        addNote:'Додај белешка', editNote:'Уреди белешка',
+        dashTitle:'Белешки', readingModeTitleBtn:'Режим на читање', readingModeBtn:'Reading',
+        catPh:'Име на категоријата...',
+        noCatFirst:'Прво додај категорија преку ⚙️',
+        dbDuplicate:'Копирај белешка', dbPrint:'Печати', dbSaved:'Автоматски зачувано',
+        dbRefs:'Референци', dbAddRef:'Додај референца', dbRefPickLaw:'избери закон', dbRefPickArt:'избери член', dbRefFrom:'Референцирано во',
       },
       en: {
         brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
@@ -3366,11 +4230,16 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         modalLabelPaste:'Or paste text', modalFileHint:'.txt/.md/.html/.docx (local)',
         modalPreview:'👁 Preview (first 300 characters):',
         mobileSrch:'Search',
-        active:'Active:', hits:function(n){return 'Total: '+n+' — Click "Next"';},
+        active:'Active:', hits:function(n){return 'Total: '+n+' -- Click "Next"';},
         hitNav:function(i,n){return 'Result '+i+' of '+n;}, noHits:'⚠️ No results found',
         confirmDelete:'Delete this note?',
         goToArt:'↗ Go to article',
         exitReading:'Exit Reading Mode',
+        noLaws:'No laws.',
+        articlesEmpty:'Articles will appear when you select a law.',
+        docEmpty:'No active law. Add one and select a tab to view.',
+        drawerLawsHint:'Rename, edit and delete laws here.',
+        fontSizeLabel:'Text size',
         // LegalBase
         dbAddTitle:'Add title', dbBack:'Back', dbSettings:'Settings',
         dbSearchPh:'Search in text...', dbSearchBtn:'Search', dbNext:'Next', dbClear:'Clear',
@@ -3380,6 +4249,32 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
         dbEdit:'Edit', dbDelete:'Delete', dbSave:'Save', dbCancel:'Cancel',
         dbTitlePh:'Title...', dbConfirmDel:'Delete this?',
         dbNoTitle:'(no title)',
+        // Extra keys
+        noLawsTab:'No laws -- click "Add".',
+        articlesEmptyJs:'Articles will appear when you select a law.',
+        docEmptyJs:'No active law. Add one and select a tab to view.',
+        modalEditTitle:'Edit law', modalAddTitle:'Add law',
+        formTitlePh:'E.g. Law on Obligations', formAltPh:'Official Gazette no. … or https://...',
+        formAltLabel:'Description / ALT (e.g. "Official Gazette no. 12/2024" or URL)',
+        formTextPh:'Paste text here',
+        deleteConfirm:'Are you sure you want to delete this law?',
+        clearConfirm:'Are you sure you want to clear everything?',
+        importOk:function(n){return 'Import complete. Loaded '+n+' laws.';},
+        importFail:'Import failed. Valid JSON format?',
+        docxFail:'Failed to read .docx. Use .txt or copy/paste.',
+        docxLib:'DOCX unavailable -- library not loaded. Wait 2-3 sec and try again.',
+        unsupported:'Unsupported format. Use .docx/.txt/.md/.html or copy/paste.',
+        enterTitle:'Please enter a title.',
+        enterText:'Please enter text or upload a file.',
+        untitled:'Untitled', titlePh:'Title',
+        altPh:'Description / ALT',
+        articleWord:'Article',
+        addNote:'Add note', editNote:'Edit note',
+        dashTitle:'Notes', readingModeTitleBtn:'Reading mode', readingModeBtn:'Reading',
+        catPh:'Category name...',
+        noCatFirst:'First add a category via ⚙️',
+        dbDuplicate:'Duplicate note', dbPrint:'Print', dbSaved:'Auto-saved',
+        dbRefs:'References', dbAddRef:'Add reference', dbRefPickLaw:'choose a law', dbRefPickArt:'choose an article', dbRefFrom:'Referenced in',
       }
     };
 
@@ -3427,21 +4322,42 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
       setH('artPopup-goto', L.goToArt||'↗ Go to article');
       setH('exitReadingMode', '<i class="fas fa-times"></i> '+(L.exitReading||'Exit Reading Mode'));
 
+      // ── LawBase extra i18n ──
+      setP('searchInput', L.searchPh);
+      setP('fulltextInput', L.fulltextPh);
+      setP('formTitle', L.formTitlePh||L.modalLabelTitle);
+      setP('formAlt', L.formAltPh);
+      setP('formText', L.formTextPh);
+      var fal=document.getElementById('formAltLbl'); if(fal) fal.innerHTML='<i class="fas fa-info-circle"></i> '+(L.formAltLabel||'');
+      var lmt=document.getElementById('lawModalTitle'); if(lmt) lmt.innerHTML='<i class="fas fa-plus"></i> '+(L.modalAddTitle||L.addLawLabel);
+      var fsl=document.getElementById('lbl-font-size'); if(fsl) fsl.textContent=L.fontSizeLabel||'Text size';
+      var rmbtn=document.getElementById('readingModeBtn'); if(rmbtn){ rmbtn.title=L.readingModeTitleBtn||'Reading mode'; rmbtn.innerHTML='<i class="fas fa-book-open"></i> '+(L.readingModeBtn||'Reading'); }
+      var rmdb=document.getElementById('readingModeBtnDB'); if(rmdb){ rmdb.title=L.readingModeTitleBtn||'Reading mode'; rmdb.innerHTML='<i class="fas fa-book-open"></i> '+(L.readingModeBtn||'Reading'); }
+      var dashb=document.getElementById('dashboardBtn'); if(dashb){ dashb.title=L.dashTitle||'Notes'; dashb.innerHTML='<i class="fas fa-sticky-note"></i> LegalBase'; }
+      // Update static empty msgs if visible
+      var aem=document.getElementById('articlesEmptyMsg'); if(aem) { var ic=aem.querySelector('i'); aem.innerHTML=''; if(ic) aem.appendChild(ic); aem.appendChild(document.createTextNode(' '+(L.articlesEmptyJs||''))); }
       // ── LegalBase i18n ──
       var dbAddTitleEl = document.getElementById('dbAddTitleBtn');
       if(dbAddTitleEl) dbAddTitleEl.querySelector('.title').innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddTitle||L.addBtn);
-      setH('dbBackBtn', '<i class="fas fa-arrow-left"></i>');
+      setH('dbBackBtn', '<i class="fas fa-arrow-left"></i> LawBase');
       setH('dbOpenSettings', '<i class="fas fa-cog"></i>');
       setP('dbSearchInput', L.dbSearchPh||L.fulltextPh);
       setH('dbSearchBtn', '<i class="fas fa-search"></i> '+(L.dbSearchBtn||L.searchBtn));
       setH('dbSearchNextBtn', '<i class="fas fa-arrow-down"></i> '+(L.dbNext||L.nextBtn));
       setH('dbSearchClear', '<i class="fas fa-times"></i> '+(L.dbClear||L.clearBtn));
-      var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong');
-      if(dbSettingsH) dbSettingsH.innerHTML = '<i class="fas fa-folder-open"></i> '+(L.dbCatsTitle||'Categories');
-      var dbAddCatGrp = document.querySelector('#dbSettingsDrawer .group h4');
-      if(dbAddCatGrp) dbAddCatGrp.innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddCat||'Add category');
-      var dbManageGrp = document.querySelectorAll('#dbSettingsDrawer .group h4')[1];
-      if(dbManageGrp) dbManageGrp.innerHTML = '<i class="fas fa-list"></i> '+(L.dbManageCats||'Manage categories');
+      var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong span');
+      if(dbSettingsH) dbSettingsH.textContent = L.settingsBtn||'Settings';
+      var dbGrpCatAdd = document.getElementById('dbGrpCatAdd');
+      if(dbGrpCatAdd) dbGrpCatAdd.innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddCat||'Add category');
+      var dbGrpCatManage = document.getElementById('dbGrpCatManage');
+      if(dbGrpCatManage) dbGrpCatManage.innerHTML = '<i class="fas fa-list"></i> '+(L.dbManageCats||'Manage categories');
+      var dbGrpTheme = document.getElementById('dbGrpTheme');
+      if(dbGrpTheme) dbGrpTheme.innerHTML = '<i class="fas fa-palette"></i> '+(L.themeH||'Theme');
+      var dbGrpLang = document.getElementById('dbGrpLang');
+      if(dbGrpLang) dbGrpLang.innerHTML = '<i class="fas fa-language"></i> '+(L.langH||'Language');
+      var dbFontLbl = document.getElementById('db-lbl-font-size');
+      if(dbFontLbl) dbFontLbl.textContent = L.fontSizeLabel||'Text size';
+      setP('dbNewCatInput', L.catPh||'Category name...');
       // Store for use in JS
       window._dbLang = L;
 
@@ -3530,7 +4446,7 @@ self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWi
           block.querySelector('.note-preview')&&block.querySelector('.note-preview').remove();
           const btn=document.createElement('button');
           btn.className='note-btn'+(notes[idx]?' has-note':'');
-          btn.type='button'; btn.title=notes[idx]?'Edit note':'Add note'; btn.textContent='📝';
+          btn.type='button'; btn.title=notes[idx]?((window._uiLang&&window._uiLang.editNote)||'Edit note'):((window._uiLang&&window._uiLang.addNote)||'Add note'); btn.textContent='📝';
           btn.addEventListener('click',e=>{e.stopPropagation();openNoteModal(law.id,idx,h3.textContent.replace('📝','').trim(),notes[idx]||'');});
           h3.appendChild(btn);
           if(notes[idx]){
