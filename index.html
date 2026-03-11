@@ -45,29 +45,40 @@
       document.getElementById('pwaManifest').href = URL.createObjectURL(blob);
     }
 
-    function registerSW(){
-      if(!('serviceWorker' in navigator)) return;
-      // Minimal SW — just makes page installable as PWA
-      const swCode = `
-const CACHE='lawbase-v3';
-self.addEventListener('install',e=>{ self.skipWaiting(); });
-self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET') return;
-  // Network first, fall back to cache
-  e.respondWith(
-    fetch(e.request).then(resp=>{
-      if(resp && resp.status===200){
-        const clone=resp.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,clone));
+    // ── Offline: cache FontAwesome + Mammoth in localStorage ──
+    async function offlineInit(){
+      // FA icons load from <link> tag — no caching needed, works from CDN
+      // Only cache Mammoth.js for offline Word import
+      const KEY = 'lb-mammoth-v1';
+      if(!navigator.onLine){
+        // Load mammoth from cache if offline
+        try {
+          const cached = localStorage.getItem(KEY);
+          if(cached && cached.length > 10000 && !window.mammoth){
+            const sc = document.createElement('script');
+            sc.textContent = cached;
+            document.head.appendChild(sc);
+          }
+        } catch(e) {}
+        return;
       }
-      return resp;
-    }).catch(()=> caches.match(e.request))
-  );
-});`;
-      const swBlob = new Blob([swCode], {type:'application/javascript'});
-      navigator.serviceWorker.register(URL.createObjectURL(swBlob), {scope: './'})
-        .then(()=>console.log('✅ SW registered')).catch(e=>console.warn('SW:',e));
+      // Online: cache mammoth in background
+      try {
+        const existing = localStorage.getItem(KEY);
+        if(existing && existing.length > 10000) return; // already cached
+        const mr = await fetch('https://unpkg.com/mammoth/mammoth.browser.min.js');
+        const ct = mr.headers.get('content-type') || '';
+        if(!mr.ok || !ct.includes('javascript')) return;
+        const txt = await mr.text();
+        if(txt && txt.length > 10000 && '!(/'.includes(txt[0])){
+          try { localStorage.setItem(KEY, txt); console.log('✅ Mammoth cached'); } catch(e) {}
+        }
+      } catch(e) {}
+    }
+
+    function registerSW(){
+      // SW via blob URL not supported on all platforms — PWA manifest alone handles installability
+      // Offline functionality handled by offlineInit() via localStorage
     }
 
     let deferredPrompt = null;
@@ -108,6 +119,7 @@ self.addEventListener('fetch',e=>{
       const faviconEl = document.getElementById('faviconIcon');
       if(faviconEl) makePng(64, png64 => { faviconEl.href = png64; });
       registerSW();
+      offlineInit();
       setTimeout(showiOSHint, 1500);
     });
     window.addEventListener('appinstalled', () => { const b=document.getElementById('pwaInstallBanner'); if(b)b.remove(); });
@@ -592,6 +604,7 @@ self.addEventListener('fetch',e=>{
       border-radius: var(--border-radius);
       box-shadow: var(--box-shadow);
       border: 1px solid var(--border);
+      border-top: none;
     }
 
     .controls input {
@@ -1401,104 +1414,89 @@ self.addEventListener('fetch',e=>{
       overflow-y: auto;
     }
 
-    /* ── Mobile: dashboard ── */
+    /* ── Mobile override: reset overflow so page scrolls ── */
     @media (max-width: 900px) {
-      /* Tabs strip: scroll horizontal, buton + Shto titull visible */
+      #dashboardView.app { overflow-y: auto; }
+      #dashboardView .wrap {
+        overflow: visible;
+        flex: none;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
+      }
+      #dashboardView .main {
+        overflow: visible;
+        flex: none;
+        min-height: 0;
+        grid-template-columns: 1fr !important;
+        gap: 0;
+        padding: 0;
+      }
+      #dashboardView .articles-list {
+        max-height: 40vh !important;
+        height: auto !important;
+        flex: none;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 0;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none;
+        margin: 0;
+        padding: 4px 12px;
+      }
+      #dashboardView .articles-list .art-link {
+        width: 100%;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #dashboardView .doc {
+        max-height: unset;
+        flex: none;
+        overflow-y: visible;
+        border-radius: 0;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none;
+        margin: 0;
+        padding: 12px !important;
+      }
+      #dashboardView aside {
+        min-height: 0;
+        overflow: hidden;
+      }
+    }
+
+    /* ── Mobile: dashboard tabs + controls ── */
+    @media (max-width: 900px) {
       #dashboardView .law-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
         scrollbar-width: none;
-        padding: 0 8px;
-        gap: 0;
+        padding: 4px 8px;
+        gap: 6px;
       }
       #dashboardView .law-tabs::-webkit-scrollbar { display: none; }
-      #dashboardView #dbCatTabs {
-        flex-wrap: nowrap;
-        overflow-x: visible;
-      }
+      #dashboardView #dbCatTabs { flex-wrap: nowrap; }
+      #dashboardView .law-tab { font-size: 0.82rem; padding: 6px 10px; }
 
-      /* Controls: nje rresht i vetëm (row) jo kolona */
       #dashboardView .controls {
         flex-direction: row !important;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         padding: 6px 10px;
-        border: none;
-        box-shadow: none;
-        border-radius: 0;
-        background: transparent;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        border-top: none !important;
       }
-      #dashboardView .controls input {
-        flex: 1;
-        min-width: 120px;
-      }
-
-      /* Main: sidebar sipër (e vogël), doc poshtë */
-      #dashboardView .main {
-        grid-template-columns: 1fr !important;
-        grid-template-rows: auto 1fr;
-        overflow-y: auto;
-        gap: 0;
-        padding: 8px;
-      }
-
-      /* Sidebar: lartësi e kufizuar, scroll horizontal për items */
-      #dashboardView aside {
-        min-height: 0;
-        max-height: 35vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-      }
-      #dashboardView .articles-list {
-        max-height: 35vh !important;
-        height: auto !important;
-        display: flex;
-        flex-direction: row;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        gap: 6px;
-        padding: 8px;
-        scrollbar-width: thin;
-        margin: 0;
-        border-radius: var(--border-radius);
-        border-left: 1px solid var(--border) !important;
-        border-right: 1px solid var(--border) !important;
-        margin-bottom: 8px;
-      }
-      #dashboardView .articles-list .art-link {
-        flex-shrink: 0;
-        width: auto;
-        max-width: 160px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin: 0;
-      }
-      #dashboardView .articles-list .empty {
-        flex-shrink: 0;
-        width: 100%;
-      }
-
-      /* Doc panel: merr hapësirën e mbetur */
-      #dashboardView .doc {
-        min-height: 200px;
-        flex: 1;
-        border-radius: var(--border-radius);
-        border-left: 1px solid var(--border) !important;
-        border-right: 1px solid var(--border) !important;
-        margin: 0;
-        padding: 12px !important;
-      }
-
-      /* Wrap: scroll i plotë */
-      #dashboardView .wrap {
-        overflow-y: auto;
-        flex: 1;
-        gap: 0;
-        padding: 0;
-      }
+      #dashboardView .controls input { flex: 1; min-width: 0; }
+      #dashboardView .controls .divider { display: none; }
     }
 
     /* Titujt në listë — si .art-link */
@@ -2150,6 +2148,7 @@ self.addEventListener('fetch',e=>{
         <div class="nav-right">
           <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu"><i class="fas fa-arrow-left"></i> LawBase</button>
           <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i> Reading</button>
+          <button id="dbDriveBtn" class="btn btn-ghost" title="Google Drive Sync"><i class="fas fa-cloud"></i></button>
           <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
         </div>
       </div>
@@ -2180,6 +2179,37 @@ self.addEventListener('fetch',e=>{
       </div>
     </div>
 
+  </div>
+
+  <!-- Google Drive Modal -->
+  <div id="dbDriveModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+    <div style="background:var(--panel);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.3);position:relative;">
+      <button id="dbDriveModalClose" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)"><i class="fas fa-times"></i></button>
+      <h3 style="margin:0 0 6px;font-size:1.1rem"><i class="fas fa-cloud" style="color:#4285f4"></i> Google Drive Sync</h3>
+      <p style="font-size:0.82rem;color:var(--muted);margin:0 0 16px">Të dhënat ruhen në Drive-in tënd privat si <code>legalbase_backup.json</code></p>
+
+      <!-- Client ID setup -->
+      <div id="dbDriveSetup">
+        <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px">Google OAuth Client ID</label>
+        <input id="dbDriveClientId" type="text" placeholder="xxxxx.apps.googleusercontent.com"
+          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;background:var(--bg);color:var(--text);margin-bottom:8px" />
+        <p style="font-size:0.75rem;color:var(--muted);margin:0 0 12px">
+          <a href="https://console.cloud.google.com" target="_blank" style="color:var(--primary)">console.cloud.google.com</a>
+          → APIs &amp; Services → Credentials → OAuth 2.0 Client ID (Web)
+        </p>
+        <button id="dbDriveSaveClientId" class="btn btn-primary" style="width:100%"><i class="fas fa-save"></i> Ruaj &amp; Lidhu</button>
+      </div>
+
+      <!-- Sync actions (shown after login) -->
+      <div id="dbDriveActions" style="display:none">
+        <div id="dbDriveStatus" style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;padding:8px;background:var(--chip);border-radius:6px"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button id="dbDriveSave" class="btn btn-primary" style="flex:1"><i class="fas fa-cloud-upload-alt"></i> Ruaj në Drive</button>
+          <button id="dbDriveLoad" class="btn btn-ghost" style="flex:1"><i class="fas fa-cloud-download-alt"></i> Ngarko nga Drive</button>
+        </div>
+        <button id="dbDriveDisconnect" class="btn btn-ghost" style="width:100%;color:var(--muted);font-size:0.78rem"><i class="fas fa-unlink"></i> Shkëput &amp; fshi Client ID</button>
+      </div>
+    </div>
   </div>
 
   <!-- Ref Picker Modal -->
@@ -2254,7 +2284,7 @@ self.addEventListener('fetch',e=>{
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.1</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.6</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2334,7 +2364,7 @@ self.addEventListener('fetch',e=>{
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.1</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.6</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -3973,6 +4003,237 @@ self.addEventListener('fetch',e=>{
         if(si){ si.focus(); si.select(); }
       }
     });
+
+    // ══════════════════════════════════════════════
+    //  GOOGLE DRIVE SYNC
+    // ══════════════════════════════════════════════
+    (function(){
+      const GAPI_SCRIPT = 'https://accounts.google.com/gsi/client';
+      const DRIVE_FILE   = 'legalbase_backup.json';
+      const SCOPES       = 'https://www.googleapis.com/auth/drive.file';
+      const LS_KEY       = 'lb-gdrive-clientid';
+
+      let _token = null;
+
+      // ── UI helpers ──
+      function driveModal(show){
+        const m = document.getElementById('dbDriveModal');
+        m.style.display = show ? 'flex' : 'none';
+      }
+      function driveStatus(msg, color){
+        const el = document.getElementById('dbDriveStatus');
+        if(el){ el.innerHTML = msg; el.style.color = color||'var(--muted)'; }
+      }
+      function showSetup(){ document.getElementById('dbDriveSetup').style.display='block'; document.getElementById('dbDriveActions').style.display='none'; }
+      function showActions(){ document.getElementById('dbDriveSetup').style.display='none'; document.getElementById('dbDriveActions').style.display='block'; }
+      function driveBtnIcon(ok){ const b=document.getElementById('dbDriveBtn'); if(b){ b.innerHTML = ok ? '<i class="fas fa-cloud" style="color:#4285f4"></i>' : '<i class="fas fa-cloud"></i>'; } }
+
+      // ── Load saved Client ID ──
+      function getSavedClientId(){ try{ return localStorage.getItem(LS_KEY)||''; }catch(e){ return ''; } }
+      function saveClientId(id){ try{ localStorage.setItem(LS_KEY, id); }catch(e){} }
+
+      // ── Get token via Google Identity Services ──
+      function getToken(clientId){
+        return new Promise((resolve, reject)=>{
+          if(!window.google || !window.google.accounts){
+            // Load GSI script first
+            const s = document.createElement('script');
+            s.src = GAPI_SCRIPT;
+            s.onload = ()=> _requestToken(clientId, resolve, reject);
+            s.onerror = ()=> reject(new Error('Nuk u ngarkua Google GSI'));
+            document.head.appendChild(s);
+          } else {
+            _requestToken(clientId, resolve, reject);
+          }
+        });
+      }
+
+      function _requestToken(clientId, resolve, reject){
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: SCOPES,
+          callback: (resp)=>{
+            if(resp.error) reject(new Error(resp.error));
+            else resolve(resp.access_token);
+          }
+        });
+        client.requestAccessToken();
+      }
+
+      // ── Drive API helpers ──
+      async function findFile(token){
+        const r = await fetch(
+          "https://www.googleapis.com/drive/v3/files?q=name%3D'" + DRIVE_FILE + "'+and+trashed%3Dfalse&fields=files(id,name,modifiedTime)",
+          { headers: { Authorization: 'Bearer '+token } }
+        );
+        const d = await r.json();
+        return (d.files && d.files.length) ? d.files[0] : null;
+      }
+
+      async function uploadFile(token, content, fileId){
+        const meta = JSON.stringify({ name: DRIVE_FILE, mimeType: 'application/json' });
+        const body = new Blob([content], {type:'application/json'});
+        const form = new FormData();
+        form.append('metadata', new Blob([meta],{type:'application/json'}));
+        form.append('file', body);
+        const url = fileId
+          ? 'https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart'
+          : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+        const method = fileId ? 'PATCH' : 'POST';
+        const r = await fetch(url, { method, headers:{Authorization:'Bearer '+token}, body: form });
+        return await r.json();
+      }
+
+      async function downloadFile(token, fileId){
+        const r = await fetch(
+          'https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',
+          { headers: { Authorization: 'Bearer '+token } }
+        );
+        return await r.text();
+      }
+
+      // ── Save to Drive ──
+      async function driveSave(){
+        driveStatus('<i class="fas fa-spinner fa-spin"></i> Po lidhet...', 'var(--muted)');
+        const clientId = getSavedClientId();
+        try {
+          _token = await getToken(clientId);
+          driveStatus('<i class="fas fa-spinner fa-spin"></i> Po ruhet...', 'var(--muted)');
+          const exportData = await exportForDrive();
+          const existing = await findFile(_token);
+          await uploadFile(_token, JSON.stringify(exportData, null, 2), existing ? existing.id : null);
+          const now = new Date().toLocaleTimeString();
+          driveStatus('<i class="fas fa-check-circle"></i> U ruajt — ' + now, '#2dc653');
+          driveBtnIcon(true);
+        } catch(e){
+          driveStatus('<i class="fas fa-exclamation-circle"></i> Gabim: ' + e.message, 'var(--danger)');
+        }
+      }
+
+      // ── Load from Drive ──
+      async function driveLoad(){
+        driveStatus('<i class="fas fa-spinner fa-spin"></i> Po lidhet...', 'var(--muted)');
+        const clientId = getSavedClientId();
+        try {
+          _token = await getToken(clientId);
+          driveStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...', 'var(--muted)');
+          const file = await findFile(_token);
+          if(!file){ driveStatus('<i class="fas fa-info-circle"></i> Nuk u gjet skedar në Drive', 'var(--muted)'); return; }
+          const text = await downloadFile(_token, file.id);
+          const data = JSON.parse(text);
+          // Import into app
+          await importFromDrive(data);
+          const mod = new Date(file.modifiedTime).toLocaleString();
+          driveStatus('<i class="fas fa-check-circle"></i> U ngarkua — ' + mod, '#2dc653');
+          driveBtnIcon(true);
+        } catch(e){
+          driveStatus('<i class="fas fa-exclamation-circle"></i> Gabim: ' + e.message, 'var(--danger)');
+        }
+      }
+
+      // ── Export/Import helpers (reuse existing logic) ──
+      async function exportForDrive(){
+        return new Promise(resolve=>{
+          // Use same export logic as exportAll but return data instead of downloading
+          const DB_NAME='lawbase_db', DB_VER=2;
+          const req = indexedDB.open(DB_NAME, DB_VER);
+          req.onsuccess = e=>{
+            const db = e.target.result;
+            const tx = db.transaction(['data','annotations'],'readonly');
+            const stateReq = tx.objectStore('data').get('state');
+            const notesReq = tx.objectStore('data').get('dashboard-notes');
+            const annoReq  = tx.objectStore('annotations').getAll();
+            let state=null, notes=null, anno=[];
+            stateReq.onsuccess = ()=>{ state=stateReq.result; };
+            notesReq.onsuccess = ()=>{ notes=notesReq.result; };
+            annoReq.onsuccess  = ()=>{ anno=annoReq.result||[]; };
+            tx.oncomplete = ()=>{
+              const payload = state||window._appState||{};
+              resolve({
+                version:3, exportedAt: new Date().toISOString(),
+                activeId: payload.activeId||null,
+                laws: payload.laws||[],
+                annotations: anno,
+                legalbase: notes||window._dbData
+              });
+            };
+          };
+          req.onerror = ()=> resolve({ version:3, exportedAt:new Date().toISOString(), laws:[], annotations:[], legalbase: window._dbData });
+        });
+      }
+
+      async function importFromDrive(data){
+        return new Promise((resolve,reject)=>{
+          const DB_NAME='lawbase_db', DB_VER=2;
+          const req = indexedDB.open(DB_NAME, DB_VER);
+          req.onsuccess = e=>{
+            const db = e.target.result;
+            const tx = db.transaction(['data','annotations'],'readwrite');
+            if(data.laws && data.laws.length){
+              tx.objectStore('data').put({ laws: data.laws, activeId: data.activeId||null }, 'state');
+            }
+            if(data.legalbase){
+              tx.objectStore('data').put(data.legalbase, 'dashboard-notes');
+            }
+            if(data.annotations){
+              const store = tx.objectStore('annotations');
+              store.clear();
+              data.annotations.forEach(a=> store.put(a));
+            }
+            tx.oncomplete = ()=>{
+              if(window._dbReload) window._dbReload();
+              resolve();
+            };
+            tx.onerror = ()=> reject(new Error('DB write failed'));
+          };
+          req.onerror = ()=> reject(new Error('DB open failed'));
+        });
+      }
+
+      // ── Event listeners ──
+      document.getElementById('dbDriveBtn').addEventListener('click', ()=>{
+        const clientId = getSavedClientId();
+        if(clientId){
+          showActions();
+          driveStatus('Client ID: ...'+clientId.slice(-20), 'var(--muted)');
+        } else {
+          showSetup();
+        }
+        driveModal(true);
+        // Pre-fill saved client id
+        const inp = document.getElementById('dbDriveClientId');
+        if(inp && clientId) inp.value = clientId;
+      });
+
+      document.getElementById('dbDriveModalClose').addEventListener('click', ()=> driveModal(false));
+      document.getElementById('dbDriveModal').addEventListener('click', (e)=>{ if(e.target===e.currentTarget) driveModal(false); });
+
+      document.getElementById('dbDriveSaveClientId').addEventListener('click', ()=>{
+        const val = document.getElementById('dbDriveClientId').value.trim();
+        if(!val || !val.includes('.apps.googleusercontent.com')){
+          alert('Client ID nuk është i vlefshëm. Duhet të mbarojë me .apps.googleusercontent.com'); return;
+        }
+        saveClientId(val);
+        showActions();
+        driveStatus('Client ID u ruajt. Klikoni "Ruaj" ose "Ngarko".', 'var(--muted)');
+        driveBtnIcon(true);
+      });
+
+      document.getElementById('dbDriveSave').addEventListener('click', driveSave);
+      document.getElementById('dbDriveLoad').addEventListener('click', driveLoad);
+
+      document.getElementById('dbDriveDisconnect').addEventListener('click', ()=>{
+        try{ localStorage.removeItem(LS_KEY); }catch(e){}
+        _token = null;
+        showSetup();
+        document.getElementById('dbDriveClientId').value = '';
+        driveBtnIcon(false);
+      });
+
+      // On init: if client ID exists, show connected icon
+      if(getSavedClientId()) driveBtnIcon(true);
+    })();
+    // ══════════════════════════════════════════════
 
     document.getElementById('dbBackBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
       dashboardView.style.display = 'none';
