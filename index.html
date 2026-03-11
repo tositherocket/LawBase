@@ -2185,8 +2185,10 @@
   <div id="dbDriveModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
     <div style="background:var(--panel);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.3);position:relative;">
       <button id="dbDriveModalClose" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)"><i class="fas fa-times"></i></button>
-      <h3 style="margin:0 0 6px;font-size:1.1rem"><i class="fas fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h3>
-      <p style="font-size:0.82rem;color:var(--muted);margin:0 0 16px">Të dhënat ruhen në Dropbox-in tënd si <code>/Apps/LegalBase/backup.json</code></p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h3 style="margin:0;font-size:1.1rem"><i class="fas fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h3>
+        <span style="font-size:0.72rem;color:var(--muted)"><code>/Apps/LegalBase/</code></span>
+      </div>
 
       <!-- Step 1: App Key -->
       <div id="dbDriveSetup">
@@ -2214,11 +2216,33 @@
 
       <!-- Step 3: Sync actions -->
       <div id="dbDriveActions" style="display:none">
-        <div id="dbDriveStatus" style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;padding:8px;background:var(--chip);border-radius:6px"></div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <button id="dbDriveSave" class="btn btn-primary" style="flex:1"><i class="fas fa-cloud-upload-alt"></i> Ruaj</button>
-          <button id="dbDriveLoad" class="btn btn-ghost" style="flex:1"><i class="fas fa-cloud-download-alt"></i> Ngarko</button>
+
+        <!-- Statusi global -->
+        <div id="dbDriveStatus" style="font-size:0.8rem;margin-bottom:12px;padding:8px 10px;background:var(--chip);border-radius:6px;min-height:28px;color:var(--muted)"></div>
+
+        <!-- ① Auto-sync → backup_auto.json -->
+        <div style="border:1px solid #2dc65344;border-radius:8px;padding:12px;margin-bottom:10px;background:var(--chip)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:0.88rem;font-weight:700"><i class="fas fa-sync-alt" style="color:#2dc653"></i> Backup Automatik</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;font-weight:600">
+              <input type="checkbox" id="dbAutoSyncToggle" style="width:16px;height:16px;cursor:pointer" />
+              Aktivo
+            </label>
+          </div>
+          <p style="font-size:0.73rem;color:var(--muted);margin:0 0 6px">Ruhet vetë çdo herë që ke ndryshime → <code style="font-size:0.7rem">backup_auto.json</code></p>
+          <div id="dbAutoSyncStatus" style="font-size:0.75rem;color:var(--muted);min-height:16px"></div>
         </div>
+
+        <!-- ② Manual backup → backup_manual.json -->
+        <div style="border:1px solid #4361ee44;border-radius:8px;padding:12px;margin-bottom:10px;background:var(--chip)">
+          <div style="font-size:0.88rem;font-weight:700;margin-bottom:4px"><i class="fas fa-shield-alt" style="color:#4361ee"></i> Backup Manual</div>
+          <p style="font-size:0.73rem;color:var(--muted);margin:0 0 8px">Ruhet kur klikoni vetë → <code style="font-size:0.7rem">backup_manual.json</code></p>
+          <div style="display:flex;gap:8px">
+            <button id="dbDriveSave" class="btn btn-primary" style="flex:1"><i class="fas fa-cloud-upload-alt"></i> Ruaj tani</button>
+            <button id="dbDriveLoad" class="btn btn-ghost" style="flex:1"><i class="fas fa-cloud-download-alt"></i> Restauro</button>
+          </div>
+        </div>
+
         <button id="dbDriveDisconnect" class="btn btn-ghost" style="width:100%;color:var(--muted);font-size:0.78rem;margin-top:4px"><i class="fas fa-unlink"></i> Shkëput llogarinë</button>
       </div>
     </div>
@@ -2244,27 +2268,46 @@
   <!-- Settings drawer për Dashboard -->
   <aside id="dbSettingsDrawer" class="drawer" aria-hidden="true" style="z-index:1010">
     <header>
-      <strong id="dbSettingsTitle"><i class="fas fa-cog"></i> <span>Cilësimet</span></strong>
+      <strong><i class="fas fa-cog"></i> <span id="db-lbl-settings">Settings</span></strong>
       <div style="float:right"><button id="dbCloseSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
     </header>
     <div class="body">
-      <!-- Kategoritë -->
+      <!-- LegalBase-only: Shto kategori -->
       <div class="group">
-        <h4 id="dbGrpCatAdd"><i class="fas fa-plus"></i> Shto kategori</h4>
+        <h4><i class="fas fa-plus"></i> <span id="db-lbl-add-cat">Add category</span></h4>
         <div class="row">
-          <input id="dbNewCatInput" type="text" class="form-control" placeholder="" maxlength="80" />
+          <button id="dbAddCatBtn" class="btn btn-primary" style="flex:1"><i class="fas fa-plus"></i> <span id="db-lbl-add-cat-btn">Add</span></button>
         </div>
         <div class="row" style="margin-top:6px">
-          <button id="dbAddCatBtn" class="btn btn-primary" style="width:100%"><i class="fas fa-plus"></i> Shto</button>
+          <input id="dbNewCatInput" type="text" class="form-control" placeholder="" maxlength="80" />
         </div>
       </div>
+      <!-- LegalBase-only: Menaxho kategoritë -->
       <div class="group">
-        <h4 id="dbGrpCatManage"><i class="fas fa-list"></i> Menaxho kategoritë</h4>
+        <h4><i class="fas fa-list"></i> <span id="db-lbl-manage-cats">Manage categories</span></h4>
         <div id="dbCatManagerList"></div>
+        <div class="hint" id="db-lbl-cats-hint">Rename and delete categories here.</div>
       </div>
-      <!-- Tema — identike me LawBase -->
+      <!-- Import / Export — identike me LawBase -->
       <div class="group">
-        <h4 id="dbGrpTheme"><i class="fas fa-palette"></i> Theme</h4>
+        <h4><i class="fas fa-file-import"></i> <span id="db-lbl-imp-exp">Import / Export</span></h4>
+        <div class="row">
+          <button id="dbExportBtn" class="btn btn-ghost"><i class="fas fa-file-export"></i> <span id="db-lbl-export">Export (JSON)</span></button>
+          <button id="dbImportBtn" class="btn btn-ghost"><i class="fas fa-file-import"></i> <span id="db-lbl-import">Import</span></button>
+          <input id="dbImportFile" type="file" accept=".json" style="display:none" />
+        </div>
+        <button id="dbClearAllBtn" class="btn btn-ghost" style="color:var(--danger)"><i class="fas fa-trash"></i> <span id="db-lbl-clear-all">Clear all</span></button>
+      </div>
+      <!-- Dropbox — buton direkt -->
+      <div class="group">
+        <h4><i class="fas fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h4>
+        <div class="row">
+          <button id="dbSettingsDriveBtn" class="btn btn-ghost" style="flex:1"><i class="fas fa-cloud"></i> <span id="db-lbl-dropbox">Configure / Sync</span></button>
+        </div>
+      </div>
+      <!-- Theme — identike me LawBase -->
+      <div class="group">
+        <h4><i class="fas fa-palette"></i> <span id="db-lbl-theme">Theme</span></h4>
         <div class="theme-mode-row">
           <button class="theme-mode-btn db-theme-mode-btn active" data-mode="light"><i class="fas fa-sun"></i> Light</button>
           <button class="theme-mode-btn db-theme-mode-btn" data-mode="dark"><i class="fas fa-moon"></i> Dark</button>
@@ -2286,9 +2329,9 @@
           </div>
         </div>
       </div>
-      <!-- Gjuha -->
+      <!-- Language — identike me LawBase -->
       <div class="group">
-        <h4 id="dbGrpLang"><i class="fas fa-language"></i> Language</h4>
+        <h4><i class="fas fa-language"></i> <span id="db-lbl-lang">Language</span></h4>
         <div class="row">
           <button class="btn btn-ghost lang-btn" data-lang="sq">🇦🇱 Shqip</button>
           <button class="btn btn-ghost lang-btn" data-lang="mk">🇲🇰 Македонски</button>
@@ -2296,7 +2339,10 @@
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.11</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px">
+      <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
+      <span class="hint" style="opacity:0.6">v2.10.17</span>
+    </div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2376,7 +2422,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.11</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.17</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -3172,6 +3218,8 @@
       openDB().then(db=>{
         db.transaction('data','readwrite').objectStore('data').put(dbData, DB_NOTES_KEY);
       }).catch(e=>console.error('dbSave:',e));
+      // Trigger Dropbox auto-sync if enabled
+      if(window._dbDropboxAutoSync) window._dbDropboxAutoSync();
     }
 
     function dbLoad(){
@@ -4020,26 +4068,38 @@
     //  DROPBOX SYNC
     // ══════════════════════════════════════════════
     (function(){
-      const DBX_FILE  = '/Apps/LegalBase/backup.json';
-      const LS_APPKEY = 'lb-dbx-appkey';
-      const LS_TOKEN  = 'lb-dbx-token';
+      const DBX_AUTO   = '/Apps/LegalBase/backup_auto.json';
+      const DBX_MANUAL = '/Apps/LegalBase/backup_manual.json';
+      const LS_APPKEY  = 'lb-dbx-appkey';
+      const LS_TOKEN   = 'lb-dbx-token';
+      const LS_AUTO    = 'lb-dbx-autosync';
 
-      // ── Helpers ──
+      let _autoTimer = null;
+
+      // ── Storage helpers ──
       function getAppKey(){ try{ return localStorage.getItem(LS_APPKEY)||''; }catch(e){ return ''; } }
       function getToken(){  try{ return localStorage.getItem(LS_TOKEN)||'';  }catch(e){ return ''; } }
       function saveAppKey(k){ try{ localStorage.setItem(LS_APPKEY,k); }catch(e){} }
       function saveToken(t){  try{ localStorage.setItem(LS_TOKEN,t);  }catch(e){} }
-      function clearAuth(){ try{ localStorage.removeItem(LS_APPKEY); localStorage.removeItem(LS_TOKEN); }catch(e){} }
+      function clearAuth(){   try{ localStorage.removeItem(LS_APPKEY); localStorage.removeItem(LS_TOKEN); }catch(e){} }
+      function isAutoEnabled(){ try{ return localStorage.getItem(LS_AUTO)==='1'; }catch(e){ return false; } }
+      function setAutoEnabled(v){ try{ localStorage.setItem(LS_AUTO, v?'1':'0'); }catch(e){} }
 
+      // ── UI helpers ──
       function modal(show){ document.getElementById('dbDriveModal').style.display = show?'flex':'none'; }
       function status(msg, color){ const el=document.getElementById('dbDriveStatus'); if(el){ el.innerHTML=msg; el.style.color=color||'var(--muted)'; } }
+      function autoStatus(msg){ const el=document.getElementById('dbAutoSyncStatus'); if(el) el.innerHTML=msg; }
       function showStep(step){ ['dbDriveSetup','dbDriveAuth','dbDriveActions'].forEach(id=>{ document.getElementById(id).style.display = id===step?'block':'none'; }); }
-      function cloudIcon(ok){ const b=document.getElementById('dbDriveBtn'); if(b) b.innerHTML = ok ? '<i class="fas fa-dropbox" style="color:#0061ff"></i>' : '<i class="fas fa-cloud"></i>'; }
-
-      // ── Redirect URI — duhet identike me atë në Dropbox dashboard ──
-      function getRedirectUri(){
-        return window.location.origin + window.location.pathname;
+      function cloudIcon(state){
+        const b=document.getElementById('dbDriveBtn');
+        if(!b) return;
+        if(state==='auto')      b.innerHTML='<i class="fas fa-dropbox" style="color:#2dc653"></i>';
+        else if(state==='conn') b.innerHTML='<i class="fas fa-dropbox" style="color:#0061ff"></i>';
+        else                    b.innerHTML='<i class="fas fa-cloud"></i>';
       }
+
+      // ── Redirect URI ──
+      function getRedirectUri(){ return window.location.origin + window.location.pathname; }
 
       // ── OAuth via popup ──
       function authorize(appKey){
@@ -4049,165 +4109,173 @@
           + '&response_type=token'
           + '&redirect_uri=' + encodeURIComponent(redirectUri)
           + '&token_access_type=legacy';
-
-        const w = window.open(authUrl, 'dropbox-auth', 'width=600,height=700,left=200,top=100');
-        if(!w){ alert('Popup u bllokua! Lejo popups për këtë faqe.'); return; }
-
+        const w = window.open(authUrl,'dropbox-auth','width=600,height=700,left=200,top=100');
+        if(!w){ alert('Popup u bllokua! Lejo popups per kete faqe.'); return; }
         const timer = setInterval(()=>{
           try {
             if(w.closed){ clearInterval(timer); return; }
             const hash = w.location.hash;
             if(hash && hash.includes('access_token=')){
-              clearInterval(timer);
-              w.close();
+              clearInterval(timer); w.close();
               const params = new URLSearchParams(hash.slice(1));
               const token = params.get('access_token');
               if(token){
                 saveToken(token);
                 showStep('dbDriveActions');
-                status('<i class="fas fa-check-circle"></i> U lidh me Dropbox!', '#2dc653');
-                cloudIcon(true);
+                _initActionsUI();
+                status('<i class="fas fa-check-circle"></i> U lidh me Dropbox!','#2dc653');
+                cloudIcon(isAutoEnabled()?'auto':'conn');
               }
             }
-          } catch(e){ /* cross-origin, wait */ }
+          } catch(e){}
         }, 500);
       }
 
       // ── Dropbox API ──
-      async function dbxRequest(endpoint, body, token){
-        const r = await fetch('https://api.dropboxapi.com/2/' + endpoint, {
-          method: 'POST',
-          headers: { 'Authorization':'Bearer '+token, 'Content-Type':'application/json' },
-          body: JSON.stringify(body)
-        });
-        if(r.status === 401) throw new Error('Token skadoi — ridhu me Dropbox');
-        return r.ok ? await r.json() : null;
-      }
-
-      async function dbxUpload(content, token){
+      async function dbxUpload(json, path, token){
         const r = await fetch('https://content.dropboxapi.com/2/files/upload', {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer '+token,
             'Content-Type': 'application/octet-stream',
-            'Dropbox-API-Arg': JSON.stringify({ path: DBX_FILE, mode: 'overwrite', autorename: false, mute: true })
+            'Dropbox-API-Arg': JSON.stringify({ path, mode:'overwrite', autorename:false, mute:true })
           },
-          body: content
+          body: json
         });
-        if(r.status===401) throw new Error('Token skadoi — ridhu me Dropbox');
-        if(!r.ok){
-          const err = await r.json().catch(()=>({error_summary:''}));
-          const msg = err.error_summary || r.status;
-          throw new Error('Upload dështoi: '+msg);
-        }
+        if(r.status===401) throw new Error('Token skadoi — ridhu');
+        if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error_summary||r.status); }
         return await r.json();
       }
 
-      async function dbxDownload(token){
-        const r = await fetch('https://content.dropboxapi.com/2/files/download', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer '+token,
-            'Dropbox-API-Arg': JSON.stringify({ path: DBX_FILE })
+      async function dbxDownload(path, token){
+        const r = await fetch('https://content.dropboxapi.com/2/files/download',{
+          method:'POST',
+          headers:{
+            'Authorization':'Bearer '+token,
+            'Dropbox-API-Arg': JSON.stringify({ path })
           }
         });
-        if(r.status===401) throw new Error('Token skadoi — ridhu me Dropbox');
+        if(r.status===401) throw new Error('Token skadoi — ridhu');
         if(r.status===409) throw new Error('Skedari nuk ekziston ende — ruaj fillimisht');
-        if(!r.ok) throw new Error('Download dështoi: '+r.status);
+        if(!r.ok) throw new Error('Download deshtoi: '+r.status);
         return await r.text();
       }
 
-      // ── Export/Import DB ──
+      // ── Export / Import DB ──
       function exportDB(){
         return new Promise(resolve=>{
-          const req = indexedDB.open('lawbase_db', 2);
+          const req = indexedDB.open('lawbase_db',2);
           req.onsuccess = e=>{
-            const db = e.target.result;
-            const tx = db.transaction(['data','annotations'],'readonly');
-            let state=null, notes=null, anno=[];
-            tx.objectStore('data').get('state').onsuccess         = e2=> state=e2.target.result;
-            tx.objectStore('data').get('dashboard-notes').onsuccess = e2=> notes=e2.target.result;
-            tx.objectStore('annotations').getAll().onsuccess      = e2=> anno=e2.target.result||[];
-            tx.oncomplete = ()=>{
-              const p = state||window._appState||{};
+            const db=e.target.result;
+            const tx=db.transaction(['data','annotations'],'readonly');
+            let state=null,notes=null,anno=[];
+            tx.objectStore('data').get('state').onsuccess          = e2=>state=e2.target.result;
+            tx.objectStore('data').get('dashboard-notes').onsuccess= e2=>notes=e2.target.result;
+            tx.objectStore('annotations').getAll().onsuccess       = e2=>anno=e2.target.result||[];
+            tx.oncomplete=()=>{
+              const p=state||window._appState||{};
               resolve({ version:3, exportedAt:new Date().toISOString(),
                 activeId:p.activeId||null, laws:p.laws||[],
                 annotations:anno, legalbase:notes||window._dbData });
             };
           };
-          req.onerror = ()=> resolve({ version:3, exportedAt:new Date().toISOString(),
-            laws:[], annotations:[], legalbase:window._dbData });
+          req.onerror=()=>resolve({ version:3,exportedAt:new Date().toISOString(),laws:[],annotations:[],legalbase:window._dbData });
         });
       }
 
       function importDB(data){
         return new Promise((resolve,reject)=>{
-          const req = indexedDB.open('lawbase_db', 2);
-          req.onsuccess = e=>{
-            const db = e.target.result;
-            const tx = db.transaction(['data','annotations'],'readwrite');
+          const req=indexedDB.open('lawbase_db',2);
+          req.onsuccess=e=>{
+            const db=e.target.result;
+            const tx=db.transaction(['data','annotations'],'readwrite');
             if(data.laws&&data.laws.length) tx.objectStore('data').put({laws:data.laws,activeId:data.activeId||null},'state');
             if(data.legalbase) tx.objectStore('data').put(data.legalbase,'dashboard-notes');
             if(data.annotations){ const s=tx.objectStore('annotations'); s.clear(); data.annotations.forEach(a=>s.put(a)); }
-            tx.oncomplete = ()=>{ if(window._dbReload) window._dbReload(); resolve(); };
-            tx.onerror = ()=> reject(new Error('DB write failed'));
+            tx.oncomplete=()=>{ if(window._dbReload) window._dbReload(); resolve(); };
+            tx.onerror=()=>reject(new Error('DB write failed'));
           };
-          req.onerror = ()=> reject(new Error('DB open failed'));
+          req.onerror=()=>reject(new Error('DB open failed'));
         });
       }
 
-      // ── Save & Load ──
-      async function syncSave(){
-        const token = getToken();
-        if(!token){ showStep('dbDriveSetup'); return; }
-        status('<i class="fas fa-spinner fa-spin"></i> Po ruhet...','var(--muted)');
+      // ── Auto-sync: debounce 4s after each dbSave ──
+      function triggerAutoSync(){
+        if(!isAutoEnabled() || !getToken()) return;
+        if(_autoTimer) clearTimeout(_autoTimer);
+        _autoTimer = setTimeout(async ()=>{
+          autoStatus('<i class="fas fa-spinner fa-spin"></i> Po sinkronizohet...');
+          try {
+            const data = await exportDB();
+            await dbxUpload(JSON.stringify(data,null,2), DBX_AUTO, getToken());
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Auto-sync ' + new Date().toLocaleTimeString());
+          } catch(e){
+            autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> ' + e.message);
+            if(e.message.includes('skadoi')){ clearAuth(); cloudIcon(false); }
+          }
+        }, 4000);
+      }
+
+      // Hook into dbSave — called after every change
+      const _origDbSave = window._dbSaveHook || null;
+      window._dbDropboxAutoSync = triggerAutoSync;
+
+      // ── Manual save ──
+      async function manualSave(){
+        status('<i class="fas fa-spinner fa-spin"></i> Po ruhet backup manual...','var(--muted)');
         try {
           const data = await exportDB();
-          await dbxUpload(JSON.stringify(data,null,2), token);
-          status('<i class="fas fa-check-circle"></i> U ruajt — '+new Date().toLocaleTimeString(),'#2dc653');
+          await dbxUpload(JSON.stringify(data,null,2), DBX_MANUAL, getToken());
+          const now = new Date().toLocaleTimeString();
+          status('<i class="fas fa-check-circle"></i> Backup manual u ruajt — '+now,'#2dc653');
         } catch(e){
           if(e.message.includes('skadoi')){ clearAuth(); cloudIcon(false); showStep('dbDriveSetup'); }
           status('<i class="fas fa-exclamation-circle"></i> '+e.message,'var(--danger)');
         }
       }
 
-      async function syncLoad(){
-        const token = getToken();
-        if(!token){ showStep('dbDriveSetup'); return; }
+      // ── Manual restore ──
+      async function manualRestore(){
+        if(!confirm('Restore nga backup_manual.json? Kjo do te zevendesoje te dhenat aktuale.')) return;
         status('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...','var(--muted)');
         try {
-          const text = await dbxDownload(token);
+          const text = await dbxDownload(DBX_MANUAL, getToken());
           const data = JSON.parse(text);
           await importDB(data);
           const d = new Date(data.exportedAt);
-          status('<i class="fas fa-check-circle"></i> U ngarkua — '+d.toLocaleString(),'#2dc653');
+          status('<i class="fas fa-check-circle"></i> Restore u be — '+d.toLocaleString(),'#2dc653');
         } catch(e){
           if(e.message.includes('skadoi')){ clearAuth(); cloudIcon(false); showStep('dbDriveSetup'); }
           status('<i class="fas fa-exclamation-circle"></i> '+e.message,'var(--danger)');
         }
+      }
+
+      // ── Init actions UI (toggle state) ──
+      function _initActionsUI(){
+        const toggle = document.getElementById('dbAutoSyncToggle');
+        if(!toggle) return;
+        toggle.checked = isAutoEnabled();
+        cloudIcon(isAutoEnabled()?'auto':'conn');
+        if(isAutoEnabled()) autoStatus('Auto-sync aktiv');
+        toggle.onchange = ()=>{
+          setAutoEnabled(toggle.checked);
+          cloudIcon(toggle.checked?'auto':'conn');
+          if(toggle.checked){ autoStatus('Auto-sync aktiv'); triggerAutoSync(); }
+          else autoStatus('Auto-sync joaktiv');
+        };
       }
 
       // ── Event listeners ──
       document.getElementById('dbDriveBtn').addEventListener('click',()=>{
-        const token  = getToken();
-        const appKey = getAppKey();
-        // Always show redirect URI
-        const uriEl = document.getElementById('dbRedirectUriDisplay');
+        const token=getToken(), appKey=getAppKey();
+        const uriEl=document.getElementById('dbRedirectUriDisplay');
         if(uriEl){
-          const uri = getRedirectUri();
-          uriEl.textContent = uri;
-          uriEl.onclick = ()=>{ navigator.clipboard.writeText(uri).then(()=>{ uriEl.textContent='✅ Kopjuar!'; setTimeout(()=>uriEl.textContent=uri, 1500); }); };
+          const uri=getRedirectUri(); uriEl.textContent=uri;
+          uriEl.onclick=()=>{ navigator.clipboard.writeText(uri).then(()=>{ uriEl.textContent='✅ Kopjuar!'; setTimeout(()=>uriEl.textContent=uri,1500); }); };
         }
-        if(token){
-          showStep('dbDriveActions');
-          status('','var(--muted)');
-        } else if(appKey){
-          showStep('dbDriveAuth');
-        } else {
-          showStep('dbDriveSetup');
-          const inp = document.getElementById('dbDriveClientId');
-          if(inp) inp.value = '';
-        }
+        if(token){ showStep('dbDriveActions'); _initActionsUI(); status('','var(--muted)'); }
+        else if(appKey){ showStep('dbDriveAuth'); }
+        else { showStep('dbDriveSetup'); document.getElementById('dbDriveClientId').value=''; }
         modal(true);
       });
 
@@ -4215,38 +4283,65 @@
       document.getElementById('dbDriveModal').addEventListener('click',e=>{ if(e.target===e.currentTarget) modal(false); });
 
       document.getElementById('dbDriveSaveClientId').addEventListener('click',()=>{
-        const val = document.getElementById('dbDriveClientId').value.trim();
-        if(!val||val.length < 5){ alert('App Key nuk është e vlefshme'); return; }
-        saveAppKey(val);
-        showStep('dbDriveAuth');
+        const val=document.getElementById('dbDriveClientId').value.trim();
+        if(!val||val.length<5){ alert('App Key nuk eshte e vlefshme'); return; }
+        saveAppKey(val); showStep('dbDriveAuth');
       });
 
       document.getElementById('dbDropboxAuthBtn').addEventListener('click',()=>{
-        const appKey = getAppKey();
-        if(!appKey){ showStep('dbDriveSetup'); return; }
+        const appKey=getAppKey(); if(!appKey){ showStep('dbDriveSetup'); return; }
         authorize(appKey);
       });
 
-      document.getElementById('dbDriveSave').addEventListener('click', syncSave);
-      document.getElementById('dbDriveLoad').addEventListener('click', syncLoad);
-
       document.getElementById('dbDriveDisconnect2').addEventListener('click',()=>{
         clearAuth(); cloudIcon(false); showStep('dbDriveSetup');
-        document.getElementById('dbDriveClientId').value = '';
+        document.getElementById('dbDriveClientId').value='';
       });
+
+      document.getElementById('dbDriveSave').addEventListener('click', manualSave);
+      document.getElementById('dbDriveLoad').addEventListener('click', manualRestore);
+
       document.getElementById('dbDriveDisconnect').addEventListener('click',()=>{
         clearAuth(); cloudIcon(false); showStep('dbDriveSetup');
-        document.getElementById('dbDriveClientId').value = '';
+        document.getElementById('dbDriveClientId').value='';
         modal(false);
       });
 
-      // Init
-      if(getToken()) cloudIcon(true);
+      // Init on load
+      if(getToken()) cloudIcon(isAutoEnabled()?'auto':'conn');
       else if(getAppKey()) cloudIcon(false);
     })();
     // ══════════════════════════════════════════════
 
-        document.getElementById('dbBackBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
+    // ── LegalBase Settings: listeners ──
+    document.getElementById('dbExportBtn').addEventListener('click', exportAll);
+    document.getElementById('dbImportBtn').addEventListener('click', ()=> document.getElementById('dbImportFile').click());
+    document.getElementById('dbImportFile').addEventListener('change', ()=>{
+      const f = document.getElementById('dbImportFile').files[0];
+      if(f) importAll(f);
+      document.getElementById('dbImportFile').value = '';
+    });
+    document.getElementById('dbClearAllBtn').addEventListener('click', ()=>{
+      if(!confirm((window._dbLang&&window._dbLang.dbClearAll)||'Clear all notes?')) return;
+      if(!confirm((window._dbLang&&window._dbLang.clearConfirm)||'Are you sure? ALL categories and titles will be deleted permanently.')) return;
+      const req = indexedDB.open('lawbase_db', 2);
+      req.onsuccess = e => {
+        const db = e.target.result;
+        db.transaction(['data'],'readwrite').objectStore('data').delete('dashboard-notes').onsuccess = ()=>{
+          window._dbData = { cats: [] };
+          if(window._dbReload) window._dbReload();
+          document.getElementById('dbSettingsDrawer').classList.remove('open');
+          document.getElementById('dbSettingsDrawer').setAttribute('aria-hidden','true');
+        };
+      };
+    });
+    document.getElementById('dbSettingsDriveBtn').addEventListener('click', ()=>{
+      document.getElementById('dbSettingsDrawer').classList.remove('open');
+      document.getElementById('dbSettingsDrawer').setAttribute('aria-hidden','true');
+      setTimeout(()=> document.getElementById('dbDriveBtn').click(), 80);
+    });
+
+    document.getElementById('dbBackBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
       dashboardView.style.display = 'none';
       appEl.style.display = '';
     });
@@ -4735,6 +4830,9 @@
         noCatFirst:'Fillimisht shto një kategori nga ⚙️',
         dbDuplicate:'Kopjo notën', dbPrint:'Printo', dbSaved:'Ruajtur automatikisht',
         dbRefs:'Referenca', dbAddRef:'Shto referencë', dbRefPickLaw:'zgjedh ligjin', dbRefPickArt:'zgjedh nenin', dbRefFrom:'Referuar në',
+        dbImpExp:'Import / Eksport', dbExport:'Eksporto', dbImport:'Importo', dbClearAll:'Fshi të gjitha',
+        dbDropboxSync:'Konfiguro / Sync', dbTheme:'Pamja', dbLang:'Gjuha',
+        dbSettings2:'Cilësimet', dbAddCat2:'Shto kategori', dbManageCats2:'Menaxho kategoritë',
       },
       mk: {
         brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
@@ -4797,6 +4895,9 @@
         noCatFirst:'Прво додај категорија преку ⚙️',
         dbDuplicate:'Копирај белешка', dbPrint:'Печати', dbSaved:'Автоматски зачувано',
         dbRefs:'Референци', dbAddRef:'Додај референца', dbRefPickLaw:'избери закон', dbRefPickArt:'избери член', dbRefFrom:'Референцирано во',
+        dbImpExp:'Увоз / Извоз', dbExport:'Извоз', dbImport:'Увоз', dbClearAll:'Избриши сè',
+        dbDropboxSync:'Конфигурирај / Синх', dbTheme:'Тема', dbLang:'Јазик',
+        dbSettings2:'Поставки', dbAddCat2:'Додај категорија', dbManageCats2:'Управувај со категории',
       },
       en: {
         brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
@@ -4859,6 +4960,9 @@
         noCatFirst:'First add a category via ⚙️',
         dbDuplicate:'Duplicate note', dbPrint:'Print', dbSaved:'Auto-saved',
         dbRefs:'References', dbAddRef:'Add reference', dbRefPickLaw:'choose a law', dbRefPickArt:'choose an article', dbRefFrom:'Referenced in',
+        dbImpExp:'Import / Export', dbExport:'Export', dbImport:'Import', dbClearAll:'Clear all',
+        dbDropboxSync:'Configure / Sync', dbTheme:'Theme', dbLang:'Language',
+        dbSettings2:'Settings', dbAddCat2:'Add category', dbManageCats2:'Manage categories',
       }
     };
 
@@ -4931,17 +5035,24 @@
       setH('dbSearchClear', '<i class="fas fa-times"></i> '+(L.dbClear||L.clearBtn));
       var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong span');
       if(dbSettingsH) dbSettingsH.textContent = L.settingsBtn||'Settings';
-      var dbGrpCatAdd = document.getElementById('dbGrpCatAdd');
-      if(dbGrpCatAdd) dbGrpCatAdd.innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddCat||'Add category');
-      var dbGrpCatManage = document.getElementById('dbGrpCatManage');
-      if(dbGrpCatManage) dbGrpCatManage.innerHTML = '<i class="fas fa-list"></i> '+(L.dbManageCats||'Manage categories');
-      var dbGrpTheme = document.getElementById('dbGrpTheme');
-      if(dbGrpTheme) dbGrpTheme.innerHTML = '<i class="fas fa-palette"></i> '+(L.themeH||'Theme');
-      var dbGrpLang = document.getElementById('dbGrpLang');
-      if(dbGrpLang) dbGrpLang.innerHTML = '<i class="fas fa-language"></i> '+(L.langH||'Language');
+      // ── LegalBase settings drawer i18n ──
+      function _setTxt(id, txt){ var el=document.getElementById(id); if(el) el.textContent=txt; }
+      _setTxt('db-lbl-settings',   L.dbSettings2||L.settingsBtn||'Settings');
+      _setTxt('db-lbl-add-cat',    L.dbAddCat2||L.dbAddCat||'Add category');
+      _setTxt('db-lbl-add-cat-btn',L.addBtn||'Add');
+      _setTxt('db-lbl-manage-cats',L.dbManageCats2||L.dbManageCats||'Manage categories');
+      _setTxt('db-lbl-imp-exp',    L.dbImpExp||L.drawerImpExp||'Import / Export');
+      _setTxt('db-lbl-export',     (L.dbExport||'Export')+' (JSON)');
+      _setTxt('db-lbl-import',     L.dbImport||L.importBtn||'Import');
+      _setTxt('db-lbl-clear-all',  L.dbClearAll||L.clearAllBtn||'Clear all');
+      _setTxt('db-lbl-dropbox',    L.dbDropboxSync||'Configure / Sync');
+      _setTxt('db-lbl-theme',      L.dbTheme||L.themeH||'Theme');
+      _setTxt('db-lbl-lang',       L.dbLang||L.langH||'Language');
       var dbFontLbl = document.getElementById('db-lbl-font-size');
       if(dbFontLbl) dbFontLbl.textContent = L.fontSizeLabel||'Text size';
       setP('dbNewCatInput', L.catPh||'Category name...');
+      var dbFtr = document.getElementById('db-lbl-footer');
+      if(dbFtr) dbFtr.innerHTML = '<i class="fas fa-info-circle"></i> '+(L.footer||'Data stored locally.')+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
       // Store for use in JS
       window._dbLang = L;
 
