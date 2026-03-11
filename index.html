@@ -2208,7 +2208,8 @@
         <button id="dbDropboxAuthBtn" style="width:100%;background:#0061ff;color:#fff;border:none;padding:11px;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
           <i class="fas fa-dropbox"></i> Autorizo me Dropbox
         </button>
-        <p style="font-size:0.73rem;color:var(--muted);margin:10px 0 0;text-align:center">Hapet popup → logohu → autorizoji → gati</p>
+        <p style="font-size:0.73rem;color:var(--muted);margin:10px 0 4px;text-align:center">Hapet popup → logohu → autorizoji → gati</p>
+        <button id="dbDriveDisconnect2" class="btn btn-ghost" style="width:100%;color:var(--muted);font-size:0.78rem;margin-top:6px"><i class="fas fa-unlink"></i> Shkëput &amp; fillo nga e para</button>
       </div>
 
       <!-- Step 3: Sync actions -->
@@ -2295,7 +2296,7 @@
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.8</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.11</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2375,7 +2376,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.8</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.11</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4089,12 +4090,16 @@
           headers: {
             'Authorization': 'Bearer '+token,
             'Content-Type': 'application/octet-stream',
-            'Dropbox-API-Arg': JSON.stringify({ path: DBX_FILE, mode: 'overwrite', autorename: false })
+            'Dropbox-API-Arg': JSON.stringify({ path: DBX_FILE, mode: 'overwrite', autorename: false, mute: true })
           },
           body: content
         });
         if(r.status===401) throw new Error('Token skadoi — ridhu me Dropbox');
-        if(!r.ok) throw new Error('Upload dështoi: '+r.status);
+        if(!r.ok){
+          const err = await r.json().catch(()=>({error_summary:''}));
+          const msg = err.error_summary || r.status;
+          throw new Error('Upload dështoi: '+msg);
+        }
         return await r.json();
       }
 
@@ -4225,6 +4230,10 @@
       document.getElementById('dbDriveSave').addEventListener('click', syncSave);
       document.getElementById('dbDriveLoad').addEventListener('click', syncLoad);
 
+      document.getElementById('dbDriveDisconnect2').addEventListener('click',()=>{
+        clearAuth(); cloudIcon(false); showStep('dbDriveSetup');
+        document.getElementById('dbDriveClientId').value = '';
+      });
       document.getElementById('dbDriveDisconnect').addEventListener('click',()=>{
         clearAuth(); cloudIcon(false); showStep('dbDriveSetup');
         document.getElementById('dbDriveClientId').value = '';
