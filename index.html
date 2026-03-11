@@ -1423,6 +1423,10 @@ self.addEventListener('fetch',e=>{
         flex-wrap: wrap;
         align-items: center;
         padding: 6px 10px;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        background: transparent;
       }
       #dashboardView .controls input {
         flex: 1;
@@ -1534,7 +1538,15 @@ self.addEventListener('fetch',e=>{
     }
     .db-note-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 16px; }
     .db-note-body-view { font-size: calc(var(--font-size-doc, 15px)); line-height: 1.85; color: var(--text); white-space: pre-wrap; word-wrap: break-word; }
-    .db-note-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 12px; padding-bottom: 4px; border-top: 1px solid var(--border); }
+    .db-note-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 20px;
+      padding-top: 10px;
+      padding-bottom: 4px;
+      border-top: 1px solid var(--border);
+      align-items: center;
+    }
     .db-edit-title {
       display: block; width: 100%; font-size: 1.2rem; font-weight: 700;
       border: none; border-bottom: 2px solid var(--border); background: transparent;
@@ -1677,47 +1689,47 @@ self.addEventListener('fetch',e=>{
 
     /* ── Referenca (Law links) ── */
     .db-refs-section {
-      margin: 12px 0 4px;
+      margin: 8px 0 12px;
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       align-items: center;
     }
     .db-refs-label {
-      font-size: 0.75rem;
+      font-size: 0.68rem;
       font-weight: 600;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-right: 2px;
-      flex-basis: 100%;
+      letter-spacing: 0.05em;
+      opacity: 0.65;
+      margin-right: 4px;
     }
     .db-ref-chip {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      background: var(--primary-soft);
-      border: 1px solid var(--primary);
-      color: var(--primary);
-      border-radius: 20px;
-      padding: 3px 10px 3px 8px;
-      font-size: 0.78rem;
-      font-weight: 600;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 2px 8px 2px 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
       text-decoration: none;
       max-width: 100%;
     }
-    .db-ref-chip:hover { background: var(--primary); color: #fff; }
+    .db-ref-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
     .db-ref-chip .chip-del {
-      margin-left: 4px;
-      opacity: 0.5;
-      font-size: 0.9rem;
+      margin-left: 3px;
+      opacity: 0.4;
+      font-size: 0.85rem;
       line-height: 1;
       cursor: pointer;
-      padding: 0 2px;
+      padding: 0 1px;
     }
-    .db-ref-chip .chip-del:hover { opacity: 1; }
+    .db-ref-chip .chip-del:hover { opacity: 0.9; color: var(--danger); }
     .db-ref-add-btn {
       display: inline-flex;
       align-items: center;
@@ -1725,13 +1737,56 @@ self.addEventListener('fetch',e=>{
       background: transparent;
       border: 1px dashed var(--border);
       color: var(--muted);
-      border-radius: 20px;
-      padding: 3px 10px;
-      font-size: 0.78rem;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
       cursor: pointer;
       transition: border-color 0.15s, color 0.15s;
     }
     .db-ref-add-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ── Note action buttons (view mode) ── */
+    .db-act-edit {
+      font-size: 0.82rem;
+      padding: 5px 14px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .db-act-edit:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+    .db-act-icon {
+      font-size: 0.82rem;
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      display: inline-flex;
+      align-items: center;
+    }
+    .db-act-icon:hover { border-color: var(--text); color: var(--text); }
+    .db-act-del {
+      font-size: 0.82rem;
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--muted);
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: auto;
+      transition: color 0.15s, border-color 0.15s;
+      display: inline-flex;
+      align-items: center;
+    }
+    .db-act-del:hover { color: var(--danger); border-color: var(--danger); }
 
     /* ── Ref Picker Modal ── */
     #dbRefModal {
@@ -1818,65 +1873,79 @@ self.addEventListener('fetch',e=>{
       .db-ref-chip { font-size: 0.82rem; padding: 4px 10px; }
     }
 
-    /* ── Article ref badge (LawBase side) ── */
+    /* ── Article ref badge (LawBase side) — same style as LegalBase chips ── */
     .art-ref-badge {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
       align-items: center;
-      font-size: 0.72rem;
-      color: var(--muted);
-      background: transparent;
+      padding: 2px 0 6px;
+      margin: 2px 0 8px;
       border: none;
-      border-left: 2px solid var(--border);
-      border-radius: 0;
-      padding: 2px 8px;
-      margin: 2px 0 6px;
-      line-height: 1.4;
-      opacity: 0.7;
-      transition: opacity 0.15s;
-    }
-    .art-ref-badge:hover { opacity: 1; }
-    .art-ref-badge i { color: var(--muted); margin-right: 3px; font-size: 0.68rem; }
-    .art-ref-note-chip {
-      display: inline-block;
       background: transparent;
-      color: var(--primary);
-      border-radius: 0;
-      padding: 0;
-      cursor: pointer;
-      font-weight: 500;
-      font-size: 0.72rem;
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      transition: opacity 0.1s;
     }
-    .art-ref-note-chip:hover { opacity: 0.7; }
+    .art-ref-badge-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.65;
+      margin-right: 2px;
+      flex-basis: 100%;
+    }
+    .art-ref-note-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 2px 8px 2px 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+      text-decoration: none;
+    }
+    .art-ref-note-chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
 
-    /* ── Popup refs bar ── */
+    /* ── Popup refs bar (article popup) — same style as LegalBase chips ── */
     .popup-refs-bar {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
+      gap: 4px;
       align-items: center;
-      padding: 8px 16px;
-      background: var(--primary-soft);
-      border-top: 1px solid var(--primary);
-      font-size: 0.78rem;
+      padding: 6px 14px 8px;
+      background: transparent;
+      border-top: 1px solid var(--border);
     }
-    .popup-refs-label { color: var(--primary); font-weight: 600; flex-shrink: 0; }
-    .popup-ref-note {
-      display: inline-block;
-      background: var(--primary);
-      color: #fff;
-      border-radius: 10px;
-      padding: 2px 10px;
-      cursor: pointer;
+    .popup-refs-label {
+      font-size: 0.68rem;
       font-weight: 600;
-      font-size: 0.74rem;
-      transition: opacity 0.1s;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.65;
+      flex-basis: 100%;
+      margin-bottom: 2px;
     }
-    .popup-ref-note:hover { opacity: 0.82; }
+    .popup-ref-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 2px 8px 2px 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.75rem;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .popup-ref-note:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
     /* Mobile toolbar: smaller */
     @media (max-width: 900px) {
       .db-tb-sep { display: none; }
@@ -2185,7 +2254,7 @@ self.addEventListener('fetch',e=>{
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.9.6</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.1</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2265,7 +2334,7 @@ self.addEventListener('fetch',e=>{
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.9.6</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.1</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -2694,8 +2763,7 @@ self.addEventListener('fetch',e=>{
           const notes = refMap[idx];
           const bar = document.createElement('div');
           bar.className = 'art-ref-badge';
-          bar.innerHTML = `<i class="fas fa-paperclip"></i> ${L.dbRefFrom||'Referenced in'}: `
-            + notes.map(n=>`<span class="art-ref-note-chip" data-cat="${escH(n.catId)}" data-tid="${escH(n.id)}">${escH(n.catName)} > ${escH(n.title||(L.dbNoTitle||'(no title)'))}</span>`).join(', ');
+          bar.innerHTML = notes.map(n=>`<span class="art-ref-note-chip" data-cat="${escH(n.catId)}" data-tid="${escH(n.id)}"><span style="opacity:0.5;font-size:0.65rem">§</span>${escH(n.catName)} › ${escH(n.title||(L.dbNoTitle||'(no title)'))}</span>`).join('');
           art.querySelector('h3').insertAdjacentElement('afterend', bar);
           bar.querySelectorAll('.art-ref-note-chip').forEach(chip=>{
             chip.addEventListener('click',()=>{
@@ -3395,15 +3463,14 @@ self.addEventListener('fetch',e=>{
         const refs = t.refs||[];
         let refsHtml = '';
         if(refs.length){
-          refsHtml = `<div class="db-refs-section" id="dbRefsSection">
-            <span class="db-refs-label"><i class="fas fa-link"></i> ${L.dbRefs||'References'}</span>`;
+          refsHtml = `<div class="db-refs-section" id="dbRefsSection">`;
           refs.forEach((r,i)=>{
             const law = window._appState && window._appState.laws.find(l=>l.id===r.lawId);
             const lawName = law ? law.title : (r.lawTitle||'?');
             const artLabel = r.artTitle || (((L.articleWord||'Article')+' '+r.artIndex));
             refsHtml += `<span class="db-ref-chip" data-ref-i="${i}" title="${escH(lawName+' > '+artLabel)}">
-              <i class="fas fa-gavel" style="font-size:0.7rem"></i>
-              <span>${escH(lawName)} <b>></b> ${escH(artLabel)}</span>
+              <span style="opacity:0.5;font-size:0.65rem">§</span>
+              <span>${escH(lawName)} › ${escH(artLabel)}</span>
             </span>`;
           });
           refsHtml += `</div>`;
@@ -3415,10 +3482,10 @@ self.addEventListener('fetch',e=>{
           ${refsHtml}
           <div class="db-note-body-view db-rendered">${t.body||''}</div>
           <div class="db-note-actions">
-            <button class="btn btn-primary" id="dbEditBtn"><i class="fas fa-pen"></i> ${L.dbEdit||'Edit'}</button>
-            <button class="btn btn-ghost" id="dbDupBtn" title="${L.dbDuplicate||'Duplicate'}"><i class="fas fa-copy"></i></button>
-            <button class="btn btn-ghost" id="dbPrintBtn" title="${L.dbPrint||'Print'}"><i class="fas fa-print"></i></button>
-            <button class="btn" style="margin-left:auto;color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
+            <button class="btn db-act-edit" id="dbEditBtn"><i class="fas fa-pen"></i> ${L.dbEdit||'Edit'}</button>
+            <button class="btn db-act-icon" id="dbDupBtn" title="${L.dbDuplicate||'Duplicate'}"><i class="fas fa-copy"></i></button>
+            <button class="btn db-act-icon" id="dbPrintBtn" title="${L.dbPrint||'Print'}"><i class="fas fa-print"></i></button>
+            <button class="btn db-act-del" id="dbDelBtn"><i class="fas fa-trash"></i></button>
           </div>`;
         document.getElementById('dbEditBtn').addEventListener('click',()=>{ dbEditing=true; dbRenderDoc(); });
         document.getElementById('dbPrintBtn').addEventListener('click',()=>{
@@ -4116,8 +4183,7 @@ self.addEventListener('fetch',e=>{
         const bar = document.createElement('div');
         bar.className='popup-refs-bar';
         const L = window._uiLang||{};
-        bar.innerHTML = `<span class="popup-refs-label"><i class="fas fa-paperclip"></i> ${L.dbRefFrom||'Referenced in'}:</span> `
-          + notesRef.map(n=>`<span class="popup-ref-note" data-cat="${escH(n.catId)}" data-tid="${escH(n.id)}">${escH(n.catName)} > ${escH(n.title||(L.dbNoTitle||'(no title)'))}</span>`).join('');
+        bar.innerHTML = notesRef.map(n=>`<span class="popup-ref-note" data-cat="${escH(n.catId)}" data-tid="${escH(n.id)}"><span style="opacity:0.5;font-size:0.65rem">§</span>${escH(n.catName)} › ${escH(n.title||(L.dbNoTitle||'(no title)'))}</span>`).join('');
         // Insert after popBody
         popBody.insertAdjacentElement('afterend', bar);
         bar.querySelectorAll('.popup-ref-note').forEach(el=>{
