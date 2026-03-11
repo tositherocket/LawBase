@@ -530,11 +530,35 @@
       margin: 0 4px;
       flex-shrink: 0;
     }
-    /* Su mobile fsheh label e Reading — mbetet vetëm ikona */
+    /* ══════════════════════════════════════════
+       MOBILE — header / nav
+    ══════════════════════════════════════════ */
     @media (max-width: 600px) {
-      .nav-btn-label { display: none; }
-      .app-switch-label { display: none; }
-      .btn-app-switch { padding: 5px 8px; }
+      /* Header padding kompakt */
+      header { padding: 6px 10px; }
+
+      /* Brand smaller */
+      .brand { font-size: 0.95rem; }
+
+      /* Nav gap smaller */
+      .nav { gap: 4px; }
+      .nav-right { gap: 4px; }
+      .nav-left { gap: 4px; }
+
+      /* Të gjithë butonat nav — vetëm ikona */
+      .nav-right .btn,
+      .nav-left .btn {
+        padding: 5px 8px;
+        font-size: 0.78rem;
+        gap: 4px;
+      }
+
+      /* LegalBase/LawBase switch: trego shkrimin, por kompakt */
+      #dashboardBtn,
+      #dbBackBtn {
+        font-size: 0.78rem;
+        padding: 5px 8px;
+      }
     }
 
     .btn {
@@ -1053,63 +1077,59 @@
 
     /* Responsive */
     @media (max-width: 900px) {
+      /* ── Layout kryesor ── */
       .main {
         grid-template-columns: 1fr;
         gap: 0;
       }
 
-      /* Vetëm doc dhe articles-list shkojnë fund-e-fund */
+      .wrap { padding: 8px 10px; gap: 8px; }
+
+      /* Articles list: max 35vh scroll */
+      .articles-list {
+        max-height: 35vh;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        margin-left: -10px;
+        margin-right: -10px;
+      }
+
+      /* Doc: pa kufij anësor */
       .doc {
         max-height: unset;
         border-radius: 0;
         border-left: none;
         border-right: none;
         box-shadow: none;
-        margin-left: -12px;
-        margin-right: -12px;
+        margin-left: -10px;
+        margin-right: -10px;
       }
 
-      .articles-list {
-        max-height: 40vh;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        box-shadow: none;
-        margin-left: -12px;
-        margin-right: -12px;
-      }
-
+      /* Drawer full-width, max-height me scroll */
       .drawer {
         width: 100%;
+        max-width: 100%;
         right: -100%;
+        height: 100%;
+        max-height: 100dvh;
+        overflow-y: auto;
       }
 
-      .wrap {
-        padding: 10px 12px;
-      }
-
+      /* Controls: kolona, input-et stretch */
       .controls {
         flex-direction: column;
         align-items: stretch;
-      }
-
-      .controls input {
-        min-width: unset;
-      }
-
-      /* Tab-et më kompakte */
-      .law-tabs {
-        padding: 4px 8px;
+        padding: 8px 10px;
         gap: 6px;
       }
-      .law-tab {
-        font-size: 0.82rem;
-        padding: 6px 10px;
-      }
+      .controls input { min-width: unset; width: 100%; }
+      .controls .divider { display: none; }
 
-      .controls .divider {
-        display: none;
-      }
+      /* Tabs kompakt */
+      .law-tabs { padding: 4px 8px; gap: 6px; }
+      .law-tab  { font-size: 0.82rem; padding: 5px 9px; }
     }
 
     /* Animation */
@@ -1449,28 +1469,36 @@
       overflow-y: auto;
     }
 
-    /* ── Mobile override: reset overflow so page scrolls ── */
+    /* ══════════════════════════════════════════
+       LEGALBASE MOBILE @900px
+    ══════════════════════════════════════════ */
     @media (max-width: 900px) {
+      /* App scroll normale */
       #dashboardView.app { overflow-y: auto; }
+
+      /* Wrap: kolona pa overflow */
       #dashboardView .wrap {
         overflow: visible;
         flex: none;
-        min-height: 0;
         display: flex;
         flex-direction: column;
         gap: 0;
         padding: 0;
       }
+
+      /* Main: grid 1 kolone */
       #dashboardView .main {
         overflow: visible;
         flex: none;
-        min-height: 0;
         grid-template-columns: 1fr !important;
         gap: 0;
         padding: 0;
       }
+
+      /* Aside (lista titujve): max 35vh scroll */
+      #dashboardView aside { overflow: hidden; }
       #dashboardView .articles-list {
-        max-height: 40vh !important;
+        max-height: 35vh !important;
         height: auto !important;
         flex: none;
         overflow-y: auto;
@@ -1480,15 +1508,16 @@
         border-right: none !important;
         box-shadow: none;
         margin: 0;
-        padding: 4px 12px;
+        padding: 4px 10px;
       }
-      #dashboardView .articles-list .art-link {
-        width: 100%;
-        max-width: 100%;
+      #dashboardView .articles-list .art-link,
+      #dashboardView .articles-list .db-title-link {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
+
+      /* Doc: scroll i brendshëm, pa kufij */
       #dashboardView .doc {
         max-height: unset;
         flex: none;
@@ -1498,40 +1527,39 @@
         border-right: none !important;
         box-shadow: none;
         margin: 0;
-        padding: 12px !important;
+        padding: 10px !important;
       }
-      #dashboardView aside {
-        min-height: 0;
-        overflow: hidden;
-      }
-    }
 
-    /* ── Mobile: dashboard tabs + controls ── */
-    @media (max-width: 900px) {
+      /* ── Tabs: scroll horizontal pa wrap ── */
       #dashboardView .law-tabs {
         flex-wrap: nowrap;
         overflow-x: auto;
         scrollbar-width: none;
         padding: 4px 8px;
         gap: 6px;
+        /* "Shto titull" nuk shtyp kategoritë */
+        justify-content: flex-start;
       }
       #dashboardView .law-tabs::-webkit-scrollbar { display: none; }
-      #dashboardView #dbCatTabs { flex-wrap: nowrap; }
-      #dashboardView .law-tab { font-size: 0.82rem; padding: 6px 10px; }
+      #dashboardView #dbCatTabs { flex-wrap: nowrap; flex-shrink: 0; }
+      #dashboardView #dbAddTitleBtn { flex-shrink: 0; }
+      #dashboardView .law-tab { font-size: 0.8rem; padding: 5px 9px; white-space: nowrap; }
 
+      /* ── Controls: si LawBase — kolone me wrap ── */
       #dashboardView .controls {
-        flex-direction: row !important;
-        flex-wrap: nowrap;
-        align-items: center;
-        padding: 6px 10px;
-        border: none !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        border-top: none !important;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 8px 10px 6px;
       }
-      #dashboardView .controls input { flex: 1; min-width: 0; }
-      #dashboardView .controls .divider { display: none; }
+      #dashboardView .controls input {
+        min-width: unset;
+        width: 100%;
+        font-size: 0.88rem;
+      }
+      #dashboardView .controls .hint {
+        font-size: 0.75rem;
+      }
     }
 
     /* Titujt në listë — si .art-link */
@@ -1903,7 +1931,9 @@
       flex-shrink: 0;
     }
     @media (max-width: 900px) {
-      .db-ref-chip { font-size: 0.82rem; padding: 4px 10px; }
+      .db-ref-chip { font-size: 0.78rem; padding: 3px 8px; }
+      /* Ref chips wrap mirë */
+      .db-refs-row { flex-wrap: wrap; gap: 4px; }
     }
 
     /* ── Article ref badge (LawBase side) — same style as LegalBase chips ── */
@@ -1979,12 +2009,25 @@
       transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
     .popup-ref-note:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
-    /* Mobile toolbar: smaller */
+    /* ── Mobile toolbar + editor ── */
     @media (max-width: 900px) {
       .db-tb-sep { display: none; }
-      .db-tb-btn { padding: 5px 6px; min-width: 32px; font-size: 0.85rem; }
-      .db-tb-select { max-width: 75px; font-size: 0.75rem; }
-      .db-editor-body { max-height: 40vh; }
+      .db-tb-btn {
+        padding: 4px 6px;
+        min-width: 28px;
+        font-size: 0.8rem;
+      }
+      .db-tb-select { max-width: 70px; font-size: 0.75rem; }
+      .db-editor-toolbar {
+        flex-wrap: wrap;
+        gap: 3px;
+        padding: 5px 8px;
+      }
+      /* Editor body: sa gjysma ekranit */
+      .db-editor-body {
+        max-height: 38vh;
+        min-height: 120px;
+      }
     }
 
     /* Category manager */
@@ -2126,11 +2169,10 @@
       <div class="nav">
         <div class="nav-left">
           <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
-          <div class="app-switch-divider"></div>
-          <button id="dashboardBtn" class="btn btn-app-switch" title=""><i class="fas fa-sticky-note"></i> <span class="app-switch-label">LegalBase</span></button>
         </div>
         <div class="nav-right">
-          <button id="readingModeBtn" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i> <span class="nav-btn-label">Reading</span></button>
+          <button id="dashboardBtn" class="btn btn-ghost" title=""><i class="fas fa-sticky-note"></i> LegalBase</button>
+          <button id="readingModeBtn" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
           <button id="dbDriveBtnLB" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
           <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
@@ -2180,12 +2222,11 @@
     <header>
       <div class="nav">
         <div class="nav-left">
-          <button id="dbBackBtn" class="btn btn-app-switch" title="Kthehu"><i class="fas fa-arrow-left"></i> <span class="app-switch-label">LawBase</span></button>
-          <div class="app-switch-divider"></div>
           <div class="brand"><i class="fas fa-sticky-note"></i> LegalBase</div>
         </div>
         <div class="nav-right">
-          <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i> <span class="nav-btn-label">Reading</span></button>
+          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu"><i class="fas fa-arrow-left"></i> LawBase</button>
+          <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
           <button id="dbDriveBtn" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
           <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
         </div>
@@ -2378,7 +2419,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.10.20</span>
+      <span class="hint" style="opacity:0.6">v2.10.23</span>
     </div>
   </aside>
 
@@ -2459,7 +2500,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.20</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.23</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -3958,7 +3999,7 @@
       dbReadingMode = false;
       dashboardView.classList.remove('reading-mode-db');
       readingModeBar.style.display = 'none';
-      document.getElementById('readingModeBtnDB').innerHTML='<i class="fas fa-book-open"></i> '+(window._dbLang&&window._dbLang.readingModeBtn||'Reading');
+      document.getElementById('readingModeBtnDB').innerHTML='<i class="fas fa-book-open"></i>';
     }
     document.getElementById('readingModeBtnDB').addEventListener('click',()=>{
       dbReadingMode ? dbLeaveReading() : dbEnterReading();
@@ -4368,8 +4409,10 @@
       }
 
       // ── Event listeners ──
-      document.getElementById('dbDriveBtn').addEventListener('click',()=>{
-        // Rifresko URI display
+      document.getElementById('dbDriveBtn').addEventListener('click', openDriveModal);
+
+      // LawBase cloud btn → hap modalin direkt (dbDriveBtn mund të jetë i fshehur)
+      function openDriveModal(){
         const uriEl = document.getElementById('dbRedirectUriDisplay');
         if(uriEl){
           const uri = getRedirectUri();
@@ -4380,25 +4423,14 @@
               .catch(()=>{});
           };
         }
-        const token = getToken();
-        const appKey = getAppKey();
-        if(token){
-          showStep('dbDriveActions');
-          _initActionsUI();
-          manualStatus(''); // pastro statusin e manualit
-        } else if(appKey){
-          showStep('dbDriveAuth');
-        } else {
-          showStep('dbDriveSetup');
-          const inp = document.getElementById('dbDriveClientId');
-          if(inp) inp.value = '';
-        }
+        const token = getToken(), appKey = getAppKey();
+        if(token){ showStep('dbDriveActions'); _initActionsUI(); manualStatus(''); }
+        else if(appKey){ showStep('dbDriveAuth'); }
+        else { showStep('dbDriveSetup'); const inp=document.getElementById('dbDriveClientId'); if(inp) inp.value=''; }
         modal(true);
-      });
-
-      // LawBase cloud btn → hap të njëjtin modal
+      }
       const _lbDriveBtn = document.getElementById('dbDriveBtnLB');
-      if(_lbDriveBtn) _lbDriveBtn.addEventListener('click',()=> document.getElementById('dbDriveBtn').click());
+      if(_lbDriveBtn) _lbDriveBtn.addEventListener('click', openDriveModal);
 
       document.getElementById('dbDriveModalClose').addEventListener('click',()=>modal(false));
       document.getElementById('dbDriveModal').addEventListener('click',e=>{
@@ -4513,7 +4545,7 @@
       document.body.classList.add('reading-mode');
       readingModeBar.style.display = 'flex';
       readingModeTitle.textContent = '📖 ' + law.title + (law.alt ? ' -- ' + law.alt : '');
-      readingModeBtn.innerHTML = '<i class="fas fa-book-open" style="color:var(--primary)"></i> '+(window._uiLang&&window._uiLang.readingModeBtn||'Reading');
+      readingModeBtn.innerHTML = '<i class="fas fa-book-open" style="color:var(--primary)"></i>';
 
       // Scroll tek neni pas reflow
       let frames = 0;
@@ -4544,7 +4576,7 @@
 
       document.body.classList.remove('reading-mode');
       readingModeBar.style.display = 'none';
-      readingModeBtn.innerHTML = '<i class="fas fa-book-open"></i> '+(window._uiLang&&window._uiLang.readingModeBtn||'Reading');
+      readingModeBtn.innerHTML = '<i class="fas fa-book-open"></i>';
 
       // Rikthe pozicionin pas reflow
       let frames = 0;
@@ -5146,8 +5178,8 @@
       var fal=document.getElementById('formAltLbl'); if(fal) fal.innerHTML='<i class="fas fa-info-circle"></i> '+(L.formAltLabel||'');
       var lmt=document.getElementById('lawModalTitle'); if(lmt) lmt.innerHTML='<i class="fas fa-plus"></i> '+(L.modalAddTitle||L.addLawLabel);
       var fsl=document.getElementById('lbl-font-size'); if(fsl) fsl.textContent=L.fontSizeLabel||'Text size';
-      var rmbtn=document.getElementById('readingModeBtn'); if(rmbtn){ rmbtn.title=L.readingModeTitleBtn||'Reading mode'; rmbtn.innerHTML='<i class="fas fa-book-open"></i> '+(L.readingModeBtn||'Reading'); }
-      var rmdb=document.getElementById('readingModeBtnDB'); if(rmdb){ rmdb.title=L.readingModeTitleBtn||'Reading mode'; rmdb.innerHTML='<i class="fas fa-book-open"></i> '+(L.readingModeBtn||'Reading'); }
+      var rmbtn=document.getElementById('readingModeBtn'); if(rmbtn){ rmbtn.title=L.readingModeTitleBtn||'Reading mode'; rmbtn.innerHTML='<i class="fas fa-book-open"></i>'; }
+      var rmdb=document.getElementById('readingModeBtnDB'); if(rmdb){ rmdb.title=L.readingModeTitleBtn||'Reading mode'; rmdb.innerHTML='<i class="fas fa-book-open"></i>'; }
       var dashb=document.getElementById('dashboardBtn'); if(dashb){ dashb.title=L.dashTitle||'Notes'; dashb.innerHTML='<i class="fas fa-sticky-note"></i> LegalBase'; }
       // Update static empty msgs if visible
       var aem=document.getElementById('articlesEmptyMsg'); if(aem) { var ic=aem.querySelector('i'); aem.innerHTML=''; if(ic) aem.appendChild(ic); aem.appendChild(document.createTextNode(' '+(L.articlesEmptyJs||''))); }
