@@ -2193,10 +2193,12 @@
         <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px"><span style="background:var(--primary);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;margin-right:6px">1</span> App Key</label>
         <input id="dbDriveClientId" type="text" placeholder="Shto App Key nga Dropbox"
           style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;background:var(--bg);color:var(--text);margin-bottom:6px" />
-        <p style="font-size:0.75rem;color:var(--muted);margin:0 0 12px">
+        <p style="font-size:0.75rem;color:var(--muted);margin:0 0 6px">
           <a href="https://www.dropbox.com/developers/apps" target="_blank" style="color:var(--primary)">dropbox.com/developers/apps</a>
           → Create app → Scoped → Full Dropbox → kopjo <strong>App key</strong>
         </p>
+        <p style="font-size:0.75rem;color:var(--muted);margin:0 0 6px">Shto këtë URL te <strong>Redirect URIs</strong>:</p>
+        <code id="dbRedirectUriDisplay" style="display:block;font-size:0.72rem;background:var(--chip);padding:6px 8px;border-radius:4px;word-break:break-all;margin-bottom:12px;cursor:pointer;color:var(--primary)" title="Klikoni për ta kopjuar"></code>
         <button id="dbDriveSaveClientId" class="btn btn-primary" style="width:100%"><i class="fas fa-arrow-right"></i> Vazhdo</button>
       </div>
 
@@ -2293,7 +2295,7 @@
         </div>
       </div>
     </div>
-    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.7</span></div>
+    <div class="footer"><span class="hint"><i class="fas fa-info-circle"></i> LegalBase v2.10.8</span></div>
   </aside>
 
   <!-- Settings drawer -->
@@ -2373,7 +2375,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.7</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.8</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4033,9 +4035,14 @@
       function showStep(step){ ['dbDriveSetup','dbDriveAuth','dbDriveActions'].forEach(id=>{ document.getElementById(id).style.display = id===step?'block':'none'; }); }
       function cloudIcon(ok){ const b=document.getElementById('dbDriveBtn'); if(b) b.innerHTML = ok ? '<i class="fas fa-dropbox" style="color:#0061ff"></i>' : '<i class="fas fa-cloud"></i>'; }
 
-      // ── OAuth PKCE via popup ──
+      // ── Redirect URI — duhet identike me atë në Dropbox dashboard ──
+      function getRedirectUri(){
+        return window.location.origin + window.location.pathname;
+      }
+
+      // ── OAuth via popup ──
       function authorize(appKey){
-        const redirectUri = window.location.href.split('?')[0].split('#')[0];
+        const redirectUri = getRedirectUri();
         const authUrl = 'https://www.dropbox.com/oauth2/authorize'
           + '?client_id=' + encodeURIComponent(appKey)
           + '&response_type=token'
@@ -4045,7 +4052,6 @@
         const w = window.open(authUrl, 'dropbox-auth', 'width=600,height=700,left=200,top=100');
         if(!w){ alert('Popup u bllokua! Lejo popups për këtë faqe.'); return; }
 
-        // Listen for redirect back with token in URL hash
         const timer = setInterval(()=>{
           try {
             if(w.closed){ clearInterval(timer); return; }
@@ -4180,6 +4186,13 @@
       document.getElementById('dbDriveBtn').addEventListener('click',()=>{
         const token  = getToken();
         const appKey = getAppKey();
+        // Always show redirect URI
+        const uriEl = document.getElementById('dbRedirectUriDisplay');
+        if(uriEl){
+          const uri = getRedirectUri();
+          uriEl.textContent = uri;
+          uriEl.onclick = ()=>{ navigator.clipboard.writeText(uri).then(()=>{ uriEl.textContent='✅ Kopjuar!'; setTimeout(()=>uriEl.textContent=uri, 1500); }); };
+        }
         if(token){
           showStep('dbDriveActions');
           status('','var(--muted)');
