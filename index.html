@@ -1282,6 +1282,47 @@
     #noteModal .modal-actions { display:flex; gap:8px; justify-content:flex-end; }
     #noteModal .modal-actions button { padding:8px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:600; font-size:0.85rem; }
 
+    /* ── Sync History Tooltip ── */
+    .dbx-history-tip {
+      position: fixed;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-width: 240px;
+      max-width: 300px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+      z-index: 8000;
+      font-size: 0.78rem;
+      pointer-events: none;
+      animation: fadeIn 0.15s ease;
+    }
+    .dbx-history-tip .dht-head {
+      font-weight: 700;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .dbx-history-tip .dht-row {
+      display: grid;
+      grid-template-columns: 18px 1fr auto;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 0;
+      border-top: 1px solid var(--border);
+      color: var(--text);
+      line-height: 1.35;
+    }
+    .dbx-history-tip .dht-row:first-of-type { border-top: none; }
+    .dbx-history-tip .dht-time { color: var(--muted); font-size: 0.7rem; white-space: nowrap; }
+    .dbx-history-tip .dht-empty { color: var(--muted); font-style: italic; text-align: center; padding: 6px 0; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
     /* ════════════════════════════════════════════════════
        MOBILE — max-width: 900px  (LawBase + LegalBase)
        ════════════════════════════════════════════════════ */
@@ -2430,7 +2471,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.13.0</span>
+      <span class="hint" style="opacity:0.6">v2.14.0</span>
     </div>
   </aside>
 
@@ -2511,7 +2552,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.13.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.14.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4176,6 +4217,7 @@
       // sessionStorage keys
       var SS_VERIFIER = 'lb-dbx-verifier';   // PKCE code_verifier (30 min)
       var SS_CHECK    = 'lb-dbx-lastcheck';  // rate-limit cooldown
+      var LS_HISTORY  = 'lb-dbx-history';    // array JSON i 5 entrave të fundit
 
       // ── localStorage helpers ──
       function getAppKey()      { try{ return localStorage.getItem(LS_APPKEY)||''; }catch(e){ return ''; } }
@@ -4191,6 +4233,21 @@
       function getLastSync()    { try{ return localStorage.getItem(LS_LASTSYNC)||null; }catch(e){ return null; } }
       function setLastSync(iso) { try{ localStorage.setItem(LS_LASTSYNC,iso); }catch(e){} }
       function isConnected()    { return !!(getAccess()||getRefresh()); }
+
+      // ── Sync History helpers (max 5 entri) ──
+      function getHistory(){
+        try{ return JSON.parse(localStorage.getItem(LS_HISTORY)||'[]'); }catch(e){ return []; }
+      }
+      function pushHistory(entry){
+        // entry = { type, iso, source }
+        // type: 'auto-upload'|'auto-download'|'manual-save'|'manual-restore'|'auto-restore'
+        try{
+          var h=getHistory();
+          h.unshift(entry);
+          if(h.length>5) h=h.slice(0,5);
+          localStorage.setItem(LS_HISTORY,JSON.stringify(h));
+        }catch(e){}
+      }
 
       function clearAuth(){
         try{
@@ -4539,6 +4596,7 @@
           await dbxUpload(JSON.stringify(data,null,2),DBX_AUTO);
           var now=new Date().toISOString();
           setLastSync(now);
+          pushHistory({type:'auto-upload',iso:now,source:'auto'});
           autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U ruajt — '+new Date(now).toLocaleTimeString());
           cloudIcon(isAutoEnabled()?'auto':'conn');
         }catch(err){
@@ -4580,39 +4638,47 @@
         }
       }
 
+      // ── Conflict toast: user zgjedh remote vs lokale ──
       function _showToast(remoteMs,localMs){
         var ex=document.getElementById('dbSyncToast');
         if(ex) ex.remove();
+
+        var isConflict = localMs>0 && Math.abs(remoteMs-localMs)>20000;
+        var remoteStr  = new Date(remoteMs).toLocaleString();
+        var localStr   = localMs?new Date(localMs).toLocaleString():'—';
 
         var div=document.createElement('div');
         div.id='dbSyncToast';
         div.style.cssText=[
           'position:fixed','bottom:20px','left:50%','transform:translateX(-50%)',
           'background:linear-gradient(135deg,#1a1a2e,#16213e)','color:#fff',
-          'padding:14px 16px','border-radius:12px','width:min(340px,90vw)',
+          'padding:14px 16px','border-radius:12px','width:min(360px,92vw)',
           'box-shadow:0 8px 32px rgba(0,0,0,0.45)','z-index:9999',
           'border:1px solid rgba(0,97,255,0.4)','animation:slideUp 0.25s ease'
         ].join(';');
 
         div.innerHTML=
           '<div style="display:flex;align-items:flex-start;gap:10px">'+
-          '<i class="fas fa-dropbox" style="color:#0061ff;font-size:1.1rem;margin-top:2px;flex-shrink:0"></i>'+
+          '<i class="fas fa-'+(isConflict?'exclamation-triangle" style="color:#f7b731':'dropbox" style="color:#0061ff')+';font-size:1.1rem;margin-top:2px;flex-shrink:0"></i>'+
           '<div style="flex:1">'+
-            '<div style="font-weight:700;font-size:0.88rem;margin-bottom:3px">Version i ri në Dropbox</div>'+
-            '<div style="font-size:0.72rem;opacity:0.75">Remote: '+new Date(remoteMs).toLocaleString()+'</div>'+
-            '<div style="font-size:0.72rem;opacity:0.55;margin-bottom:10px">Lokale: '+(localMs?new Date(localMs).toLocaleString():'—')+'</div>'+
-            '<div style="display:flex;gap:8px">'+
-              '<button id="dbToastYes" style="background:#0061ff;color:#fff;border:none;padding:7px 0;border-radius:7px;font-weight:700;font-size:0.82rem;cursor:pointer;flex:1"><i class="fas fa-download"></i> Ngarko tani</button>'+
-              '<button id="dbToastNo"  style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:0.82rem;cursor:pointer">Jo</button>'+
+            '<div style="font-weight:700;font-size:0.88rem;margin-bottom:6px">'+(isConflict?'⚠️ Konflikt — dy versione ndryshuan':'Version i ri në Dropbox')+'</div>'+
+            '<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin-bottom:10px;font-size:0.72rem">'+
+              '<span style="opacity:0.5">☁ Dropbox:</span><span style="opacity:0.85">'+remoteStr+'</span>'+
+              '<span style="opacity:0.5">💻 Lokale:</span><span style="opacity:0.6">'+localStr+'</span>'+
+            '</div>'+
+            '<div style="display:flex;gap:6px">'+
+              '<button id="dbToastYes" style="background:#0061ff;color:#fff;border:none;padding:7px 0;border-radius:7px;font-weight:700;font-size:0.78rem;cursor:pointer;flex:1"><i class="fas fa-cloud-download-alt"></i> Ngarko Dropbox</button>'+
+              '<button id="dbToastNo"  style="background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:7px 0;border-radius:7px;font-size:0.78rem;cursor:pointer;flex:1"><i class="fas fa-laptop"></i> Mbaj lokalen</button>'+
             '</div>'+
           '</div>'+
-          '<button id="dbToastX" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1rem;cursor:pointer;padding:0;flex-shrink:0;line-height:1">&#x2715;</button>'+
+          '<button id="dbToastX" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:1rem;cursor:pointer;padding:0 0 0 6px;flex-shrink:0;line-height:1">&#x2715;</button>'+
           '</div>';
 
         document.body.appendChild(div);
 
         function close(){ var t=document.getElementById('dbSyncToast'); if(t) t.remove(); }
 
+        // Ngarko nga Dropbox
         document.getElementById('dbToastYes').addEventListener('click',async function(){
           close();
           autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
@@ -4624,6 +4690,7 @@
             await importDB(data);
             var n=new Date().toISOString();
             setLastSync(n);
+            pushHistory({type:'auto-download',iso:n,source:'conflict-remote'});
             _lastCheck=Date.now();
             try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
             autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U sinkronizua — '+new Date(n).toLocaleTimeString());
@@ -4632,14 +4699,29 @@
             autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
           }
         });
-        document.getElementById('dbToastNo').addEventListener('click',function(){
+
+        // Mbaj lokalen — ngarko lokalen mbi Dropbox
+        document.getElementById('dbToastNo').addEventListener('click',async function(){
           close();
-          setLastSync(new Date(remoteMs-1000).toISOString());
-          _lastCheck=Date.now();
-          try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
+          autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon lokalen...');
+          cloudIcon('conn');
+          try{
+            var data=await exportDB();
+            await dbxUpload(JSON.stringify(data,null,2),DBX_AUTO);
+            var n=new Date().toISOString();
+            setLastSync(n);
+            pushHistory({type:'auto-upload',iso:n,source:'conflict-local'});
+            _lastCheck=Date.now();
+            try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Lokale u ngarkua — '+new Date(n).toLocaleTimeString());
+            cloudIcon(isAutoEnabled()?'auto':'conn');
+          }catch(err){
+            autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
+          }
         });
+
         document.getElementById('dbToastX').addEventListener('click',close);
-        setTimeout(close,30000);
+        setTimeout(close,40000);
       }
 
       // ══════════════════════════════════════════════
@@ -4650,6 +4732,7 @@
         try{
           var data=await exportDB();
           await dbxUpload(JSON.stringify(data,null,2),DBX_MANUAL);
+          pushHistory({type:'manual-save',iso:new Date().toISOString(),source:'manual'});
           manualStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U ruajt — '+new Date().toLocaleString());
         }catch(err){
           manualStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
@@ -4665,6 +4748,7 @@
           if(!text) throw new Error('Skedari manual nuk ekziston — ruaj fillimisht');
           var data=JSON.parse(text);
           await importDB(data);
+          pushHistory({type:'manual-restore',iso:new Date().toISOString(),source:'manual'});
           manualStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Restauruar — '+new Date(data.exportedAt||Date.now()).toLocaleString());
         }catch(err){
           manualStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
@@ -4681,6 +4765,7 @@
           await importDB(data);
           var n=new Date().toISOString();
           setLastSync(n);
+          pushHistory({type:'auto-restore',iso:n,source:'manual'});
           autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Restauruar — '+new Date(data.exportedAt||n).toLocaleString());
         }catch(err){
           autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
@@ -4793,6 +4878,84 @@
           setTimeout(startupSync,3000);
         }
       });
+
+      // ══════════════════════════════════════════════
+      //  SYNC HISTORY TOOLTIP
+      // ══════════════════════════════════════════════
+      var _tipEl=null, _tipTimer=null;
+
+      function _typeIcon(type){
+        if(type==='auto-upload')    return '<i class="fas fa-cloud-upload-alt" style="color:#2dc653;font-size:0.8rem"></i>';
+        if(type==='auto-download')  return '<i class="fas fa-cloud-download-alt" style="color:#0061ff;font-size:0.8rem"></i>';
+        if(type==='manual-save')    return '<i class="fas fa-shield-alt" style="color:#4361ee;font-size:0.8rem"></i>';
+        if(type==='manual-restore') return '<i class="fas fa-history" style="color:#f7b731;font-size:0.8rem"></i>';
+        if(type==='auto-restore')   return '<i class="fas fa-history" style="color:#2dc653;font-size:0.8rem"></i>';
+        return '<i class="fas fa-sync" style="font-size:0.8rem"></i>';
+      }
+
+      function _typeLabel(type){
+        if(type==='auto-upload')    return 'Ruajtur auto';
+        if(type==='auto-download')  return 'Ngarkuar remote';
+        if(type==='manual-save')    return 'Backup manual';
+        if(type==='manual-restore') return 'Restauruar manual';
+        if(type==='auto-restore')   return 'Restauruar auto';
+        return type;
+      }
+
+      function _showHistoryTip(anchor){
+        _hideTip();
+        var h=getHistory();
+        var rows='';
+        if(!h.length){
+          rows='<div class="dht-empty">Asnjë backup ende</div>';
+        } else {
+          h.forEach(function(e){
+            var d=new Date(e.iso);
+            var time=d.toLocaleDateString(undefined,{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+            rows+='<div class="dht-row">'+
+              _typeIcon(e.type)+
+              '<span>'+_typeLabel(e.type)+'</span>'+
+              '<span class="dht-time">'+time+'</span>'+
+            '</div>';
+          });
+        }
+
+        _tipEl=document.createElement('div');
+        _tipEl.className='dbx-history-tip';
+        _tipEl.innerHTML=
+          '<div class="dht-head"><i class="fas fa-history"></i> Sync History</div>'+rows;
+        document.body.appendChild(_tipEl);
+
+        // Pozicionim — mbi/nën buton sipas hapësirës
+        var rect=anchor.getBoundingClientRect();
+        var tipH=120; // vlerësim
+        var top=rect.top-tipH-8;
+        if(top<8) top=rect.bottom+8;
+        var left=rect.left+rect.width/2;
+        _tipEl.style.top=top+'px';
+        _tipEl.style.left=left+'px';
+        _tipEl.style.transform='translateX(-50%)';
+      }
+
+      function _hideTip(){
+        if(_tipEl){_tipEl.remove();_tipEl=null;}
+        clearTimeout(_tipTimer);
+      }
+
+      function _attachTip(btnId){
+        var btn=document.getElementById(btnId);
+        if(!btn) return;
+        btn.addEventListener('mouseenter',function(){
+          _tipTimer=setTimeout(function(){_showHistoryTip(btn);},400);
+        });
+        btn.addEventListener('mouseleave',function(){
+          clearTimeout(_tipTimer);
+          setTimeout(_hideTip,200);
+        });
+      }
+
+      _attachTip('dbDriveBtn');
+      _attachTip('dbDriveBtnLB');
 
       window._dbStartupSync=startupSync;
 
