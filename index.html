@@ -606,10 +606,15 @@
     /* Compact tabs */
     .law-tabs {
       display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding: 0;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 4px 12px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
     }
+    .law-tabs::-webkit-scrollbar { display: none; }
 
     .law-tab {
       display: inline-flex;
@@ -643,38 +648,41 @@
     }
 
     .law-tab .title {
-      max-width: 220px;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
       font-weight: 500;
       color: var(--text);
     }
 
-    /* CONTROLS - dual search panel */
+    /* CONTROLS - search panel */
     .controls {
       display: flex;
-      gap: 8px;
-      row-gap: 4px;
-      flex-wrap: wrap;
-      align-items: center;
+      flex-direction: column;
+      gap: 6px;
       background: var(--panel);
-      padding: 8px 12px 6px 12px;
-      border-radius: var(--border-radius);
+      padding: 8px 12px 8px;
       box-shadow: var(--box-shadow);
       border: 1px solid var(--border);
       border-top: none;
     }
 
+    /* Çdo grup search: input + butona në 1 rresht */
+    .controls-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
     .controls input {
       flex: 1;
-      min-width: 180px;
-      padding: 8px 12px;
+      min-width: 0;
+      padding: 7px 10px;
       border-radius: var(--border-radius);
       border: 1px solid var(--border);
-      background: var(--panel);
+      background: var(--bg);
       color: var(--text);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     .controls input:focus {
@@ -683,11 +691,20 @@
       box-shadow: 0 0 0 2px var(--primary-soft);
     }
 
+    .controls .btn {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
     .controls .divider {
-      width: 2px;
-      height: 32px;
+      height: 1px;
       background: var(--border);
-      margin: 0 4px;
+      margin: 2px 0;
+    }
+
+    .controls .hint {
+      margin: 0;
+      padding: 0 2px;
     }
 
     .hint {
@@ -698,11 +715,12 @@
       line-height: 1;
     }
 
-    #activeTitle {
+    #activeTitle, #dbActiveTitle {
       margin-top: -2px;
       padding: 0;
       font-size: 0.75rem;
       line-height: 1;
+      color: var(--muted);
     }
 
     /* Main grid */
@@ -1118,18 +1136,17 @@
       }
 
       /* Controls: kolona, input-et stretch */
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 8px 10px;
-        gap: 6px;
-      }
-      .controls input { min-width: unset; width: 100%; }
+
       .controls .divider { display: none; }
 
-      /* Tabs kompakt */
-      .law-tabs { padding: 4px 8px; gap: 6px; }
-      .law-tab  { font-size: 0.82rem; padding: 5px 9px; }
+      /* Tabs — scroll horizontal, pa ndryshim */
+      .law-tab { font-size: 0.82rem; padding: 5px 9px; }
+    }
+
+    /* Sync toast animation */
+    @keyframes slideUp {
+      from { opacity:0; transform:translateX(-50%) translateY(12px); }
+      to   { opacity:1; transform:translateX(-50%) translateY(0); }
     }
 
     /* Animation */
@@ -1322,13 +1339,6 @@
         transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s;
       }
 
-      /* Slightly more compact on mobile */
-      .controls {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .controls .divider { display: none; }
       header { position: relative; }
       .main { grid-template-columns: 1fr; }
       .doc { max-height: unset; }
@@ -1530,36 +1540,11 @@
         padding: 10px !important;
       }
 
-      /* ── Tabs: scroll horizontal pa wrap ── */
-      #dashboardView .law-tabs {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        scrollbar-width: none;
-        padding: 4px 8px;
-        gap: 6px;
-        /* "Shto titull" nuk shtyp kategoritë */
-        justify-content: flex-start;
-      }
-      #dashboardView .law-tabs::-webkit-scrollbar { display: none; }
-      #dashboardView #dbCatTabs { flex-wrap: nowrap; flex-shrink: 0; }
+      /* Tabs LegalBase — kompakt */
+      #dashboardView #dbCatTabs { flex-shrink: 0; }
       #dashboardView #dbAddTitleBtn { flex-shrink: 0; }
-      #dashboardView .law-tab { font-size: 0.8rem; padding: 5px 9px; white-space: nowrap; }
 
-      /* ── Controls: si LawBase — kolone me wrap ── */
-      #dashboardView .controls {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-        padding: 8px 10px 6px;
-      }
-      #dashboardView .controls input {
-        min-width: unset;
-        width: 100%;
-        font-size: 0.88rem;
-      }
-      #dashboardView .controls .hint {
-        font-size: 0.75rem;
-      }
+      /* Controls LegalBase — input full-width */
     }
 
     /* Titujt në listë — si .art-link */
@@ -2185,18 +2170,19 @@
 
       <!-- Controls (dual search panel) -->
       <div class="controls" id="controlsPanel">
-        <input id="searchInput" type="text" placeholder="" />
-        <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
-        <button id="clearSearchBtn" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
-
-        <span class="divider"></span>
-
-        <input id="fulltextInput" type="text" placeholder="" />
-        <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
-        <button id="fulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i> Next</button>
-        <button id="fulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i> Clear</button>
+        <div class="controls-row">
+          <input id="searchInput" type="text" placeholder="" />
+          <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="clearSearchBtn" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="divider"></div>
+        <div class="controls-row">
+          <input id="fulltextInput" type="text" placeholder="" />
+          <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="fulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
+          <button id="fulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+        </div>
         <span id="fulltextCount" class="hint"></span>
-
         <div id="activeTitle" class="hint"></div>
       </div>
 
@@ -2240,10 +2226,12 @@
       </div>
 
       <div class="controls" id="dbControlsPanel">
-        <input id="dbSearchInput" type="text" placeholder="Kërko në tekst..." />
-        <button id="dbSearchBtn" class="btn btn-primary"><i class="fas fa-search"></i> Kërko</button>
-        <button id="dbSearchNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i> Tjetri</button>
-        <button id="dbSearchClear" class="btn btn-ghost"><i class="fas fa-times"></i> Pastro</button>
+        <div class="controls-row">
+          <input id="dbSearchInput" type="text" placeholder="" />
+          <button id="dbSearchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="dbSearchNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
+          <button id="dbSearchClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+        </div>
         <span id="dbSearchCount" class="hint"></span>
         <div id="dbActiveTitle" class="hint"></div>
       </div>
@@ -2419,7 +2407,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.10.23</span>
+      <span class="hint" style="opacity:0.6">v2.11.0</span>
     </div>
   </aside>
 
@@ -2500,7 +2488,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.10.23</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.11.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4148,8 +4136,12 @@
     //  backup_manual.json ← manual save/restore nga user
     // ══════════════════════════════════════════════
     (function(){
-      const DBX_AUTO   = '/Apps/LegalBase/backup_auto.json';
-      const DBX_MANUAL = '/Apps/LegalBase/backup_manual.json';
+      const DBX_AUTO        = '/Apps/LegalBase/backup_auto.json';
+      const DBX_MANUAL      = '/Apps/LegalBase/backup_manual.json';
+      const LS_LAST_SYNC    = 'lb-dbx-last-sync';   // timestamp ISO i sync-ut të fundit
+
+      function getLastSync(){ return localStorage.getItem(LS_LAST_SYNC)||null; }
+      function setLastSync(iso){ localStorage.setItem(LS_LAST_SYNC, iso); }
       const LS_APPKEY  = 'lb-dbx-appkey';
       const LS_TOKEN   = 'lb-dbx-token';
       const LS_AUTO    = 'lb-dbx-autosync';
@@ -4317,10 +4309,10 @@
           try {
             const data = await exportDB();
             await dbxUpload(JSON.stringify(data,null,2), DBX_AUTO, getToken());
+            setLastSync(new Date().toISOString());
             autoStatus(
               '<i class="fas fa-check-circle" style="color:#2dc653"></i> '
-              + 'U ruajt — ' + new Date().toLocaleTimeString(),
-              'var(--muted)'
+              + 'U ruajt — ' + new Date().toLocaleTimeString()
             );
           } catch(err){
             autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message, 'var(--danger)');
@@ -4466,9 +4458,134 @@
         modal(false);
       });
 
+      // ── Startup sync: kontrollo nëse Dropbox ka version më të ri ──
+      async function startupSync(){
+        if(!getToken() || !isAutoEnabled()) return;
+        try {
+          // Merr metadata (pa shkarkuar të gjithë skedarin)
+          const metaR = await fetch('https://api.dropboxapi.com/2/files/get_metadata',{
+            method:'POST',
+            headers:{
+              'Authorization':'Bearer '+getToken(),
+              'Content-Type':'application/json'
+            },
+            body: JSON.stringify({ path: DBX_AUTO })
+          });
+          if(!metaR.ok) return; // skedari nuk ekziston ende
+          const meta = await metaR.json();
+          const remoteTime = new Date(meta.client_modified || meta.server_modified).getTime();
+
+          // Merr kohën lokale nga IndexedDB
+          const localData = await exportDB();
+          const localTime = localData.exportedAt ? new Date(localData.exportedAt).getTime() : 0;
+
+          // Nëse versioni remote është më i ri me mbi 10 sekonda
+          if(remoteTime > localTime + 10000){
+            showSyncToast(remoteTime, localTime);
+          } else {
+            const ls = getLastSync();
+            const lsStr = ls ? new Date(ls).toLocaleTimeString() : new Date(localTime).toLocaleTimeString();
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — ' + lsStr);
+          }
+        } catch(err){
+          // Heshtje — startup sync nuk duhet të bllokojë app-in
+          if(err.message && err.message.includes('skadoi')){ cloudIcon(false); }
+        }
+      }
+
+      // ── Toast notification (jo-bllokuese) kur ka version më të ri ──
+      function showSyncToast(remoteTime, localTime){
+        // Hiq toast ekzistues
+        const existing = document.getElementById('dbSyncToast');
+        if(existing) existing.remove();
+
+        const remoteStr = new Date(remoteTime).toLocaleString();
+        const localStr  = localTime ? new Date(localTime).toLocaleString() : 'asnjëherë';
+
+        const toast = document.createElement('div');
+        toast.id = 'dbSyncToast';
+        toast.innerHTML = `
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <i class="fas fa-dropbox" style="color:#0061ff;font-size:1.1rem;margin-top:2px;flex-shrink:0"></i>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:0.88rem;margin-bottom:2px">Version i ri në Dropbox</div>
+              <div style="font-size:0.75rem;opacity:0.8">Remote: ${remoteStr}</div>
+              <div style="font-size:0.75rem;opacity:0.6;margin-bottom:8px">Lokale: ${localStr}</div>
+              <div style="display:flex;gap:8px">
+                <button id="dbSyncToastYes" style="background:#0061ff;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-weight:700;font-size:0.82rem;cursor:pointer;flex:1">
+                  <i class="fas fa-cloud-download-alt"></i> Ngarko tani
+                </button>
+                <button id="dbSyncToastNo" style="background:rgba(255,255,255,0.15);color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:0.82rem;cursor:pointer">
+                  Jo
+                </button>
+              </div>
+            </div>
+            <button id="dbSyncToastClose" style="background:none;border:none;color:rgba(255,255,255,0.6);font-size:1rem;cursor:pointer;padding:0;line-height:1;flex-shrink:0">✕</button>
+          </div>`;
+        toast.style.cssText = [
+          'position:fixed',
+          'bottom:20px',
+          'left:50%',
+          'transform:translateX(-50%)',
+          'background:linear-gradient(135deg,#1a1a2e,#16213e)',
+          'color:#fff',
+          'padding:14px 16px',
+          'border-radius:12px',
+          'width:min(340px,90vw)',
+          'box-shadow:0 8px 32px rgba(0,0,0,0.4)',
+          'z-index:9999',
+          'border:1px solid rgba(0,97,255,0.4)',
+          'animation:slideUp 0.25s ease'
+        ].join(';');
+
+        document.body.appendChild(toast);
+
+        // Buton: ngarko nga Dropbox
+        document.getElementById('dbSyncToastYes').addEventListener('click', async ()=>{
+          toast.remove();
+          autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...', 'var(--muted)');
+          cloudIcon('conn');
+          try {
+            const text = await dbxDownload(DBX_AUTO, getToken());
+            const data = JSON.parse(text);
+            await importDB(data);
+            setLastSync(new Date().toISOString());
+            const syncTime = new Date().toLocaleTimeString();
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U sinkronizua — ' + syncTime);
+            manualStatus('');
+            cloudIcon(isAutoEnabled()?'auto':'conn');
+          } catch(err){
+            autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
+          }
+        });
+
+        // Buton: jo
+        document.getElementById('dbSyncToastNo').addEventListener('click', ()=> toast.remove());
+        document.getElementById('dbSyncToastClose').addEventListener('click', ()=> toast.remove());
+
+        // Auto-fshij pas 30 sekondave
+        setTimeout(()=>{ if(document.getElementById('dbSyncToast')) toast.remove(); }, 30000);
+      }
+
+      // Ekspozo për thirrje externe (nga dashboardBtn, visibilitychange)
+      window._dbStartupSync = startupSync;
+
       // Init on load
-      if(getToken()) cloudIcon(isAutoEnabled()?'auto':'conn');
-      else if(getAppKey()) cloudIcon(false);
+      if(getToken()){
+        cloudIcon(isAutoEnabled()?'auto':'conn');
+        // Startup sync pas 1.5s (prit të ngarkohen të dhënat lokale)
+        setTimeout(startupSync, 1500);
+      } else if(getAppKey()){
+        cloudIcon(false);
+      }
+
+      // ── Sync kur tab-i rifokusohet (kthehet nga device/tab tjetër) ──
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState === 'visible' && getToken() && isAutoEnabled()){
+          // Prit 800ms — siguro DB të jetë gati
+          setTimeout(startupSync, 800);
+        }
+      });
     })();
     // ══════════════════════════════════════════════
 
@@ -4511,12 +4628,13 @@
       if(document.body.classList.contains('reading-mode')) leaveReadingMode();
       appEl.style.display = 'none';
       dashboardView.style.display = 'flex';
-      // If no cats loaded in memory yet, reload from DB first (e.g. after import)
       if(!dbData.cats || !dbData.cats.length){
         dbLoad().then(()=>dbRender());
       } else {
         dbRender();
       }
+      // Startup sync kur hapet dashboard
+      if(window._dbStartupSync) window._dbStartupSync();
     });
 
     // Reading Mode
