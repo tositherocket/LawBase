@@ -2430,7 +2430,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.12.0</span>
+      <span class="hint" style="opacity:0.6">v2.13.0</span>
     </div>
   </aside>
 
@@ -2511,7 +2511,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.12.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.13.0</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4153,39 +4153,59 @@
     });
 
     // ══════════════════════════════════════════════
-    //  DROPBOX SYNC  (v3)
-    //  backup_auto.json   ← countdown X min pas ndryshimit të fundit
+    //  DROPBOX SYNC  (v4 — PKCE)
+    //  OAuth 2.0 PKCE — i sigurt për browser-only apps
+    //  backup_auto.json   ← countdown X min pas ndryshimit
     //  backup_manual.json ← manual save/restore
     // ══════════════════════════════════════════════
     (function(){
 
       // ── Konstante ──
-      const DBX_AUTO    = '/Apps/LegalBase/backup_auto.json';
-      const DBX_MANUAL  = '/Apps/LegalBase/backup_manual.json';
-      const LS_APPKEY   = 'lb-dbx-appkey';
-      const LS_TOKEN    = 'lb-dbx-token';
-      const LS_AUTO     = 'lb-dbx-autosync';
-      const LS_DELAY    = 'lb-dbx-delay';      // minuta countdown (default 5)
-      const LS_LASTSYNC = 'lb-dbx-lastsync';   // ISO kur KY DEVICE ka ruajtur/marrë
+      var DBX_AUTO    = '/Apps/LegalBase/backup_auto.json';
+      var DBX_MANUAL  = '/Apps/LegalBase/backup_manual.json';
+      var DBX_TOKEN   = 'https://api.dropbox.com/oauth2/token';
+
+      // localStorage keys
+      var LS_APPKEY   = 'lb-dbx-appkey';
+      var LS_ACCESS   = 'lb-dbx-token';      // access_token (4h)
+      var LS_REFRESH  = 'lb-dbx-refresh';    // refresh_token (i përjetshëm)
+      var LS_AUTO     = 'lb-dbx-autosync';
+      var LS_DELAY    = 'lb-dbx-delay';
+      var LS_LASTSYNC = 'lb-dbx-lastsync';
+
+      // sessionStorage keys
+      var SS_VERIFIER = 'lb-dbx-verifier';   // PKCE code_verifier (30 min)
+      var SS_CHECK    = 'lb-dbx-lastcheck';  // rate-limit cooldown
 
       // ── localStorage helpers ──
-      function getAppKey()    { try{ return localStorage.getItem(LS_APPKEY)||''; }catch(e){ return ''; } }
-      function getToken()     { try{ return localStorage.getItem(LS_TOKEN)||'';  }catch(e){ return ''; } }
-      function saveAppKey(k)  { try{ localStorage.setItem(LS_APPKEY,k); }catch(e){} }
-      function saveToken(t)   { try{ localStorage.setItem(LS_TOKEN,t);  }catch(e){} }
-      function clearAuth()    { try{ localStorage.removeItem(LS_APPKEY); localStorage.removeItem(LS_TOKEN); }catch(e){} }
-      function isAutoEnabled(){ try{ return localStorage.getItem(LS_AUTO)==='1'; }catch(e){ return false; } }
+      function getAppKey()      { try{ return localStorage.getItem(LS_APPKEY)||''; }catch(e){ return ''; } }
+      function getAccess()      { try{ return localStorage.getItem(LS_ACCESS)||''; }catch(e){ return ''; } }
+      function getRefresh()     { try{ return localStorage.getItem(LS_REFRESH)||''; }catch(e){ return ''; } }
+      function saveAppKey(k)    { try{ localStorage.setItem(LS_APPKEY,k); }catch(e){} }
+      function saveAccess(t)    { try{ localStorage.setItem(LS_ACCESS,t); }catch(e){} }
+      function saveRefresh(r)   { try{ localStorage.setItem(LS_REFRESH,r); }catch(e){} }
+      function isAutoEnabled()  { try{ return localStorage.getItem(LS_AUTO)==='1'; }catch(e){ return false; } }
       function setAutoEnabled(v){ try{ localStorage.setItem(LS_AUTO,v?'1':'0'); }catch(e){} }
-      function getDelay()     { return Math.max(1,Math.min(60,parseInt(localStorage.getItem(LS_DELAY)||'5',10))); }
-      function setDelay(m)    { try{ localStorage.setItem(LS_DELAY,String(m)); }catch(e){} }
-      function getLastSync()  { try{ return localStorage.getItem(LS_LASTSYNC)||null; }catch(e){ return null; } }
-      function setLastSync(iso){ try{ localStorage.setItem(LS_LASTSYNC,iso); }catch(e){} }
+      function getDelay()       { return Math.max(1,Math.min(60,parseInt(localStorage.getItem(LS_DELAY)||'5',10))); }
+      function setDelay(m)      { try{ localStorage.setItem(LS_DELAY,String(m)); }catch(e){} }
+      function getLastSync()    { try{ return localStorage.getItem(LS_LASTSYNC)||null; }catch(e){ return null; } }
+      function setLastSync(iso) { try{ localStorage.setItem(LS_LASTSYNC,iso); }catch(e){} }
+      function isConnected()    { return !!(getAccess()||getRefresh()); }
+
+      function clearAuth(){
+        try{
+          localStorage.removeItem(LS_APPKEY);
+          localStorage.removeItem(LS_ACCESS);
+          localStorage.removeItem(LS_REFRESH);
+        }catch(e){}
+        try{ sessionStorage.removeItem(SS_VERIFIER); }catch(e){}
+      }
 
       // ── UI helpers ──
-      function modal(show){ document.getElementById('dbDriveModal').style.display = show?'flex':'none'; }
+      function modal(show){ document.getElementById('dbDriveModal').style.display=show?'flex':'none'; }
       function showStep(s){
         ['dbDriveSetup','dbDriveAuth','dbDriveActions'].forEach(function(id){
-          document.getElementById(id).style.display = id===s?'block':'none';
+          document.getElementById(id).style.display=id===s?'block':'none';
         });
       }
       function autoStatus(msg){
@@ -4197,88 +4217,226 @@
         if(el) el.innerHTML=msg;
       }
       function cloudIcon(state){
-        var html = state==='auto'
-          ? '<i class="fas fa-dropbox" style="color:#2dc653"></i>'
-          : state==='conn'
-          ? '<i class="fas fa-dropbox" style="color:#0061ff"></i>'
-          : '<i class="fas fa-cloud"></i>';
+        var html=state==='auto'
+          ?'<i class="fas fa-dropbox" style="color:#2dc653"></i>'
+          :state==='conn'
+          ?'<i class="fas fa-dropbox" style="color:#0061ff"></i>'
+          :'<i class="fas fa-cloud"></i>';
         ['dbDriveBtn','dbDriveBtnLB'].forEach(function(id){
           var b=document.getElementById(id); if(b) b.innerHTML=html;
         });
       }
 
-      // ── OAuth (popup) ──
+      // ══════════════════════════════════════════════
+      //  PKCE — Kripto helpers
+      // ══════════════════════════════════════════════
+      function _randomString(len){
+        var arr=new Uint8Array(len);
+        crypto.getRandomValues(arr);
+        return Array.from(arr).map(function(b){
+          return 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'[b%66];
+        }).join('');
+      }
+
+      async function _sha256b64url(str){
+        var buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+        return btoa(String.fromCharCode.apply(null,new Uint8Array(buf)))
+          .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+      }
+
       function getRedirectUri(){ return window.location.origin+window.location.pathname; }
 
-      function authorize(appKey){
-        var uri = getRedirectUri();
-        var url = 'https://www.dropbox.com/oauth2/authorize'
+      // ══════════════════════════════════════════════
+      //  PKCE — Autorizo (hap popup)
+      // ══════════════════════════════════════════════
+      async function authorize(appKey){
+        var verifier  = _randomString(64);
+        var challenge = await _sha256b64url(verifier);
+
+        // Ruaj verifier-in — popup do ta kthejë code-in tek ne
+        try{ sessionStorage.setItem(SS_VERIFIER, verifier); }catch(e){}
+
+        var uri=getRedirectUri();
+        var url='https://www.dropbox.com/oauth2/authorize'
           +'?client_id='+encodeURIComponent(appKey)
-          +'&response_type=token'
+          +'&response_type=code'
           +'&redirect_uri='+encodeURIComponent(uri)
-          +'&token_access_type=legacy';
-        var w = window.open(url,'dbx-auth','width=600,height=700,left=200,top=100');
+          +'&code_challenge='+encodeURIComponent(challenge)
+          +'&code_challenge_method=S256'
+          +'&token_access_type=offline';   // ← refresh token i përjetshëm
+
+        var w=window.open(url,'dbx-auth','width=600,height=700,left=200,top=100');
         if(!w){ alert('Popup u bllokua! Lejo popups për këtë faqe.'); return; }
-        var t = setInterval(function(){
+
+        // Dëgjo URL-n e popup-it — prit ?code=
+        var t=setInterval(function(){
           try{
             if(w.closed){ clearInterval(t); return; }
-            var hash=w.location.hash;
-            if(hash&&hash.indexOf('access_token=')>-1){
-              clearInterval(t); w.close();
-              var token=new URLSearchParams(hash.slice(1)).get('access_token');
-              if(token){
-                saveToken(token);
-                showStep('dbDriveActions');
-                _initActionsUI();
-                autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U lidh me Dropbox!');
-                cloudIcon(isAutoEnabled()?'auto':'conn');
-              }
+            var search=w.location.search;
+            if(search&&search.indexOf('code=')>-1){
+              clearInterval(t);
+              var code=new URLSearchParams(search).get('code');
+              w.close();
+              if(code) _exchangeCode(code, appKey);
             }
-          }catch(e){}
-        },500);
+            // Nëse user refuzoi
+            if(search&&search.indexOf('error=')>-1){
+              clearInterval(t); w.close();
+              autoStatus('<i class="fas fa-times-circle" style="color:var(--danger)"></i> Autorizimi u refuzua.');
+            }
+          }catch(e){ /* cross-origin — prit */ }
+        },400);
       }
 
-      // ── Dropbox API ──
-      async function dbxUpload(text, path, token){
-        var r=await fetch('https://content.dropboxapi.com/2/files/upload',{
-          method:'POST',
-          headers:{
-            'Authorization':'Bearer '+token,
-            'Content-Type':'application/octet-stream',
-            'Dropbox-API-Arg':JSON.stringify({path:path,mode:'overwrite',autorename:false,mute:true})
-          },
-          body:text
-        });
-        if(r.status===401) throw new Error('Token skadoi — ridhu');
-        if(!r.ok){ var e=await r.json().catch(function(){return{};}); throw new Error(e.error_summary||String(r.status)); }
-        return await r.json();
-      }
+      // ══════════════════════════════════════════════
+      //  PKCE — Shkëmbe code → tokens
+      // ══════════════════════════════════════════════
+      async function _exchangeCode(code, appKey){
+        var verifier='';
+        try{ verifier=sessionStorage.getItem(SS_VERIFIER)||''; }catch(e){}
+        if(!verifier){
+          autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> Gabim: code_verifier mungon. Provo sërish.');
+          return;
+        }
 
-      async function dbxDownload(path, token){
-        var r=await fetch('https://content.dropboxapi.com/2/files/download',{
-          method:'POST',
-          headers:{
-            'Authorization':'Bearer '+token,
-            'Dropbox-API-Arg':JSON.stringify({path:path})
+        autoStatus('<i class="fas fa-spinner fa-spin"></i> Po lidhet me Dropbox...');
+        try{
+          var r=await fetch(DBX_TOKEN,{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:[
+              'grant_type=authorization_code',
+              'code='+encodeURIComponent(code),
+              'redirect_uri='+encodeURIComponent(getRedirectUri()),
+              'client_id='+encodeURIComponent(appKey),
+              'code_verifier='+encodeURIComponent(verifier)
+            ].join('&')
+          });
+
+          if(!r.ok){
+            var err=await r.json().catch(function(){return{};});
+            throw new Error(err.error_description||err.error||'Token exchange deshtoi');
           }
-        });
-        if(r.status===401) throw new Error('Token skadoi — ridhu');
-        if(r.status===409) return null;
-        if(!r.ok) throw new Error('Download deshtoi: '+r.status);
-        return await r.text();
+
+          var data=await r.json();
+          saveAccess(data.access_token||'');
+          if(data.refresh_token) saveRefresh(data.refresh_token);
+          try{ sessionStorage.removeItem(SS_VERIFIER); }catch(e){}
+
+          showStep('dbDriveActions');
+          _initActionsUI();
+          autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U lidh me Dropbox!');
+          cloudIcon(isAutoEnabled()?'auto':'conn');
+        }catch(err){
+          autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
+        }
       }
 
-      async function dbxGetMeta(path, token){
-        var r=await fetch('https://api.dropboxapi.com/2/files/get_metadata',{
+      // ══════════════════════════════════════════════
+      //  PKCE — Refresh access token automatikisht
+      // ══════════════════════════════════════════════
+      var _refreshing=null; // Promise — shmang thirrje paralele
+
+      async function _doRefresh(){
+        var refresh=getRefresh();
+        var appKey=getAppKey();
+        if(!refresh||!appKey) throw new Error('Token skadoi — ridhu');
+
+        var r=await fetch(DBX_TOKEN,{
           method:'POST',
-          headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-          body:JSON.stringify({path:path})
+          headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body:[
+            'grant_type=refresh_token',
+            'refresh_token='+encodeURIComponent(refresh),
+            'client_id='+encodeURIComponent(appKey)
+          ].join('&')
         });
-        if(!r.ok) return null;
-        return await r.json();
+
+        if(!r.ok) throw new Error('Token skadoi — ridhu');
+        var data=await r.json();
+        saveAccess(data.access_token);
+        return data.access_token;
       }
 
-      // ── IndexedDB export/import ──
+      function refreshToken(){
+        if(!_refreshing) _refreshing=_doRefresh().finally(function(){ _refreshing=null; });
+        return _refreshing;
+      }
+
+      // ══════════════════════════════════════════════
+      //  Dropbox API — me auto-retry pas refresh
+      // ══════════════════════════════════════════════
+      async function _apiCall(fn){
+        // Provo me access token aktual
+        var token=getAccess();
+        try{
+          return await fn(token);
+        }catch(err){
+          // Nëse 401 → refresh dhe provo sërish (1 herë)
+          if(err.message&&(err.message.indexOf('401')>-1||err.message.indexOf('skadoi')>-1)){
+            try{
+              token=await refreshToken();
+              return await fn(token);
+            }catch(refreshErr){
+              clearAuth(); cloudIcon(false);
+              throw new Error('Token skadoi — ridhu');
+            }
+          }
+          throw err;
+        }
+      }
+
+      async function dbxUpload(text, path){
+        return _apiCall(async function(token){
+          var r=await fetch('https://content.dropboxapi.com/2/files/upload',{
+            method:'POST',
+            headers:{
+              'Authorization':'Bearer '+token,
+              'Content-Type':'application/octet-stream',
+              'Dropbox-API-Arg':JSON.stringify({path:path,mode:'overwrite',autorename:false,mute:true})
+            },
+            body:text
+          });
+          if(r.status===401) throw new Error('401');
+          if(r.status===429) throw new Error('Shumë kërkesa — provo pas 60 sekondash');
+          if(!r.ok){ var e=await r.json().catch(function(){return{};}); throw new Error(e.error_summary||String(r.status)); }
+          return await r.json();
+        });
+      }
+
+      async function dbxDownload(path){
+        return _apiCall(async function(token){
+          var r=await fetch('https://content.dropboxapi.com/2/files/download',{
+            method:'POST',
+            headers:{
+              'Authorization':'Bearer '+token,
+              'Dropbox-API-Arg':JSON.stringify({path:path})
+            }
+          });
+          if(r.status===401) throw new Error('401');
+          if(r.status===429) throw new Error('Shumë kërkesa — provo pas 60 sekondash');
+          if(r.status===409) return null;
+          if(!r.ok) throw new Error('Download deshtoi: '+r.status);
+          return await r.text();
+        });
+      }
+
+      async function dbxGetMeta(path){
+        return _apiCall(async function(token){
+          var r=await fetch('https://api.dropboxapi.com/2/files/get_metadata',{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+            body:JSON.stringify({path:path})
+          });
+          if(r.status===401) throw new Error('401');
+          if(!r.ok) return null;
+          return await r.json();
+        });
+      }
+
+      // ══════════════════════════════════════════════
+      //  IndexedDB export / import
+      // ══════════════════════════════════════════════
       function exportDB(){
         return new Promise(function(resolve){
           var req=indexedDB.open('lawbase_db',2);
@@ -4340,7 +4498,7 @@
       }
 
       function _cdStart(){
-        if(!isAutoEnabled()||!getToken()) return;
+        if(!isAutoEnabled()||!isConnected()) return;
         clearInterval(_cdTimer); _cdTimer=null;
         _cdTotal=getDelay()*60;
         _cdLeft=_cdTotal;
@@ -4358,7 +4516,6 @@
           if(b){b.style.width=(pct*100)+'%';b.style.background=col;}
           if(l) l.style.color=col;
         }
-
         _render();
         autoStatus('<i class="fas fa-hourglass-half" style="color:#f7b731"></i> Backup fillon pas '+getDelay()+' min...');
 
@@ -4379,51 +4536,47 @@
         cloudIcon('conn');
         try{
           var data=await exportDB();
-          await dbxUpload(JSON.stringify(data,null,2),DBX_AUTO,getToken());
+          await dbxUpload(JSON.stringify(data,null,2),DBX_AUTO);
           var now=new Date().toISOString();
           setLastSync(now);
           autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U ruajt — '+new Date(now).toLocaleTimeString());
           cloudIcon(isAutoEnabled()?'auto':'conn');
         }catch(err){
           autoStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
-          if(err.message.indexOf('skadoi')>-1){clearAuth();cloudIcon(false);}
+          if(err.message.indexOf('ridhu')>-1){cloudIcon(false);}
         }
       }
 
       // Hook: thirret nga dbSave() pas çdo ndryshimi
       window._dbDropboxAutoSync=function(){
-        if(isAutoEnabled()&&getToken()) _cdStart();
+        if(isAutoEnabled()&&isConnected()) _cdStart();
       };
 
       // ══════════════════════════════════════════════
-      //  STARTUP SYNC — kontrollo Dropbox kur hapet app
+      //  STARTUP SYNC
       // ══════════════════════════════════════════════
-      var _lastCheck=0;
+      var _lastCheck=parseInt(sessionStorage.getItem(SS_CHECK)||'0',10);
 
       async function startupSync(skipCooldown){
-        if(!getToken()||!isAutoEnabled()) return;
+        if(!isConnected()||!isAutoEnabled()) return;
         var now=Date.now();
-        // Cooldown 30s — polling-u e kalon me skipCooldown=true
-        if(!skipCooldown && now-_lastCheck<30000) return;
+        if(!skipCooldown&&now-_lastCheck<30000) return;
         _lastCheck=now;
+        try{ sessionStorage.setItem(SS_CHECK,String(now)); }catch(e){}
 
         try{
-          var meta=await dbxGetMeta(DBX_AUTO,getToken());
+          var meta=await dbxGetMeta(DBX_AUTO);
           if(!meta||!meta.server_modified) return;
-
-          // server_modified = kur u ngarku skedari në Dropbox
           var remoteMs=new Date(meta.server_modified).getTime();
-          // LS_LASTSYNC = kur KY DEVICE ka ruajtur ose marrë nga Dropbox
           var localMs=getLastSync()?new Date(getLastSync()).getTime():0;
 
           if(remoteMs>localMs+20000){
-            // Dropbox ka version më të ri — trego toast
             _showToast(remoteMs,localMs);
           } else {
-            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — '+new Date(remoteMs).toLocaleTimeString()+' &nbsp;<span style="color:var(--muted);font-size:0.7rem">(kontrollohet çdo 60s)</span>');
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — '+new Date(remoteMs).toLocaleTimeString());
           }
         }catch(err){
-          if(err.message&&err.message.indexOf('401')>-1){clearAuth();cloudIcon(false);}
+          if(err.message&&err.message.indexOf('ridhu')>-1){cloudIcon(false);}
         }
       }
 
@@ -4443,35 +4596,36 @@
 
         div.innerHTML=
           '<div style="display:flex;align-items:flex-start;gap:10px">'+
-            '<i class="fas fa-dropbox" style="color:#0061ff;font-size:1.1rem;margin-top:2px;flex-shrink:0"></i>'+
-            '<div style="flex:1">'+
-              '<div style="font-weight:700;font-size:0.88rem;margin-bottom:3px">Version i ri në Dropbox</div>'+
-              '<div style="font-size:0.72rem;opacity:0.75">Remote: '+new Date(remoteMs).toLocaleString()+'</div>'+
-              '<div style="font-size:0.72rem;opacity:0.55;margin-bottom:10px">Lokale: '+(localMs?new Date(localMs).toLocaleString():'—')+'</div>'+
-              '<div style="display:flex;gap:8px">'+
-                '<button id="dbToastYes" style="background:#0061ff;color:#fff;border:none;padding:7px 0;border-radius:7px;font-weight:700;font-size:0.82rem;cursor:pointer;flex:1"><i class="fas fa-download"></i> Ngarko tani</button>'+
-                '<button id="dbToastNo"  style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:0.82rem;cursor:pointer">Jo</button>'+
-              '</div>'+
+          '<i class="fas fa-dropbox" style="color:#0061ff;font-size:1.1rem;margin-top:2px;flex-shrink:0"></i>'+
+          '<div style="flex:1">'+
+            '<div style="font-weight:700;font-size:0.88rem;margin-bottom:3px">Version i ri në Dropbox</div>'+
+            '<div style="font-size:0.72rem;opacity:0.75">Remote: '+new Date(remoteMs).toLocaleString()+'</div>'+
+            '<div style="font-size:0.72rem;opacity:0.55;margin-bottom:10px">Lokale: '+(localMs?new Date(localMs).toLocaleString():'—')+'</div>'+
+            '<div style="display:flex;gap:8px">'+
+              '<button id="dbToastYes" style="background:#0061ff;color:#fff;border:none;padding:7px 0;border-radius:7px;font-weight:700;font-size:0.82rem;cursor:pointer;flex:1"><i class="fas fa-download"></i> Ngarko tani</button>'+
+              '<button id="dbToastNo"  style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:7px 14px;border-radius:7px;font-size:0.82rem;cursor:pointer">Jo</button>'+
             '</div>'+
-            '<button id="dbToastX" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1rem;cursor:pointer;padding:0;flex-shrink:0;line-height:1">&#x2715;</button>'+
+          '</div>'+
+          '<button id="dbToastX" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:1rem;cursor:pointer;padding:0;flex-shrink:0;line-height:1">&#x2715;</button>'+
           '</div>';
 
         document.body.appendChild(div);
 
-        function close(){var t=document.getElementById('dbSyncToast');if(t)t.remove();}
+        function close(){ var t=document.getElementById('dbSyncToast'); if(t) t.remove(); }
 
         document.getElementById('dbToastYes').addEventListener('click',async function(){
           close();
           autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
           cloudIcon('conn');
           try{
-            var text=await dbxDownload(DBX_AUTO,getToken());
+            var text=await dbxDownload(DBX_AUTO);
             if(!text) throw new Error('backup_auto.json nuk ekziston');
             var data=JSON.parse(text);
             await importDB(data);
             var n=new Date().toISOString();
             setLastSync(n);
             _lastCheck=Date.now();
+            try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
             autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U sinkronizua — '+new Date(n).toLocaleTimeString());
             cloudIcon(isAutoEnabled()?'auto':'conn');
           }catch(err){
@@ -4480,9 +4634,9 @@
         });
         document.getElementById('dbToastNo').addEventListener('click',function(){
           close();
-          // Shëno si "parë" — mos shfaq sërish
           setLastSync(new Date(remoteMs-1000).toISOString());
           _lastCheck=Date.now();
+          try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
         });
         document.getElementById('dbToastX').addEventListener('click',close);
         setTimeout(close,30000);
@@ -4495,11 +4649,11 @@
         manualStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
         try{
           var data=await exportDB();
-          await dbxUpload(JSON.stringify(data,null,2),DBX_MANUAL,getToken());
+          await dbxUpload(JSON.stringify(data,null,2),DBX_MANUAL);
           manualStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U ruajt — '+new Date().toLocaleString());
         }catch(err){
           manualStatus('<i class="fas fa-exclamation-circle" style="color:var(--danger)"></i> '+err.message);
-          if(err.message.indexOf('skadoi')>-1){clearAuth();cloudIcon(false);}
+          if(err.message.indexOf('ridhu')>-1){cloudIcon(false);}
         }
       }
 
@@ -4507,7 +4661,7 @@
         if(!confirm('Restauro nga backup_manual.json?\nKjo do te zevendesoje te dhenat aktuale.')) return;
         manualStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
         try{
-          var text=await dbxDownload(DBX_MANUAL,getToken());
+          var text=await dbxDownload(DBX_MANUAL);
           if(!text) throw new Error('Skedari manual nuk ekziston — ruaj fillimisht');
           var data=JSON.parse(text);
           await importDB(data);
@@ -4521,7 +4675,7 @@
         if(!confirm('Restauro nga backup_auto.json?\nKjo do te zevendesoje te dhenat aktuale.')) return;
         autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
         try{
-          var text=await dbxDownload(DBX_AUTO,getToken());
+          var text=await dbxDownload(DBX_AUTO);
           if(!text) throw new Error('backup_auto.json nuk ekziston');
           var data=JSON.parse(text);
           await importDB(data);
@@ -4577,7 +4731,7 @@
         if(uriEl) uriEl.textContent=getRedirectUri();
         var inp=document.getElementById('dbDriveClientId');
         if(inp&&!inp.value&&getAppKey()) inp.value=getAppKey();
-        if(getToken()){
+        if(isConnected()){
           showStep('dbDriveActions');
           _initActionsUI();
           manualStatus('');
@@ -4590,18 +4744,15 @@
       }
       window._dbOpenDriveModal=openDriveModal;
 
-      // Të dy butonat cloud hapin modalin
       document.getElementById('dbDriveBtn').addEventListener('click',openDriveModal);
       var _lbBtn=document.getElementById('dbDriveBtnLB');
       if(_lbBtn) _lbBtn.addEventListener('click',openDriveModal);
 
-      // Modal close
       document.getElementById('dbDriveModalClose').addEventListener('click',function(){modal(false);});
       document.getElementById('dbDriveModal').addEventListener('click',function(e){
         if(e.target===e.currentTarget) modal(false);
       });
 
-      // Step 1 — ruaj App Key
       document.getElementById('dbDriveSaveClientId').addEventListener('click',function(){
         var val=(document.getElementById('dbDriveClientId').value||'').trim();
         if(!val||val.length<5){alert('App Key nuk është e vlefshme.');return;}
@@ -4609,20 +4760,20 @@
         showStep('dbDriveAuth');
       });
 
-      // Step 2 — autorizo
       document.getElementById('dbDropboxAuthBtn').addEventListener('click',function(){
         var k=getAppKey(); if(!k){showStep('dbDriveSetup');return;}
         authorize(k);
       });
+
       document.getElementById('dbDriveDisconnect2').addEventListener('click',function(){
         clearAuth();cloudIcon(false);showStep('dbDriveSetup');
         var inp=document.getElementById('dbDriveClientId');if(inp) inp.value='';
       });
 
-      // Step 3 — backup/restore
       document.getElementById('dbDriveSave').addEventListener('click',manualSave);
       document.getElementById('dbDriveLoad').addEventListener('click',manualRestore);
       document.getElementById('dbAutoRestore').addEventListener('click',autoRestore);
+
       document.getElementById('dbDriveDisconnect').addEventListener('click',function(){
         clearAuth();cloudIcon(false);showStep('dbDriveSetup');
         var inp=document.getElementById('dbDriveClientId');if(inp) inp.value='';
@@ -4630,29 +4781,19 @@
       });
 
       // ── Init on load ──
-      if(getToken()){
+      if(isConnected()){
         cloudIcon(isAutoEnabled()?'auto':'conn');
         setTimeout(startupSync,2000);
       } else if(getAppKey()){
         cloudIcon(false);
       }
 
-      // Kontrollo kur kthehet faqja në fokus (kalon nga app tjetër/tab)
       document.addEventListener('visibilitychange',function(){
-        if(document.visibilityState==='visible'&&getToken()&&isAutoEnabled()){
-          setTimeout(startupSync,800);
+        if(document.visibilityState==='visible'&&isConnected()&&isAutoEnabled()){
+          setTimeout(startupSync,3000);
         }
       });
 
-      // ── POLLING: kontrollo Dropbox çdo 60s nëse faqja është aktive ──
-      // Kjo siguron që device i dytë merr ndryshimet pa pasur nevojë të ri-fokusohet
-      setInterval(function(){
-        if(getToken()&&isAutoEnabled()&&document.visibilityState==='visible'){
-          startupSync(true); // skip cooldown — polling është i kontrolluar vetë
-        }
-      }, 60000);
-
-      // Ekspozo startupSync globalisht (thirret nga dashboardBtn)
       window._dbStartupSync=startupSync;
 
     })();
@@ -4660,7 +4801,7 @@
 
     // ── LegalBase Settings: listeners ──
 
-        // ── LegalBase Settings: listeners ──
+    
     document.getElementById('dbExportBtn').addEventListener('click', exportAll);
     document.getElementById('dbImportBtn').addEventListener('click', ()=> document.getElementById('dbImportFile').click());
     document.getElementById('dbImportFile').addEventListener('change', ()=>{
