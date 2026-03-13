@@ -4400,10 +4400,11 @@
       // ══════════════════════════════════════════════
       var _lastCheck=0;
 
-      async function startupSync(){
+      async function startupSync(skipCooldown){
         if(!getToken()||!isAutoEnabled()) return;
         var now=Date.now();
-        if(now-_lastCheck<15000) return; // max 1 herë çdo 15s
+        // Cooldown 30s — polling-u e kalon me skipCooldown=true
+        if(!skipCooldown && now-_lastCheck<30000) return;
         _lastCheck=now;
 
         try{
@@ -4419,7 +4420,7 @@
             // Dropbox ka version më të ri — trego toast
             _showToast(remoteMs,localMs);
           } else {
-            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — '+new Date(remoteMs).toLocaleTimeString());
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — '+new Date(remoteMs).toLocaleTimeString()+' &nbsp;<span style="color:var(--muted);font-size:0.7rem">(kontrollohet çdo 60s)</span>');
           }
         }catch(err){
           if(err.message&&err.message.indexOf('401')>-1){clearAuth();cloudIcon(false);}
@@ -4642,6 +4643,14 @@
           setTimeout(startupSync,800);
         }
       });
+
+      // ── POLLING: kontrollo Dropbox çdo 60s nëse faqja është aktive ──
+      // Kjo siguron që device i dytë merr ndryshimet pa pasur nevojë të ri-fokusohet
+      setInterval(function(){
+        if(getToken()&&isAutoEnabled()&&document.visibilityState==='visible'){
+          startupSync(true); // skip cooldown — polling është i kontrolluar vetë
+        }
+      }, 60000);
 
       // Ekspozo startupSync globalisht (thirret nga dashboardBtn)
       window._dbStartupSync=startupSync;
