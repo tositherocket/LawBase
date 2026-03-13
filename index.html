@@ -472,9 +472,10 @@
     }
 
     .app {
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     /* Compact header */
@@ -493,6 +494,8 @@
       justify-content: space-between;
       align-items: center;
       gap: 10px;
+      flex-wrap: nowrap;
+      min-height: 36px;
     }
 
     .brand {
@@ -500,6 +503,20 @@
       font-size: 1.1rem;
       color: var(--primary);
       letter-spacing: -0.3px;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
     }
 
     /* App switch button — ndërmjet LawBase dhe LegalBase */
@@ -542,8 +559,8 @@
 
       /* Nav gap smaller */
       .nav { gap: 4px; }
-      .nav-right { gap: 4px; }
-      .nav-left { gap: 4px; }
+      .nav-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: nowrap; }
+      .nav-left  { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: nowrap; }
 
       /* Të gjithë butonat nav — vetëm ikona */
       .nav-right .btn,
@@ -594,13 +611,15 @@
     }
 
     .wrap {
-      padding: 12px 16px;
-      max-width: 1800px;
-      margin: 0 auto;
+      padding: 0;
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 0;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      box-sizing: border-box;
     }
 
     /* Compact tabs */
@@ -610,9 +629,12 @@
       flex-wrap: nowrap;
       overflow-x: auto;
       overflow-y: hidden;
-      padding: 4px 12px;
+      padding: 8px 16px;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
     .law-tabs::-webkit-scrollbar { display: none; }
 
@@ -658,20 +680,25 @@
     /* CONTROLS - search panel */
     .controls {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
       background: var(--panel);
-      padding: 8px 12px 8px;
+      padding: 6px 16px;
       box-shadow: var(--box-shadow);
-      border: 1px solid var(--border);
-      border-top: none;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      flex-shrink: 0;
     }
 
-    /* Çdo grup search: input + butona në 1 rresht */
+    /* Çdo grup search: input + butona krah për krah */
     .controls-row {
       display: flex;
       gap: 6px;
       align-items: center;
+      flex: 1;
+      min-width: 0;
+      padding: 2px 0;
     }
 
     .controls input {
@@ -696,15 +723,20 @@
       white-space: nowrap;
     }
 
+    /* Divider vertikal ndërmjet dy search-eve */
     .controls .divider {
-      height: 1px;
+      width: 1px;
+      height: 28px;
       background: var(--border);
-      margin: 2px 0;
+      margin: 0 10px;
+      flex-shrink: 0;
+      align-self: center;
     }
 
     .controls .hint {
       margin: 0;
-      padding: 0 2px;
+      padding: 2px 2px 0;
+      flex-basis: 100%;
     }
 
     .hint {
@@ -712,11 +744,11 @@
       color: var(--muted);
       flex-basis: 100%;
       margin: 0;
-      line-height: 1;
+      line-height: 1.4;
     }
 
     #activeTitle, #dbActiveTitle {
-      margin-top: -2px;
+      margin-top: 1px;
       padding: 0;
       font-size: 0.75rem;
       line-height: 1;
@@ -728,6 +760,19 @@
       display: grid;
       grid-template-columns: 240px 1fr;
       gap: 12px;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 12px 16px;
+      box-sizing: border-box;
+    }
+
+    /* Grid children duhet min-height:0 që overflow të funksionojë */
+    .main aside,
+    .main section {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Articles list */
@@ -736,8 +781,10 @@
       border-radius: var(--border-radius);
       padding: 12px;
       box-shadow: var(--box-shadow);
-      max-height: calc(100vh - 220px);
-      overflow: auto;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
       border: 1px solid var(--border);
     }
 
@@ -768,7 +815,8 @@
       box-shadow: var(--box-shadow);
       overflow-y: auto;
       overflow-x: hidden;
-      max-height: calc(100vh - 220px);
+      flex: 1;
+      min-height: 0;
       box-sizing: border-box;
       border: 1px solid var(--border);
     }
@@ -1333,7 +1381,10 @@
         gap: 0;
       }
 
-      .wrap { padding: 8px 10px; gap: 8px; }
+      .wrap { gap: 0; }
+      .law-tabs { padding: 6px 10px; }
+      .controls { padding: 5px 10px; }
+      .main { padding: 8px 10px; gap: 8px; }
 
       /* Articles list: max 35vh scroll */
       .articles-list {
@@ -1421,6 +1472,42 @@
         transform: translateY(0);
       }
 
+      /* Mobile: controls kthehet kolona */
+      .controls {
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 10px;
+      }
+      .controls-row {
+        flex: unset;
+        width: 100%;
+        gap: 4px;
+      }
+      .controls .divider {
+        width: 100%;
+        height: 1px;
+        margin: 0;
+      }
+      /* Mobile buttons — ikona vetëm, pa tekst */
+      .controls .btn {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+        gap: 0;
+      }
+      .controls .btn span,
+      .controls .btn-text { display: none; }
+      /* Input pak më i vogël */
+      .controls input {
+        font-size: 0.82rem;
+        padding: 6px 8px;
+      }
+      /* Hint — më kompakt */
+      .controls .hint,
+      #activeTitle, #dbActiveTitle {
+        font-size: 0.72rem;
+        padding: 0 2px;
+      }
+
       /* When expanded, controls appears above the bottom sticky button */
       .controls.mobile-fixed {
         position: fixed;
@@ -1493,66 +1580,48 @@
       .back-to-top.on { display: inline-flex; }
       .back-to-top:active { transform: scale(0.95); }
 
-      /* App scroll normale */
-      #dashboardView.app { overflow-y: auto; }
-
-      /* Wrap: kolona pa overflow */
-      #dashboardView .wrap {
+      /* App scroll normale në mobile — të dyja njëlloj */
+      .app { height: auto; min-height: 100vh; overflow: visible; }
+      .wrap { overflow: visible; flex: none; }
+      .main {
         overflow: visible;
         flex: none;
-        display: flex;
-        flex-direction: column;
+        grid-template-columns: 1fr;
         gap: 0;
         padding: 0;
       }
 
-      /* Main: grid 1 kolone */
-      #dashboardView .main {
-        overflow: visible;
+      /* Aside/articles-list mobile */
+      .main aside, .main section { overflow: visible; }
+      .articles-list {
+        max-height: 40vh;
         flex: none;
-        grid-template-columns: 1fr !important;
-        gap: 0;
-        padding: 0;
-      }
-
-      /* Aside (lista titujve): max 35vh scroll */
-      #dashboardView aside { overflow: hidden; }
-      #dashboardView .articles-list {
-        max-height: 35vh !important;
-        height: auto !important;
-        flex: none;
-        overflow-y: auto;
-        overflow-x: hidden;
         border-radius: 0;
-        border-left: none !important;
-        border-right: none !important;
+        border-left: none;
+        border-right: none;
         box-shadow: none;
         margin: 0;
         padding: 4px 10px;
       }
-      #dashboardView .articles-list .art-link,
-      #dashboardView .articles-list .db-title-link {
+      .articles-list .art-link,
+      .articles-list .db-title-link {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      /* Doc: scroll i brendshëm, pa kufij */
-      #dashboardView .doc {
-        max-height: unset;
+      /* Doc mobile — scroll i brendshëm */
+      .doc {
         flex: none;
-        overflow-y: visible;
+        overflow-y: auto;
+        max-height: 55vh;
         border-radius: 0;
-        border-left: none !important;
-        border-right: none !important;
+        border-left: none;
+        border-right: none;
         box-shadow: none;
         margin: 0;
-        padding: 10px !important;
+        padding: 10px 14px;
       }
-
-      /* Tabs LegalBase — kompakt */
-      #dashboardView #dbCatTabs { flex-shrink: 0; }
-      #dashboardView #dbAddTitleBtn { flex-shrink: 0; }
 
       /* Controls LegalBase — input full-width */
 
@@ -1584,30 +1653,11 @@
        Layout/header/tabs/controls = trashëgohen nga .app
     ══════════════════════════════════════════════ */
 
-    /* Overlay .app mbi gjithçka */
+    /* #dashboardView shfaqet si overlay me position:fixed */
     #dashboardView.app {
-      overflow: hidden;
-    }
-    #dashboardView .wrap {
-      overflow: hidden;
-      flex: 1;
-      min-height: 0;
-    }
-    #dashboardView .main {
-      overflow: hidden;
-      flex: 1;
-      min-height: 0;
-    }
-    #dashboardView .articles-list {
-      max-height: unset;
-      flex: 1;
-      height: 100%;
-      overflow-y: auto;
-    }
-    #dashboardView .doc {
-      max-height: unset;
-      flex: 1;
-      overflow-y: auto;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
     }
 
     /* ══════════════════════════════════════════
@@ -1615,7 +1665,7 @@
     ══════════════════════════════════════════ */
     
 
-    /* Titujt në listë — si .art-link */
+    /* Titujt në listë — identik me .art-link */
     .db-title-link {
       display: block;
       padding: 8px 12px;
@@ -1626,7 +1676,7 @@
       text-decoration: none;
       transition: var(--transition);
       border: 1px solid var(--border);
-      font-size: 0.88rem;
+      font-size: calc(var(--font-size-doc, 15px) * 0.93);
       cursor: pointer;
       width: 100%;
       text-align: left;
@@ -1637,29 +1687,48 @@
     .db-title-link.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 600; }
     .db-title-link.db-match { border-color: var(--accent); background: var(--primary-soft); }
     .db-add-title-item {
-      background: var(--primary) !important; color: #fff !important;
-      border-color: var(--primary) !important; font-weight: 600 !important;
-      display: flex !important; align-items: center; justify-content: center;
-      gap: 6px; margin-bottom: 8px !important; transform: none !important;
+      background: transparent !important;
+      color: var(--primary) !important;
+      border: 1px dashed var(--primary) !important;
+      font-weight: 600 !important;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 8px !important;
+      transform: none !important;
+      opacity: 0.8;
     }
-    .db-add-title-item:hover { background: var(--primary-dark) !important; box-shadow: none !important; }
+    .db-add-title-item:hover {
+      background: var(--primary-soft) !important;
+      opacity: 1;
+      box-shadow: none !important;
+      transform: none !important;
+    }
 
     /* Content view/edit */
     .db-note-title-view {
-      font-size: 1.25rem; font-weight: 700; color: var(--primary);
-      font-family: var(--font-heading); margin-bottom: 6px;
-      text-transform: uppercase; letter-spacing: 0.3px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-family: var(--font-heading);
+      margin: 0 0 4px;
+      padding: 0 0 8px;
+      border-bottom: 2px solid var(--primary-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
     }
-    .db-note-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 16px; }
+    .db-note-meta { font-size: 0.73rem; color: var(--muted); margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
     .db-note-body-view { font-size: calc(var(--font-size-doc, 15px)); line-height: 1.85; color: var(--text); white-space: pre-wrap; word-wrap: break-word; }
     .db-note-actions {
       display: flex;
       gap: 6px;
-      margin-top: 20px;
+      margin-top: 16px;
       padding-top: 10px;
       padding-bottom: 4px;
       border-top: 1px solid var(--border);
       align-items: center;
+      flex-wrap: wrap;
     }
     .db-edit-title {
       display: block; width: 100%; font-size: 1.2rem; font-weight: 700;
@@ -1748,7 +1817,7 @@
       padding: 12px 14px;
       outline: none;
       min-height: 220px;
-      max-height: 55vh;
+      max-height: calc(100vh - 340px);
       overflow-y: auto;
       margin-bottom: 8px;
       box-sizing: border-box;
@@ -1769,14 +1838,19 @@
 
     /* Category header in search results */
     .db-search-cat-hdr {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.07em;
       color: var(--muted);
-      padding: 10px 10px 4px 10px;
+      padding: 10px 12px 4px 12px;
       border-top: 1px solid var(--border);
       margin-top: 4px;
+      opacity: 0.75;
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
     .db-search-cat-hdr:first-child { border-top: none; margin-top: 0; }
 
@@ -2249,7 +2323,7 @@
   <!-- ═══════════════════════════════════════════════
        LEGALBASE — kopje 1:1 e .app (LawBase)
   ═══════════════════════════════════════════════ -->
-  <div id="dashboardView" class="app" style="display:none;position:fixed;inset:0;z-index:200">
+  <div id="dashboardView" class="app" style="display:none">
 
     <header>
       <div class="nav">
@@ -2257,7 +2331,7 @@
           <div class="brand"><i class="fas fa-sticky-note"></i> LegalBase</div>
         </div>
         <div class="nav-right">
-          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu"><i class="fas fa-arrow-left"></i> LawBase</button>
+          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu te LawBase"><i class="fas fa-arrow-left"></i></button>
           <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
           <button id="dbDriveBtn" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
           <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
@@ -2266,17 +2340,23 @@
     </header>
 
     <div class="wrap">
-      <div class="law-tabs" style="justify-content:space-between;align-items:center">
-        <div id="dbCatTabs" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;flex:1"></div>
-        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
+      <div class="law-tabs">
+        <div id="dbCatTabs" style="display:contents"></div>
+        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer;opacity:0.7;border-style:dashed"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
       </div>
 
       <div class="controls" id="dbControlsPanel">
         <div class="controls-row">
           <input id="dbSearchInput" type="text" placeholder="" />
           <button id="dbSearchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
-          <button id="dbSearchNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
           <button id="dbSearchClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="divider"></div>
+        <div class="controls-row">
+          <input id="dbBodySearchInput" type="text" placeholder="" />
+          <button id="dbBodySearchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="dbBodySearchNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
+          <button id="dbBodySearchClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
         </div>
         <span id="dbSearchCount" class="hint"></span>
         <div id="dbActiveTitle" class="hint"></div>
@@ -2299,7 +2379,7 @@
     <div style="background:var(--panel);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.3);position:relative;">
       <button id="dbDriveModalClose" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)"><i class="fas fa-times"></i></button>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <h3 style="margin:0;font-size:1.1rem"><i class="fas fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h3>
+        <h3 style="margin:0;font-size:1.1rem"><i class="fab fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h3>
         <span style="font-size:0.72rem;color:var(--muted)"><code>/Apps/LegalBase/</code></span>
       </div>
 
@@ -2321,7 +2401,7 @@
       <div id="dbDriveAuth" style="display:none">
         <p style="font-size:0.85rem;margin:0 0 12px">Klikoni butonin për t'u autorizuar me Dropbox-in tuaj:</p>
         <button id="dbDropboxAuthBtn" style="width:100%;background:#0061ff;color:#fff;border:none;padding:11px;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-          <i class="fas fa-dropbox"></i> Autorizo me Dropbox
+          <i class="fab fa-dropbox"></i> Autorizo me Dropbox
         </button>
         <p style="font-size:0.73rem;color:var(--muted);margin:10px 0 4px;text-align:center">Hapet popup → logohu → autorizoji → gati</p>
         <button id="dbDriveDisconnect2" class="btn btn-ghost" style="width:100%;color:var(--muted);font-size:0.78rem;margin-top:6px"><i class="fas fa-unlink"></i> Shkëput &amp; fillo nga e para</button>
@@ -2430,7 +2510,7 @@
       </div>
       <!-- Dropbox — buton direkt -->
       <div class="group">
-        <h4><i class="fas fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h4>
+        <h4><i class="fab fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h4>
         <div class="row">
           <button id="dbSettingsDriveBtn" class="btn btn-ghost" style="flex:1"><i class="fas fa-cloud"></i> <span id="db-lbl-dropbox">Configure / Sync</span></button>
         </div>
@@ -2471,7 +2551,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.14.0</span>
+      <span class="hint" style="opacity:0.6">v2.16.2</span>
     </div>
   </aside>
 
@@ -2552,7 +2632,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.14.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.16.2</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4058,15 +4138,19 @@
     // Exit reading mode bar also works for DB
     document.getElementById('exitReadingMode').addEventListener('click', dbLeaveReading);
 
-    // ── Search in sidebar ──
-    const dbSearchInputEl = document.getElementById('dbSearchInput');
-    const dbSearchCountEl = document.getElementById('dbSearchCount');
-    let dbSearchQuery = '';
+    // ══════════════════════════════════════════════
+    //  SEARCH — Row 1: sipas titullit (sidebar)
+    //           Row 2: fulltext brenda notës aktive
+    // ══════════════════════════════════════════════
+    const dbSearchInputEl  = document.getElementById('dbSearchInput');
+    const dbSearchCountEl  = document.getElementById('dbSearchCount');
+    const dbBodyInpEl      = document.getElementById('dbBodySearchInput');
+    let dbSearchQuery      = '';
+    let dbBodyQuery        = '';
+    let dbBodyHits         = [];
+    let dbBodyHitIdx       = 0;
 
-    let dbSearchHitIdx = 0;
-    let dbSearchHits = [];
-
-    // Global search index: titleId -> title object (across ALL cats)
+    // ── Row 1: Title search ──
     function dbBuildSearchIndex(){
       const idx = {};
       (dbData.cats||[]).forEach(cat=>{
@@ -4078,43 +4162,58 @@
     function dbApplySearch(){
       const q = dbSearchQuery.toLowerCase().trim();
       const links = dbTitlesListEl.querySelectorAll('.art-link');
-      dbSearchHits = [];
-
       if(!q){
-        links.forEach(link=>{ link.style.display=''; link.classList.remove('db-match','db-match-body'); });
+        links.forEach(link=>{ link.style.display=''; link.classList.remove('db-match'); });
         dbSearchCountEl.textContent = '';
         return;
       }
-
-      // Build index across ALL cats so cross-category search works
-      const idx = dbBuildSearchIndex();
-
+      let hits = 0;
       links.forEach(link => {
-        const titleId = link.dataset.tid;
-        const entry = idx[titleId];
-        const t = entry && entry.t;
         const inTitle = link.textContent.toLowerCase().includes(q);
-        const bodyText = t ? (t.body||'').replace(/<[^>]+>/g,'') : '';
-        const inBody  = bodyText.toLowerCase().includes(q);
-        const matches = inTitle || inBody;
-        link.style.display = matches ? '' : 'none';
-        link.classList.toggle('db-match', matches);
-        link.classList.toggle('db-match-body', !!(inBody && !inTitle));
-        if(matches) dbSearchHits.push(link);
+        link.style.display = inTitle ? '' : 'none';
+        link.classList.toggle('db-match', inTitle);
+        if(inTitle) hits++;
       });
-
-      dbSearchHitIdx = 0;
       const L=window._dbLang||window._uiLang||{};
-      dbSearchCountEl.textContent = (L.hits||function(n){return n+' rezultate';})(dbSearchHits.length);
+      dbSearchCountEl.textContent = (L.hits||function(n){return n+' rezultate';})(hits);
     }
 
-    // Highlight search term inside rendered note body
+    dbSearchInputEl.addEventListener('input', () => {
+      dbSearchQuery = dbSearchInputEl.value;
+      document.getElementById('dbSearchClear').style.display = dbSearchQuery ? '' : 'none';
+      dbRenderTitles();
+      dbApplySearch();
+    });
+    document.getElementById('dbSearchBtn').addEventListener('click', () => {
+      dbSearchQuery = dbSearchInputEl.value;
+      dbRenderTitles();
+      dbApplySearch();
+    });
+    document.getElementById('dbSearchClear').addEventListener('click', () => {
+      dbSearchInputEl.value = ''; dbSearchQuery = '';
+      document.getElementById('dbSearchClear').style.display = 'none';
+      dbSearchCountEl.textContent = '';
+      dbRenderTitles();
+      dbApplySearch();
+    });
+
+    // ── Row 2: Fulltext brenda notës aktive ──
+    function dbClearBodyHighlights(){
+      const bodyEl = dbDocEl.querySelector('.db-note-body-view');
+      if(!bodyEl) return;
+      bodyEl.querySelectorAll('mark.db-srch-hl').forEach(m=>{
+        m.replaceWith(document.createTextNode(m.textContent));
+      });
+      dbBodyHits = []; dbBodyHitIdx = 0;
+    }
+
     function dbHighlightInDoc(q){
+      dbClearBodyHighlights();
       if(!q) return;
       const bodyEl = dbDocEl.querySelector('.db-note-body-view');
       if(!bodyEl) return;
-      // Walk text nodes and wrap matches
-      const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+      const esc = q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      const re  = new RegExp('('+esc+')','gi');
       function walk(node){
         if(node.nodeType===3){
           const text = node.textContent;
@@ -4129,34 +4228,46 @@
         }
       }
       walk(bodyEl);
-      // Scroll first highlight into view
-      const first = bodyEl.querySelector('.db-srch-hl');
-      if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
+      dbBodyHits   = Array.from(bodyEl.querySelectorAll('mark.db-srch-hl'));
+      dbBodyHitIdx = 0;
+      if(dbBodyHits.length) dbBodyHits[0].scrollIntoView({behavior:'smooth',block:'center'});
     }
 
-    dbSearchInputEl.addEventListener('input', () => {
-      dbSearchQuery = dbSearchInputEl.value;
-      document.getElementById('dbSearchClear').style.display = dbSearchQuery ? '' : 'none';
-      dbRenderTitles(); // re-render list (all cats in search mode, active cat otherwise)
-      dbApplySearch();
+    function dbRunBodySearch(){
+      dbBodyQuery = dbBodyInpEl ? dbBodyInpEl.value.trim() : '';
+      dbHighlightInDoc(dbBodyQuery);
+      const L=window._dbLang||window._uiLang||{};
+      if(dbBodyQuery)
+        dbSearchCountEl.textContent = (L.hits||function(n){return n+' rezultate';})(dbBodyHits.length);
+    }
+
+    if(dbBodyInpEl){
+      dbBodyInpEl.addEventListener('input', () => {
+        document.getElementById('dbBodySearchClear').style.display = dbBodyInpEl.value ? '' : 'none';
+        dbRunBodySearch();
+      });
+      dbBodyInpEl.addEventListener('keydown', e=>{
+        if(e.key==='Enter'){ e.preventDefault(); dbRunBodySearch(); }
+      });
+    }
+
+    document.getElementById('dbBodySearchBtn').addEventListener('click', dbRunBodySearch);
+
+    document.getElementById('dbBodySearchNextBtn').addEventListener('click', () => {
+      if(!dbBodyHits.length) return;
+      dbBodyHitIdx = (dbBodyHitIdx + 1) % dbBodyHits.length;
+      dbBodyHits.forEach((m,i)=>{
+        m.style.background = i===dbBodyHitIdx ? 'rgba(255,180,0,0.7)' : '';
+      });
+      dbBodyHits[dbBodyHitIdx].scrollIntoView({behavior:'smooth',block:'center'});
     });
-    document.getElementById('dbSearchBtn').addEventListener('click', () => {
-      dbSearchQuery = dbSearchInputEl.value;
-      dbRenderTitles();
-      dbApplySearch();
-    });
-    document.getElementById('dbSearchNextBtn').addEventListener('click', () => {
-      if(!dbSearchHits.length) return;
-      dbSearchHitIdx = (dbSearchHitIdx + 1) % dbSearchHits.length;
-      dbSearchHits[dbSearchHitIdx].scrollIntoView({block:'nearest'});
-      dbSearchHits[dbSearchHitIdx].click();
-    });
-    document.getElementById('dbSearchClear').addEventListener('click', () => {
-      dbSearchInputEl.value = ''; dbSearchQuery = '';
-      document.getElementById('dbSearchClear').style.display = 'none';
-      dbSearchCountEl.textContent = '';
-      dbRenderTitles(); // restore normal category view
-      dbApplySearch();
+
+    document.getElementById('dbBodySearchClear').addEventListener('click', () => {
+      if(dbBodyInpEl) dbBodyInpEl.value = '';
+      dbBodyQuery = '';
+      document.getElementById('dbBodySearchClear').style.display = 'none';
+      dbClearBodyHighlights();
+      if(!dbSearchQuery) dbSearchCountEl.textContent = '';
     });
 
     // ── "Shto titull" button in header ──
@@ -4275,9 +4386,9 @@
       }
       function cloudIcon(state){
         var html=state==='auto'
-          ?'<i class="fas fa-dropbox" style="color:#2dc653"></i>'
+          ?'<i class="fab fa-dropbox" style="color:#2dc653"></i>'
           :state==='conn'
-          ?'<i class="fas fa-dropbox" style="color:#0061ff"></i>'
+          ?'<i class="fab fa-dropbox" style="color:#0061ff"></i>'
           :'<i class="fas fa-cloud"></i>';
         ['dbDriveBtn','dbDriveBtnLB'].forEach(function(id){
           var b=document.getElementById(id); if(b) b.innerHTML=html;
@@ -5681,10 +5792,13 @@
       if(dbAddTitleEl) dbAddTitleEl.querySelector('.title').innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddTitle||L.addBtn);
       setH('dbBackBtn', '<i class="fas fa-arrow-left"></i> LawBase');
       setH('dbOpenSettings', '<i class="fas fa-cog"></i>');
-      setP('dbSearchInput', L.dbSearchPh||L.fulltextPh);
-      setH('dbSearchBtn', '<i class="fas fa-search"></i> '+(L.dbSearchBtn||L.searchBtn));
-      setH('dbSearchNextBtn', '<i class="fas fa-arrow-down"></i> '+(L.dbNext||L.nextBtn));
-      setH('dbSearchClear', '<i class="fas fa-times"></i> '+(L.dbClear||L.clearBtn));
+      setP('dbSearchInput',    L.dbTitlePh||L.searchPh||'Kërko sipas titullit...');
+      setH('dbSearchBtn',      '<i class="fas fa-search"></i> '+(L.dbSearchBtn||L.searchBtn));
+      setH('dbSearchClear',    '<i class="fas fa-times"></i> '+(L.dbClear||L.clearBtn));
+      setP('dbBodySearchInput',L.dbSearchPh||L.fulltextPh||'Kërko në tekst...');
+      setH('dbBodySearchBtn',  '<i class="fas fa-search"></i> '+(L.dbSearchBtn||L.searchBtn));
+      setH('dbBodySearchNextBtn','<i class="fas fa-arrow-down"></i> '+(L.dbNext||L.nextBtn));
+      setH('dbBodySearchClear','<i class="fas fa-times"></i> '+(L.dbClear||L.clearBtn));
       var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong span');
       if(dbSettingsH) dbSettingsH.textContent = L.settingsBtn||'Settings';
       // ── LegalBase settings drawer i18n ──
