@@ -681,7 +681,7 @@
     .controls {
       display: flex;
       flex-direction: row;
-      align-items: center;
+      align-items: stretch;
       gap: 0;
       background: var(--panel);
       padding: 6px 16px;
@@ -735,8 +735,9 @@
 
     .controls .hint {
       margin: 0;
-      padding: 2px 2px 0;
+      padding: 1px 2px;
       flex-basis: 100%;
+      align-self: flex-start;
     }
 
     .hint {
@@ -748,11 +749,13 @@
     }
 
     #activeTitle, #dbActiveTitle {
-      margin-top: 1px;
-      padding: 0;
+      margin-top: 0;
+      padding: 1px 2px;
       font-size: 0.75rem;
-      line-height: 1;
+      line-height: 1.4;
       color: var(--muted);
+      flex-basis: 100%;
+      align-self: flex-start;
     }
 
     /* Main grid */
@@ -1582,7 +1585,11 @@
 
       /* App scroll normale në mobile — të dyja njëlloj */
       .app { height: auto; min-height: 100vh; overflow: visible; }
+      /* App mobile — scroll normal */
+      .app { height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: auto; }
       .wrap { overflow: visible; flex: none; }
+
+      /* Main — 1 kolonë, pa padding */
       .main {
         overflow: visible;
         flex: none;
@@ -1591,10 +1598,13 @@
         padding: 0;
       }
 
-      /* Aside/articles-list mobile */
-      .main aside, .main section { overflow: visible; }
+      /* Aside/section — pa overflow hidden */
+      .main aside, .main section { overflow: visible; min-height: 0; }
+
+      /* Articles-list — max 40vh, scroll */
       .articles-list {
         max-height: 40vh;
+        overflow-y: auto;
         flex: none;
         border-radius: 0;
         border-left: none;
@@ -1610,11 +1620,11 @@
         text-overflow: ellipsis;
       }
 
-      /* Doc mobile — scroll i brendshëm */
+      /* Doc — scroll i brendshëm */
       .doc {
         flex: none;
         overflow-y: auto;
-        max-height: 55vh;
+        max-height: 60vh;
         border-radius: 0;
         border-left: none;
         border-right: none;
@@ -1622,8 +1632,6 @@
         margin: 0;
         padding: 10px 14px;
       }
-
-      /* Controls LegalBase — input full-width */
 
       .db-ref-chip { font-size: 0.78rem; padding: 3px 8px; }
       /* Ref chips wrap mirë */
@@ -2341,8 +2349,8 @@
 
     <div class="wrap">
       <div class="law-tabs">
-        <div id="dbCatTabs" style="display:contents"></div>
-        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer;opacity:0.7;border-style:dashed"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
+        <div id="dbCatTabs" style="display:flex;gap:6px;align-items:center;flex:1;min-width:0;overflow:hidden"></div>
+        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer;opacity:0.65;border:none;box-shadow:none"><span class="dot" style="opacity:0.5"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
       </div>
 
       <div class="controls" id="dbControlsPanel">
@@ -2551,7 +2559,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.16.2</span>
+      <span class="hint" style="opacity:0.6">v2.16.13</span>
     </div>
   </aside>
 
@@ -2632,7 +2640,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.16.2</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.16.13</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -3629,7 +3637,7 @@
           <div class="db-edit-actions"><span id="dbAutoSaveInd" class="db-autosave-ind"></span>
             <button class="btn btn-primary" id="dbSaveBtn"><i class="fas fa-save"></i> ${L.dbSave||'Save'}</button>
             <button class="btn btn-ghost" id="dbCancelBtn">${L.dbCancel||'Cancel'}</button>
-            <button class="btn" style="margin-left:auto;color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtn"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
+            <button class="btn" style="margin-left:auto;color:var(--danger);border:1px solid var(--danger);background:transparent" id="dbDelBtnEdit"><i class="fas fa-trash"></i> ${L.dbDelete||'Delete'}</button>
           </div>`;
 
         // ── Toolbar logic ──
@@ -3729,7 +3737,7 @@
           dbRender();
         });
         document.getElementById('dbCancelBtn').addEventListener('click',()=>{ dbEditing=false; dbRenderDoc(); });
-        document.getElementById('dbDelBtn').addEventListener('click',()=>{
+        document.getElementById('dbDelBtnEdit').addEventListener('click',()=>{
           if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
           cat.titles=cat.titles.filter(x=>x.id!==t.id);
           dbActiveTitle=null; dbEditing=false; dbSave(); dbRender();
@@ -3784,7 +3792,7 @@
             <button class="btn db-act-edit" id="dbEditBtn"><i class="fas fa-pen"></i> ${L.dbEdit||'Edit'}</button>
             <button class="btn db-act-icon" id="dbDupBtn" title="${L.dbDuplicate||'Duplicate'}"><i class="fas fa-copy"></i></button>
             <button class="btn db-act-icon" id="dbPrintBtn" title="${L.dbPrint||'Print'}"><i class="fas fa-print"></i></button>
-            <button class="btn db-act-del" id="dbDelBtn"><i class="fas fa-trash"></i></button>
+            <button class="btn db-act-del" id="dbDelBtnView"><i class="fas fa-trash"></i></button>
           </div>`;
         document.getElementById('dbEditBtn').addEventListener('click',()=>{ dbEditing=true; dbRenderDoc(); });
         document.getElementById('dbPrintBtn').addEventListener('click',()=>{
@@ -3815,7 +3823,7 @@
           dbActiveTitle = dup.id;
           dbSave(); dbRender();
         });
-        document.getElementById('dbDelBtn').addEventListener('click',()=>{
+        document.getElementById('dbDelBtnView').addEventListener('click',()=>{
           if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
           cat.titles=cat.titles.filter(x=>x.id!==t.id);
           dbActiveTitle=null; dbSave(); dbRender();
