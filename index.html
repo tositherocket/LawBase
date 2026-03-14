@@ -1585,24 +1585,13 @@
       .back-to-top.on { display: inline-flex; }
       .back-to-top:active { transform: scale(0.95); }
 
-      /* LegalBase mobile — articles-list scroll */
-      #dashboardView .articles-list {
-        max-height: 35vh;
-        overflow-y: auto;
-      }
-      /* LegalBase mobile — doc scroll brenda dashboardView */
-      #dashboardView.app {
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-      #dashboardView .doc {
-        max-height: unset;
-        overflow-y: unset;
-      }
-
       /* Tabs LegalBase — kompakt */
       #dashboardView #dbCatTabs { flex-shrink: 0; }
       #dashboardView #dbAddTitleBtn { flex-shrink: 0; }
+      /* Mobile: lista mbi doc, pa kolona */
+      #dashboardView .main { grid-template-columns: 1fr; }
+      #dashboardView .articles-list { max-height: 40vh; }
+      #dashboardView .doc { max-height: unset; }
 
       .db-ref-chip { font-size: 0.78rem; padding: 3px 8px; }
       .db-refs-row { flex-wrap: wrap; gap: 4px; }
@@ -1614,16 +1603,18 @@
     }
 
     /* ══════════════════════════════════════════════
-       LEGALBASE — desktop styles
+       LEGALBASE — desktop styles (>900px)
        Identike me LawBase — calc(100vh - X)
     ══════════════════════════════════════════════ */
-    #dashboardView .articles-list {
-      max-height: calc(100vh - 190px);
-      overflow-y: auto;
-    }
-    #dashboardView .doc {
-      max-height: calc(100vh - 190px);
-      overflow-y: auto;
+    @media (min-width: 901px) {
+      #dashboardView .articles-list {
+        max-height: calc(100vh - 190px);
+        overflow-y: auto;
+      }
+      #dashboardView .doc {
+        max-height: calc(100vh - 190px);
+        overflow-y: auto;
+      }
     }
 
     /* ══════════════════════════════════════════
@@ -2475,7 +2466,7 @@
   <!-- ═══════════════════════════════════════════════
        LEGALBASE — kopje 1:1 e .app (LawBase)
   ═══════════════════════════════════════════════ -->
-  <div id="dashboardView" class="app" style="display:none;position:fixed;inset:0;z-index:200">
+  <div id="dashboardView" class="app" style="display:none">
 
     <header>
       <div class="nav">
@@ -2711,7 +2702,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.4.1</span>
+      <span class="hint" style="opacity:0.6">v3.5.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2785,7 +2776,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.4.1</span>
+      <span class="hint" style="opacity:0.6">v3.5.0</span>
     </div>
   </aside>
 
@@ -5779,9 +5770,9 @@
       const db = document.getElementById('dashboardView');
       const inDB = db && db.style.display !== 'none';
       if(inDB){
-        // Mobile: dashboardView vetë scroll-on
-        // Desktop: #dbDoc scroll-on
-        return isMobile() ? db : (document.getElementById('dbDoc') || db);
+        // Desktop: #dbDoc scroll-on brendshëm
+        // Mobile: window scroll-on — null
+        return isMobile() ? null : (document.getElementById('dbDoc') || null);
       }
       return document.getElementById('doc') || null;
     }
