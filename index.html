@@ -705,7 +705,7 @@
       grid-template-columns: 1fr auto 1fr;
       grid-template-rows: auto;
       align-items: center;
-      gap: 6px;
+      gap: 2px;
       background: var(--panel);
       padding: 8px 16px;
       box-shadow: var(--box-shadow);
@@ -808,11 +808,17 @@
     }
 
     #activeTitle, #dbActiveTitle {
-      margin-top: -2px;
-      padding: 0;
+      margin-top: 2px;
+      padding: 0 0 0 2px;
       font-size: 0.75rem;
       line-height: 1;
       color: var(--muted);
+    }
+
+    /* Fshih hints bosh — parandalon gap të madh */
+    #dbControlsPanel #dbFulltextCount:empty,
+    #dbControlsPanel #dbSearchCount:empty {
+      display: none;
     }
 
     /* Main grid */
@@ -2694,7 +2700,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.6.0</span>
+      <span class="hint" style="opacity:0.6">v3.6.3</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2776,7 +2782,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.6.0</span>
+      <span class="hint" style="opacity:0.6">v3.6.3</span>
     </div>
   </aside>
 
