@@ -713,6 +713,11 @@
       border-top: none;
     }
 
+    #dbControlsPanel {
+      border-left: none;
+      border-right: none;
+    }
+
     /* Hint dhe Active — span të gjitha kolonat */
     #controlsPanel .hint,
     #controlsPanel #activeTitle,
@@ -1580,102 +1585,38 @@
       .back-to-top.on { display: inline-flex; }
       .back-to-top:active { transform: scale(0.95); }
 
-      /* App scroll normale */
-      #dashboardView.app { overflow-y: auto; }
-
-      /* Wrap: kolona pa overflow */
-      #dashboardView .wrap {
-        overflow: visible;
-        flex: none;
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        padding: 0;
-      }
-
-      /* Main: grid 1 kolone */
-      #dashboardView .main {
-        overflow: visible;
-        flex: none;
-        grid-template-columns: 1fr !important;
-        gap: 0;
-        padding: 0;
-      }
-
-      /* Aside (lista titujve): max 35vh scroll */
-      #dashboardView aside { overflow: hidden; }
+      /* LegalBase mobile — articles-list scroll */
       #dashboardView .articles-list {
-        max-height: 35vh !important;
-        height: auto !important;
-        flex: none;
+        max-height: 35vh;
+        overflow-y: auto;
+      }
+      /* LegalBase mobile — doc scroll brenda dashboardView */
+      #dashboardView.app {
         overflow-y: auto;
         overflow-x: hidden;
-        border-radius: 0;
-        border-left: none !important;
-        border-right: none !important;
-        box-shadow: none;
-        margin: 0;
-        padding: 4px 10px;
       }
-      #dashboardView .articles-list .art-link,
-      #dashboardView .articles-list .db-title-link {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      /* Doc: scroll i brendshëm, pa kufij */
       #dashboardView .doc {
         max-height: unset;
-        flex: none;
-        overflow-y: visible;
-        border-radius: 0;
-        border-left: none !important;
-        border-right: none !important;
-        box-shadow: none;
-        margin: 0;
-        padding: 10px !important;
+        overflow-y: unset;
       }
 
       /* Tabs LegalBase — kompakt */
       #dashboardView #dbCatTabs { flex-shrink: 0; }
       #dashboardView #dbAddTitleBtn { flex-shrink: 0; }
 
-      /* Controls LegalBase — input full-width */
-
       .db-ref-chip { font-size: 0.78rem; padding: 3px 8px; }
-      /* Ref chips wrap mirë */
       .db-refs-row { flex-wrap: wrap; gap: 4px; }
-
       .db-tb-sep { display: none; }
-      .db-tb-btn {
-        padding: 4px 6px;
-        min-width: 28px;
-        font-size: 0.8rem;
-      }
+      .db-tb-btn { padding: 4px 6px; min-width: 28px; font-size: 0.8rem; }
       .db-tb-select { max-width: 70px; font-size: 0.75rem; }
-      .db-editor-toolbar {
-        flex-wrap: wrap;
-        gap: 3px;
-        padding: 5px 8px;
-      }
-      /* Editor body: sa gjysma ekranit */
-      .db-editor-body {
-        max-height: 38vh;
-        min-height: 120px;
-      }
+      .db-editor-toolbar { flex-wrap: wrap; gap: 3px; padding: 5px 8px; }
+      .db-editor-body { max-height: 38vh; min-height: 120px; }
     }
 
-        /* ══════════════════════════════════════════════
-       LEGALBASE — vetëm content styles
-       Layout/header/tabs/controls = trashëgohen nga .app
+    /* ══════════════════════════════════════════════
+       LEGALBASE — desktop styles
+       Identike me LawBase — calc(100vh - X)
     ══════════════════════════════════════════════ */
-
-    /* Overlay .app mbi gjithçka */
-    /* ── DESKTOP vetëm (>900px) ── */
-    #dashboardView.app {
-      overflow: hidden;
-    }
     #dashboardView .articles-list {
       max-height: calc(100vh - 190px);
       overflow-y: auto;
@@ -1683,31 +1624,6 @@
     #dashboardView .doc {
       max-height: calc(100vh - 190px);
       overflow-y: auto;
-    }
-
-    /* ── MOBILE — kthe dashboardView si ishte (<900px) ── */
-    @media (max-width: 900px) {
-      #dashboardView.app {
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-      #dashboardView .wrap {
-        flex: none;
-        min-height: unset;
-      }
-      #dashboardView .main {
-        flex: none;
-        min-height: unset;
-        overflow: visible;
-      }
-      #dashboardView .articles-list {
-        height: auto;
-        overflow-y: auto;
-      }
-      #dashboardView .doc {
-        height: auto;
-        overflow-y: visible;
-      }
     }
 
     /* ══════════════════════════════════════════
@@ -2795,7 +2711,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.3.4</span>
+      <span class="hint" style="opacity:0.6">v3.4.1</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2869,7 +2785,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.3.4</span>
+      <span class="hint" style="opacity:0.6">v3.4.1</span>
     </div>
   </aside>
 
