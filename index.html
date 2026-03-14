@@ -2683,10 +2683,18 @@
           <button class="btn btn-ghost lang-btn" data-lang="en">🇬🇧 English</button>
         </div>
       </div>
+      <!-- Swipe toggle -->
+      <div class="group">
+        <h4><i class="fas fa-hand-pointer"></i> <span id="db-lbl-swipe-title">Swipe</span></h4>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem">
+          <input type="checkbox" id="dbSwipeToggle" style="width:16px;height:16px;cursor:pointer" />
+          <span id="db-lbl-swipe-label">Swipe për të kaluar LawBase ↔ LegalBase</span>
+        </label>
+      </div>
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.4</span>
+      <span class="hint" style="opacity:0.6">v3.5.6</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2757,10 +2765,18 @@
           <button class="btn btn-ghost lang-btn lang-active" data-lang="en">🇬🇧 English</button>
         </div>
       </div>
+      <!-- Swipe toggle -->
+      <div class="group">
+        <h4><i class="fas fa-hand-pointer"></i> <span id="lbl-swipe-title">Swipe</span></h4>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem">
+          <input type="checkbox" id="swipeToggle" style="width:16px;height:16px;cursor:pointer" />
+          <span id="lbl-swipe-label">Swipe për të kaluar LawBase ↔ LegalBase</span>
+        </label>
+      </div>
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.4</span>
+      <span class="hint" style="opacity:0.6">v3.5.6</span>
     </div>
   </aside>
 
@@ -5536,7 +5552,7 @@
 
   <!-- Swipe horizontal LawBase ↔ LegalBase me animacion -->
   <style>
-    .app { transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s ease; }
+    .app { transition: transform 0.18s ease-out, opacity 0.18s ease-out; }
     .app.slide-out-left  { transform: translateX(-100%); opacity: 0; pointer-events: none; }
     .app.slide-out-right { transform: translateX(100%);  opacity: 0; pointer-events: none; }
     .app.slide-in-left   { transform: translateX(-100%); opacity: 0; }
@@ -5547,6 +5563,28 @@
     var THRESH = 55;
     var VERT   = 40;
     var startX = 0, startY = 0, tracking = false, animating = false;
+    var STORAGE_KEY = 'swipe-enabled';
+
+    function isEnabled(){ return localStorage.getItem(STORAGE_KEY) !== 'false'; }
+
+    function syncCheckboxes(val){
+      var c1 = document.getElementById('swipeToggle');
+      var c2 = document.getElementById('dbSwipeToggle');
+      if(c1) c1.checked = val;
+      if(c2) c2.checked = val;
+    }
+
+    function initCheckboxes(){
+      syncCheckboxes(isEnabled());
+      ['swipeToggle','dbSwipeToggle'].forEach(function(id){
+        var el = document.getElementById(id);
+        if(!el) return;
+        el.addEventListener('change', function(){
+          localStorage.setItem(STORAGE_KEY, el.checked ? 'true' : 'false');
+          syncCheckboxes(el.checked);
+        });
+      });
+    }
 
     function inDB(){
       var db = document.getElementById('dashboardView');
@@ -5554,20 +5592,18 @@
     }
 
     function switchView(direction){
-      if(animating) return;
+      if(animating || !isEnabled()) return;
       animating = true;
 
       var fromEl = inDB()
         ? document.getElementById('dashboardView')
         : document.querySelector('.app:not(#dashboardView)');
-      var outClass  = direction === 'left' ? 'slide-out-left'  : 'slide-out-right';
-      var inClass   = direction === 'left' ? 'slide-in-right'  : 'slide-in-left';
+      var outClass = direction === 'left' ? 'slide-out-left' : 'slide-out-right';
+      var inClass  = direction === 'left' ? 'slide-in-right' : 'slide-in-left';
 
-      // Animate out current
       fromEl.classList.add(outClass);
 
       setTimeout(function(){
-        // Switch view
         if(direction === 'left'){
           document.getElementById('dashboardBtn').click();
         } else {
@@ -5578,21 +5614,19 @@
           ? document.getElementById('dashboardView')
           : document.querySelector('.app:not(#dashboardView)');
 
-        // Start position for slide-in
         toEl.classList.add(inClass);
-        // Force reflow
         void toEl.offsetWidth;
         toEl.classList.remove(inClass);
 
         setTimeout(function(){
           fromEl.classList.remove(outClass);
           animating = false;
-        }, 350);
-      }, 200);
+        }, 200);
+      }, 100);
     }
 
     document.addEventListener('touchstart', function(e){
-      if(e.touches.length !== 1) return;
+      if(e.touches.length !== 1 || !isEnabled()) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       tracking = true;
@@ -5601,13 +5635,21 @@
     document.addEventListener('touchend', function(e){
       if(!tracking) return;
       tracking = false;
+      if(!isEnabled()) return;
       var dx = e.changedTouches[0].clientX - startX;
       var dy = e.changedTouches[0].clientY - startY;
       if(Math.abs(dy) > VERT)   return;
       if(Math.abs(dx) < THRESH) return;
-      if(!inDB() && dx < 0) switchView('left');   // LawBase → LegalBase
-      if(inDB()  && dx > 0) switchView('right');  // LegalBase → LawBase
+      if(!inDB() && dx < 0) switchView('left');
+      if(inDB()  && dx > 0) switchView('right');
     }, { passive: true });
+
+    // Init pas load
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', initCheckboxes);
+    } else {
+      initCheckboxes();
+    }
   })();
   </script>
   <script>
@@ -5943,7 +5985,7 @@
         dbDropboxSync:'Konfiguro / Sync', dbTheme:'Pamja', dbLang:'Gjuha',
         dbSettings2:'Cilësimet', dbAddCat2:'Shto kategori', dbManageCats2:'Menaxho kategoritë',
         // v3.1.0
-        errQuota:'⚠️ Hapësira e diskut u mbush! Eksporto dhe pastro të dhënat.',
+        errQuota:'⚠️ Hapësira e diskut u mbush! Eksporto dhe pastro të dhënat.', swipeLabel:'Swipe për të kaluar LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Gabim gjatë ruajtjes',
       },
       mk: {
@@ -6011,7 +6053,7 @@
         dbDropboxSync:'Конфигурирај / Синх', dbTheme:'Тема', dbLang:'Јазик',
         dbSettings2:'Поставки', dbAddCat2:'Додај категорија', dbManageCats2:'Управувај со категории',
         // v3.1.0
-        errQuota:'⚠️ Дискот е полн! Извезете и исчистете ги податоците.',
+        errQuota:'⚠️ Дискот е полн! Извезете и исчистете ги податоците.', swipeLabel:'Swipe за префрлање LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Грешка при зачувување',
       },
       en: {
@@ -6079,7 +6121,7 @@
         dbDropboxSync:'Configure / Sync', dbTheme:'Theme', dbLang:'Language',
         dbSettings2:'Settings', dbAddCat2:'Add category', dbManageCats2:'Manage categories',
         // v3.1.0
-        errQuota:'⚠️ Storage quota exceeded! Export and clear your data.',
+        errQuota:'⚠️ Storage quota exceeded! Export and clear your data.', swipeLabel:'Swipe to switch LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Error saving data',
       }
     };
@@ -6124,6 +6166,10 @@
       setT('lbl-dropbox', L.dbDropboxSync||'Configure / Sync');
       setT('lbl-theme-title', L.themeH);
       setT('lbl-lang-title', L.langH);
+      setT('lbl-swipe-title', L.swipeTitle||'Swipe');
+      setT('lbl-swipe-label', L.swipeLabel||'Swipe për të kaluar LawBase ↔ LegalBase');
+      setT('db-lbl-swipe-title', L.swipeTitle||'Swipe');
+      setT('db-lbl-swipe-label', L.swipeLabel||'Swipe për të kaluar LawBase ↔ LegalBase');
       var ft=document.querySelector('#drawer .footer .hint');
       if(ft) ft.innerHTML='<i class="fas fa-info-circle"></i> '+L.footer+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
 
