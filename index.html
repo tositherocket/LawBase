@@ -567,29 +567,41 @@
       #fulltextNextBtn .btn-text,
       #fulltextClear .btn-text,
       #dbSearchBtn .btn-text,
-      #dbSearchNextBtn .btn-text,
-      #dbSearchClear .btn-text {
+      #dbSearchClear .btn-text,
+      #dbFulltextBtn .btn-text,
+      #dbFulltextNextBtn .btn-text,
+      #dbFulltextClear .btn-text {
         display: none;
       }
 
       #searchBtn, #clearSearchBtn,
       #fulltextBtn, #fulltextNextBtn, #fulltextClear,
-      #dbSearchBtn, #dbSearchNextBtn, #dbSearchClear {
+      #dbSearchBtn, #dbSearchClear,
+      #dbFulltextBtn, #dbFulltextNextBtn, #dbFulltextClear {
         padding: 7px 9px;
         min-width: 0;
       }
 
-      /* Search rows — njëri mbi tjetrin: vsep bëhet line-break */
-      #controlsPanel .controls-row,
-      #dbControlsPanel .controls-row {
-        flex-wrap: wrap;
+      /* Mobile: dy rreshtat njëri mbi tjetrin — LawBase dhe LegalBase */
+      #controlsPanel,
+      #dbControlsPanel {
+        grid-template-columns: 1fr;
+        gap: 5px;
       }
 
-      .controls-vsep {
-        width: 100%;
-        height: 1px;
-        background: var(--border);
-        margin: 2px 0;
+      /* Active/hint — full width në mobile */
+      #controlsPanel .hint,
+      #controlsPanel #activeTitle,
+      #dbControlsPanel .hint,
+      #dbControlsPanel #dbActiveTitle,
+      #dbControlsPanel #dbSearchCount,
+      #dbControlsPanel #dbFulltextCount {
+        grid-column: 1;
+      }
+
+      /* Ndarësi desktop → fshihet në mobile */
+      .controls-vsep-h {
+        display: none;
       }
     }
 
@@ -626,13 +638,13 @@
     }
 
     .wrap {
-      padding: 12px 16px;
+      padding: 12px 16px 4px;
       max-width: 1800px;
       margin: 0 auto;
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 6px;
     }
 
     /* Compact tabs */
@@ -689,9 +701,11 @@
 
     /* CONTROLS - search panel */
     .controls {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      grid-template-rows: auto;
+      align-items: center;
+      gap: 6px;
       background: var(--panel);
       padding: 8px 12px;
       box-shadow: var(--box-shadow);
@@ -699,11 +713,44 @@
       border-top: none;
     }
 
-    /* Çdo grup search: input + butona në 1 rresht */
+    /* Hint dhe Active — span të gjitha kolonat */
+    #controlsPanel .hint,
+    #controlsPanel #activeTitle,
+    #dbControlsPanel .hint,
+    #dbControlsPanel #dbActiveTitle,
+    #dbControlsPanel #dbSearchCount,
+    #dbControlsPanel #dbFulltextCount {
+      grid-column: 1 / -1;
+    }
+
+    /* controls-vsep-h — ndarës vertikal qendër */
+    .controls-vsep-h {
+      width: 1px;
+      height: 28px;
+      background: var(--border);
+      justify-self: center;
+    }
+
+    /* Çdo controls-row merr hapësirën e vet */
     .controls-row {
       display: flex;
       gap: 6px;
       align-items: center;
+      min-width: 0;
+    }
+
+    .controls-row input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Ndarësi vertikal origjinal (desktop, brenda rreshtit) */
+    .controls-vsep {
+      width: 1px;
+      height: 28px;
+      background: var(--border);
+      flex-shrink: 0;
+      margin: 0 2px;
     }
 
     .controls input {
@@ -776,7 +823,7 @@
       border-radius: var(--border-radius);
       padding: 12px;
       box-shadow: var(--box-shadow);
-      max-height: calc(100vh - 220px);
+      max-height: calc(100vh - 190px);
       overflow: auto;
       border: 1px solid var(--border);
     }
@@ -804,11 +851,11 @@
     .doc {
       background: var(--panel);
       border-radius: var(--border-radius);
-      padding: 16px 20px;
+      padding: 16px 20px 8px;
       box-shadow: var(--box-shadow);
       overflow-y: auto;
       overflow-x: hidden;
-      max-height: calc(100vh - 220px);
+      max-height: calc(100vh - 190px);
       box-sizing: border-box;
       border: 1px solid var(--border);
     }
@@ -1626,28 +1673,27 @@
 
     /* Overlay .app mbi gjithçka */
     #dashboardView.app {
-      overflow: hidden;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
     #dashboardView .wrap {
-      overflow: hidden;
       flex: 1;
-      min-height: 0;
+      display: flex;
+      flex-direction: column;
     }
     #dashboardView .main {
-      overflow: hidden;
-      flex: 1;
-      min-height: 0;
+      display: grid;
+      grid-template-columns: 240px 1fr;
     }
     #dashboardView .articles-list {
       max-height: unset;
-      flex: 1;
-      height: 100%;
-      overflow-y: auto;
+      height: auto;
+      overflow-y: visible;
     }
     #dashboardView .doc {
       max-height: unset;
-      flex: 1;
-      overflow-y: auto;
+      overflow-y: visible;
     }
 
     /* ══════════════════════════════════════════
@@ -2470,7 +2516,9 @@
           <input id="searchInput" type="text" placeholder="" />
           <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
           <button id="clearSearchBtn" class="btn btn-ghost"><i class="fas fa-times"></i></button>
-          <div class="controls-vsep"></div>
+        </div>
+        <div class="controls-vsep-h"></div>
+        <div class="controls-row">
           <input id="fulltextInput" type="text" placeholder="" />
           <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
           <button id="fulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
@@ -2516,16 +2564,23 @@
     <div class="wrap">
       <div class="law-tabs">
         <div id="dbCatTabs" style="display:contents"></div>
-        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer;opacity:0.7;border-style:dashed"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
+        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer;opacity:0.7;border:none"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
       </div>
 
       <div class="controls" id="dbControlsPanel">
         <div class="controls-row">
           <input id="dbSearchInput" type="text" placeholder="" />
           <button id="dbSearchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
-          <button id="dbSearchNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
           <button id="dbSearchClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
         </div>
+        <div class="controls-vsep-h"></div>
+        <div class="controls-row">
+          <input id="dbFulltextInput" type="text" placeholder="" />
+          <button id="dbFulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="dbFulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
+          <button id="dbFulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+        </div>
+        <span id="dbFulltextCount" class="hint"></span>
         <span id="dbSearchCount" class="hint"></span>
         <div id="dbActiveTitle" class="hint"></div>
       </div>
@@ -4233,12 +4288,10 @@
         const t = cat && dbActiveTitle && cat.titles.find(x=>x.id===dbActiveTitle);
         el.textContent = cat ? (t ? `${L.dbActive||'Active:'} ${cat.name} > ${t.title||noTitle}` : `${L.dbActive||'Active:'} ${cat.name}`) : '';
       }
-      if(typeof dbApplySearch==='function'){
-        dbApplySearch();
-        // Highlight search term in the currently open note
-        if(dbSearchQuery && dbSearchQuery.trim()){
-          setTimeout(()=>dbHighlightInDoc(dbSearchQuery.trim()), 50);
-        }
+      if(typeof dbApplySearch==='function') dbApplySearch();
+      // Re-run fulltext highlight kur ndërrohet shënimi
+      if(typeof dbRunFulltext==='function' && dbFtQuery){
+        setTimeout(dbRunFulltext, 60);
       }
     }
 
@@ -4364,6 +4417,11 @@
     let dbSearchHitIdx = 0;
     let dbSearchHits = [];
 
+    // ── Fulltext search brenda content (Search 2) ──
+    let dbFtQuery = '';
+    let dbFtResults = [];
+    let dbFtIdx = -1;
+
     // Global search index: titleId -> title object (across ALL cats)
     function dbBuildSearchIndex(){
       const idx = {};
@@ -4373,6 +4431,7 @@
       return idx;
     }
 
+    // Search 1: filtron listën sipas TITULLIT
     function dbApplySearch(){
       const q = dbSearchQuery.toLowerCase().trim();
       const links = dbTitlesListEl.querySelectorAll('.art-link');
@@ -4384,35 +4443,40 @@
         return;
       }
 
-      // Build index across ALL cats so cross-category search works
-      const idx = dbBuildSearchIndex();
-
       links.forEach(link => {
-        const titleId = link.dataset.tid;
-        const entry = idx[titleId];
-        const t = entry && entry.t;
         const inTitle = link.textContent.toLowerCase().includes(q);
-        const bodyText = t ? (t.body||'').replace(/<[^>]+>/g,'') : '';
-        const inBody  = bodyText.toLowerCase().includes(q);
-        const matches = inTitle || inBody;
-        link.style.display = matches ? '' : 'none';
-        link.classList.toggle('db-match', matches);
-        link.classList.toggle('db-match-body', !!(inBody && !inTitle));
-        if(matches) dbSearchHits.push(link);
+        link.style.display = inTitle ? '' : 'none';
+        link.classList.toggle('db-match', inTitle);
+        link.classList.remove('db-match-body');
+        if(inTitle) dbSearchHits.push(link);
       });
 
       dbSearchHitIdx = 0;
       const L=window._dbLang||window._uiLang||{};
-      dbSearchCountEl.textContent = (L.hits||function(n){return n+' rezultate';})(dbSearchHits.length);
+      dbSearchCountEl.textContent = dbSearchHits.length
+        ? (L.hits||function(n){return n+' rezultate';})(dbSearchHits.length)
+        : (L.noHits||'⚠️ Nuk ka rezultate');
     }
 
-    // Highlight search term inside rendered note body
-    function dbHighlightInDoc(q){
-      if(!q) return;
+    // Search 2: fulltext highlight brenda content (identike me LawBase)
+    function dbClearFtHighlights(){
       const bodyEl = dbDocEl.querySelector('.db-note-body-view');
       if(!bodyEl) return;
-      // Walk text nodes and wrap matches
-      const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+      bodyEl.querySelectorAll('.db-srch-hl').forEach(m=>{
+        m.replaceWith(document.createTextNode(m.textContent));
+      });
+    }
+
+    function dbRunFulltext(){
+      dbClearFtHighlights();
+      dbFtResults = []; dbFtIdx = -1;
+      const ftCountEl = document.getElementById('dbFulltextCount');
+      if(!dbFtQuery){ if(ftCountEl) ftCountEl.textContent=''; return; }
+
+      const bodyEl = dbDocEl.querySelector('.db-note-body-view');
+      if(!bodyEl){ if(ftCountEl) ftCountEl.textContent=''; return; }
+
+      const re = new RegExp('('+dbFtQuery.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
       function walk(node){
         if(node.nodeType===3){
           const text = node.textContent;
@@ -4427,15 +4491,40 @@
         }
       }
       walk(bodyEl);
-      // Scroll first highlight into view
-      const first = bodyEl.querySelector('.db-srch-hl');
-      if(first) first.scrollIntoView({behavior:'smooth', block:'center'});
+
+      dbFtResults = Array.from(bodyEl.querySelectorAll('.db-srch-hl'));
+      const L=window._dbLang||window._uiLang||{};
+      if(ftCountEl){
+        ftCountEl.textContent = dbFtResults.length
+          ? (L.hits||function(n){return 'Gjithsej: '+n+' -- Kliko "Tjetri"';})(dbFtResults.length)
+          : (L.noHits||'⚠️ Nuk ka rezultate');
+      }
+      if(dbFtResults.length){ dbFtIdx=0; dbFtScrollTo(0); }
     }
 
+    function dbFtScrollTo(i){
+      if(!dbFtResults.length) return;
+      dbFtResults.forEach(m=>{ m.style.outline=''; m.style.background=''; });
+      const cur = dbFtResults[i];
+      cur.style.outline = '2px solid var(--primary)';
+      cur.style.background = 'rgba(67,97,238,0.25)';
+      cur.scrollIntoView({behavior:'smooth', block:'center'});
+      const L=window._dbLang||window._uiLang||{};
+      const ftCountEl = document.getElementById('dbFulltextCount');
+      if(ftCountEl) ftCountEl.textContent = (L.hitNav||function(i,n){return 'Rezultati '+i+' nga '+n;})(i+1, dbFtResults.length);
+    }
+
+    // Highlight search term inside rendered note body (called from dbRender)
+    function dbHighlightInDoc(q){
+      if(!q) return;
+      dbFtQuery = q;
+      dbRunFulltext();
+    }
+
+    // ── Event listeners Search 1 (title filter) ──
     dbSearchInputEl.addEventListener('input', () => {
       dbSearchQuery = dbSearchInputEl.value;
-      document.getElementById('dbSearchClear').style.display = dbSearchQuery ? '' : 'none';
-      dbRenderTitles(); // re-render list (all cats in search mode, active cat otherwise)
+      dbRenderTitles();
       dbApplySearch();
     });
     document.getElementById('dbSearchBtn').addEventListener('click', () => {
@@ -4443,18 +4532,37 @@
       dbRenderTitles();
       dbApplySearch();
     });
-    document.getElementById('dbSearchNextBtn').addEventListener('click', () => {
-      if(!dbSearchHits.length) return;
-      dbSearchHitIdx = (dbSearchHitIdx + 1) % dbSearchHits.length;
-      dbSearchHits[dbSearchHitIdx].scrollIntoView({block:'nearest'});
-      dbSearchHits[dbSearchHitIdx].click();
-    });
     document.getElementById('dbSearchClear').addEventListener('click', () => {
       dbSearchInputEl.value = ''; dbSearchQuery = '';
-      document.getElementById('dbSearchClear').style.display = 'none';
       dbSearchCountEl.textContent = '';
-      dbRenderTitles(); // restore normal category view
+      dbRenderTitles();
       dbApplySearch();
+    });
+
+    // ── Event listeners Search 2 (fulltext in content) ──
+    const dbFtInput = document.getElementById('dbFulltextInput');
+    let _dbFtDebounce = null;
+    dbFtInput.addEventListener('input', () => {
+      dbFtQuery = dbFtInput.value.trim();
+      clearTimeout(_dbFtDebounce);
+      _dbFtDebounce = setTimeout(dbRunFulltext, 200);
+    });
+    document.getElementById('dbFulltextBtn').addEventListener('click', () => {
+      dbFtQuery = dbFtInput.value.trim();
+      dbRunFulltext();
+    });
+    dbFtInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); dbFtQuery=dbFtInput.value.trim(); dbRunFulltext(); }});
+    document.getElementById('dbFulltextNextBtn').addEventListener('click', () => {
+      if(!dbFtResults.length) return;
+      dbFtIdx = (dbFtIdx + 1) % dbFtResults.length;
+      dbFtScrollTo(dbFtIdx);
+    });
+    document.getElementById('dbFulltextClear').addEventListener('click', () => {
+      dbFtInput.value = ''; dbFtQuery = '';
+      dbClearFtHighlights();
+      dbFtResults = []; dbFtIdx = -1;
+      const ftCountEl = document.getElementById('dbFulltextCount');
+      if(ftCountEl) ftCountEl.textContent = '';
     });
 
     // ── "Shto titull" button in header ──
@@ -5801,7 +5909,7 @@
         fontSizeLabel:'Madhësia e tekstit',
         // LegalBase
         dbAddTitle:'Shto titull', dbBack:'Kthehu', dbSettings:'Cilësimet',
-        dbSearchPh:'Kërko në tekst...', dbSearchBtn:'Kërko', dbNext:'Tjetri', dbClear:'Pastro',
+        dbSearchPh:'Kërko sipas titullit...', dbFulltextPh:'Kërko në përmbajtje...', dbSearchBtn:'Kërko', dbNext:'Tjetri', dbClear:'Pastro',
         dbActive:'Aktiv:', dbNoCat:'Zgjidh një kategori', dbNoTitles:'Nuk ka tituj',
         dbSelectTitle:'Zgjidh ose shto një titull',
         dbCatsTitle:'Kategoritë', dbAddCat:'Shto kategori', dbManageCats:'Menaxho kategoritë',
@@ -5869,7 +5977,7 @@
         fontSizeLabel:'Големина на текстот',
         // LegalBase
         dbAddTitle:'Додај наслов', dbBack:'Назад', dbSettings:'Поставки',
-        dbSearchPh:'Пребарај во текст...', dbSearchBtn:'Пребарај', dbNext:'Наредно', dbClear:'Исчисти',
+        dbSearchPh:'Пребарај по наслов...', dbFulltextPh:'Пребарај во содржина...', dbSearchBtn:'Пребарај', dbNext:'Наредно', dbClear:'Исчисти',
         dbActive:'Активен:', dbNoCat:'Избери категорија', dbNoTitles:'Нема наслови',
         dbSelectTitle:'Избери или додај наслов',
         dbCatsTitle:'Категории', dbAddCat:'Додај категорија', dbManageCats:'Управувај со категории',
@@ -5937,7 +6045,7 @@
         fontSizeLabel:'Text size',
         // LegalBase
         dbAddTitle:'Add title', dbBack:'Back', dbSettings:'Settings',
-        dbSearchPh:'Search in text...', dbSearchBtn:'Search', dbNext:'Next', dbClear:'Clear',
+        dbSearchPh:'Search by title...', dbFulltextPh:'Search in content...', dbSearchBtn:'Search', dbNext:'Next', dbClear:'Clear',
         dbActive:'Active:', dbNoCat:'Select a category', dbNoTitles:'No titles',
         dbSelectTitle:'Select or add a title',
         dbCatsTitle:'Categories', dbAddCat:'Add category', dbManageCats:'Manage categories',
@@ -6042,10 +6150,13 @@
       if(dbAddTitleEl) dbAddTitleEl.querySelector('.title').innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddTitle||L.addBtn);
       setH('dbBackBtn', '<i class="fas fa-arrow-left"></i> LawBase');
       setH('dbOpenSettings', '<i class="fas fa-cog"></i>');
-      setP('dbSearchInput', L.dbSearchPh||L.fulltextPh);
+      setP('dbSearchInput', L.dbSearchPh||'Kërko sipas titullit...');
       setH('dbSearchBtn', '<i class="fas fa-search"></i><span class="btn-text"> '+(L.dbSearchBtn||L.searchBtn)+'</span>');
-      setH('dbSearchNextBtn', '<i class="fas fa-arrow-down"></i><span class="btn-text"> '+(L.dbNext||L.nextBtn)+'</span>');
       setH('dbSearchClear', '<i class="fas fa-times"></i><span class="btn-text"> '+(L.dbClear||L.clearBtn)+'</span>');
+      setP('dbFulltextInput', L.dbFulltextPh||'Kërko në përmbajtje...');
+      setH('dbFulltextBtn', '<i class="fas fa-search"></i><span class="btn-text"> '+(L.dbSearchBtn||L.searchBtn)+'</span>');
+      setH('dbFulltextNextBtn', '<i class="fas fa-arrow-down"></i><span class="btn-text"> '+(L.dbNext||L.nextBtn)+'</span>');
+      setH('dbFulltextClear', '<i class="fas fa-times"></i><span class="btn-text"> '+(L.dbClear||L.clearBtn)+'</span>');
       var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong span');
       if(dbSettingsH) dbSettingsH.textContent = L.settingsBtn||'Settings';
       // ── LegalBase settings drawer i18n ──
