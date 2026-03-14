@@ -1602,10 +1602,12 @@
       .db-editor-body { max-height: 38vh; min-height: 120px; }
     }
 
-    /* ══════════════════════════════════════════════
-       LEGALBASE — desktop styles (>900px)
-       Identike me LawBase — calc(100vh - X)
-    ══════════════════════════════════════════════ */
+    /* Fshih LawBase controls kur LegalBase është aktive */
+    body.legalbase-active #controlsPanel,
+    body.legalbase-active .mobile-sticky-search,
+    body.legalbase-active .app:not(#dashboardView) {
+      display: none !important;
+    }
     @media (min-width: 901px) {
       #dashboardView .articles-list {
         max-height: calc(100vh - 190px);
@@ -2311,24 +2313,6 @@
       background: var(--muted);
     }
 
-    /* ══ v3.1.0 — Tooltip for shortcuts ══ */
-    [data-tip] { position: relative; }
-    [data-tip]:hover::after {
-      content: attr(data-tip);
-      position: absolute;
-      bottom: calc(100% + 6px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.82);
-      color: #fff;
-      font-size: 0.7rem;
-      white-space: nowrap;
-      padding: 3px 8px;
-      border-radius: 5px;
-      pointer-events: none;
-      z-index: 9999;
-    }
-
     /* ══ v3.1.0 — modal annotation ══ */
     #noteModal {
       position: fixed;
@@ -2417,10 +2401,10 @@
           <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
-          <button id="dashboardBtn" class="btn btn-ghost" data-tip="LegalBase (Shënime)" title=""><i class="fas fa-sticky-note"></i> LegalBase</button>
-          <button id="readingModeBtn" class="btn btn-ghost" data-tip="Reading Mode" title=""><i class="fas fa-book-open"></i></button>
-          <button id="dbDriveBtnLB" class="btn btn-ghost" data-tip="Dropbox Sync" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
-          <button id="openSettings" class="btn btn-ghost" data-tip="Cilësimet" title="Settings"><i class="fas fa-cog"></i></button>
+          <button id="dashboardBtn" class="btn btn-ghost" title=""><i class="fas fa-sticky-note"></i> LegalBase</button>
+          <button id="readingModeBtn" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
+          <button id="dbDriveBtnLB" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
+          <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
       </div>
     </header>
@@ -2702,7 +2686,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.0</span>
+      <span class="hint" style="opacity:0.6">v3.5.3</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2776,7 +2760,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.0</span>
+      <span class="hint" style="opacity:0.6">v3.5.3</span>
     </div>
   </aside>
 
@@ -5327,6 +5311,7 @@
     document.getElementById('dbBackBtn').addEventListener('click', () => {
       dashboardView.style.display = 'none';
       appEl.style.display = '';
+      document.body.classList.remove('legalbase-active');
       localStorage.setItem('active-view', 'lawbase');
       setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 100);
     });
@@ -5336,6 +5321,7 @@
       if(document.body.classList.contains('reading-mode')) leaveReadingMode();
       appEl.style.display = 'none';
       dashboardView.style.display = 'flex';
+      document.body.classList.add('legalbase-active');
       localStorage.setItem('active-view', 'legalbase');
       if(!dbData.cats || !dbData.cats.length){
         dbLoad().then(()=>{ dbRender(); setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 100); });
@@ -5496,6 +5482,7 @@
       if(localStorage.getItem('active-view') === 'legalbase'){
         appEl.style.display = 'none';
         dashboardView.style.display = 'flex';
+        document.body.classList.add('legalbase-active');
         dbRender();
         if(window._dbStartupSync) window._dbStartupSync();
       }
@@ -5547,7 +5534,46 @@
     }
   </script>
 
-  <!-- Article Cross-Reference Popup -->
+  <!-- Swipe horizontal LawBase ↔ LegalBase -->
+  <script>
+  (function(){
+    var THRESH = 60;   // px minimum swipe
+    var VERT   = 40;   // px max vertical movement (to avoid scroll conflict)
+    var startX = 0, startY = 0, tracking = false;
+
+    function inDB(){
+      var db = document.getElementById('dashboardView');
+      return db && db.style.display !== 'none';
+    }
+
+    function goToLegalBase(){
+      var btn = document.getElementById('dashboardBtn');
+      if(btn) btn.click();
+    }
+    function goToLawBase(){
+      var btn = document.getElementById('dbBackBtn');
+      if(btn) btn.click();
+    }
+
+    document.addEventListener('touchstart', function(e){
+      if(e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, { passive: true });
+
+    document.addEventListener('touchend', function(e){
+      if(!tracking) return;
+      tracking = false;
+      var dx = e.changedTouches[0].clientX - startX;
+      var dy = e.changedTouches[0].clientY - startY;
+      if(Math.abs(dy) > VERT) return;  // shumë vertikal — scroll normal
+      if(Math.abs(dx) < THRESH) return; // shumë i shkurtër
+      if(!inDB() && dx < 0) goToLegalBase();  // LawBase → swipe majtas → LegalBase
+      if(inDB()  && dx > 0) goToLawBase();    // LegalBase → swipe djathtas → LawBase
+    }, { passive: true });
+  })();
+  </script>
   <script>
   document.addEventListener('DOMContentLoaded', function(){
     const popup    = document.getElementById('artPopup');
