@@ -775,7 +775,6 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
     }
 
     /* Articles list */
@@ -1479,7 +1478,7 @@
       .controls {
         flex-direction: column;
         gap: 3px;
-        padding: 5px 10px;
+        padding: 5px 16px;
       }
       .controls-row {
         flex: unset;
@@ -1545,10 +1544,25 @@
       }
 
       header { position: relative; }
-      .main { grid-template-columns: 1fr; }
-      .doc { max-height: unset; }
-      .articles-list { max-height: 40vh; }
+      .main {
+        grid-template-columns: 1fr;
+        padding: 0;
+        gap: 0;
+        overflow: visible;
+        flex: none;
+        min-height: 0;
+      }
+      .doc { max-height: unset; border-radius: 0; border-left: none; border-right: none; box-shadow: none; }
+      .articles-list {
+        max-height: 40vh;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        box-shadow: none;
+        padding: 4px 10px;
+      }
       .drawer { width: 100%; right: -100%; }
+      #activeTitle, #dbActiveTitle { display: block; }
 
       .controls.mobile-fixed.only-fulltext #searchInput,
       .controls.mobile-fixed.only-fulltext #searchBtn,
@@ -2346,10 +2360,7 @@
     </header>
 
     <div class="wrap">
-      <div class="law-tabs">
-        <div id="dbCatTabs" style="display:flex;gap:6px;align-items:center;flex:1;min-width:0;overflow:hidden"></div>
-        <div id="dbAddTitleBtn" class="law-tab" style="flex-shrink:0;cursor:pointer;opacity:0.7;border:none;box-shadow:none"><span class="dot"></span><span class="title"><i class="fas fa-plus"></i> Shto titull</span></div>
-      </div>
+      <div id="dbCatTabs" class="law-tabs"></div>
 
       <div class="controls" id="dbControlsPanel">
         <div class="controls-row">
@@ -2557,7 +2568,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v2.17.4</span>
+      <span class="hint" style="opacity:0.6">v3.0.2</span>
     </div>
   </aside>
 
@@ -2638,7 +2649,7 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v2.17.4</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v3.0.2</span></div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -3428,12 +3439,13 @@
     }
 
     function dbSave(){
-      // Invalidate LawBase doc cache so ref badges re-render
+      // Ruaj gjendjen aktive
+      dbData._activeCat   = dbActiveCat  || null;
+      dbData._activeTitle = dbActiveTitle || null;
       if(window._docCache) Object.keys(window._docCache).forEach(k=>delete window._docCache[k]);
       openDB().then(db=>{
         db.transaction('data','readwrite').objectStore('data').put(dbData, DB_NOTES_KEY);
-      }).catch(e=>console.error('dbSave:',e));
-      // Trigger Dropbox auto-sync if enabled
+      }).catch(e=>{});
       if(window._dbDropboxAutoSync) window._dbDropboxAutoSync();
     }
 
@@ -3448,7 +3460,16 @@
             else d={cats:[]};
           }
           dbData=d;
-          if(dbData.cats && dbData.cats.length && !dbActiveCat){
+          // Rikthe kategorinë dhe titullin e fundit
+          if(dbData._activeCat && dbData.cats.find(c=>c.id===dbData._activeCat)){
+            dbActiveCat = dbData._activeCat;
+            const cat = dbData.cats.find(c=>c.id===dbActiveCat);
+            if(dbData._activeTitle && cat && cat.titles && cat.titles.find(t=>t.id===dbData._activeTitle)){
+              dbActiveTitle = dbData._activeTitle;
+            } else if(cat && cat.titles && cat.titles.length){
+              dbActiveTitle = cat.titles[0].id;
+            }
+          } else if(dbData.cats && dbData.cats.length){
             dbActiveCat = dbData.cats[0].id;
             const firstCat = dbData.cats[0];
             if(firstCat.titles && firstCat.titles.length) dbActiveTitle = firstCat.titles[0].id;
@@ -3468,6 +3489,7 @@
     function dbRenderTabs(){
       const el = document.getElementById('dbCatTabs');
       el.innerHTML='';
+      const L=window._dbLang||window._uiLang||{};
       dbData.cats.forEach(cat=>{
         const tab=document.createElement('div');
         tab.className='law-tab'+(dbActiveCat===cat.id?' active':'');
@@ -3475,6 +3497,18 @@
         tab.addEventListener('click',()=>{ dbActiveCat=cat.id; dbActiveTitle=null; dbEditing=false; dbRender(); });
         el.appendChild(tab);
       });
+      // Shto titull — si tab i fundit
+      const addBtn=document.createElement('div');
+      addBtn.id='dbAddTitleBtn';
+      addBtn.className='law-tab';
+      addBtn.style.cssText='flex-shrink:0;cursor:pointer;opacity:0.7;border:none!important;box-shadow:none!important';
+      addBtn.innerHTML='<span class="dot"></span><span class="title"><i class="fas fa-plus"></i> '+(L.dbAddTitle||'Shto titull')+'</span>';
+      addBtn.addEventListener('click',()=>{
+        if(dbActiveCat){ dbNewTitle(dbActiveCat); }
+        else if(dbData.cats.length>0){ dbActiveCat=dbData.cats[0].id; dbNewTitle(dbActiveCat); dbRender(); }
+        else { alert((window._dbLang&&window._dbLang.noCatFirst)||'First add a category via ⚙️'); }
+      });
+      el.appendChild(addBtn);
     }
 
     // ── Render titles list (sidebar) ──
@@ -4011,19 +4045,23 @@
       updateConfirmLabel();
     }
 
+    function _updateActiveBreadcrumb(){
+      const el = document.getElementById('dbActiveTitle');
+      if(!el) return;
+      const L = window._dbLang||window._uiLang||{};
+      const cat = dbFindCat(dbActiveCat);
+      if(!cat){ el.textContent=''; return; }
+      const noTitle = L.dbNoTitle||'(no title)';
+      const t = cat.titles && dbActiveTitle ? cat.titles.find(x=>x.id===dbActiveTitle) : null;
+      const prefix = L.dbActive||'Aktiv:';
+      el.textContent = t ? `${prefix} ${cat.name} > ${t.title||noTitle}` : `${prefix} ${cat.name}`;
+    }
+
     function dbRender(){
       dbRenderTabs(); dbRenderTitles(); dbRenderDoc();
-      const L=window._dbLang||window._uiLang||{};
-      const el = document.getElementById('dbActiveTitle');
-      if(el){
-        const cat = dbFindCat(dbActiveCat);
-        const noTitle = L.dbNoTitle||'(no title)';
-        const t = cat && dbActiveTitle && cat.titles.find(x=>x.id===dbActiveTitle);
-        el.textContent = cat ? (t ? `${L.dbActive||'Active:'} ${cat.name} > ${t.title||noTitle}` : `${L.dbActive||'Active:'} ${cat.name}`) : '';
-      }
+      _updateActiveBreadcrumb();
       if(typeof dbApplySearch==='function'){
         dbApplySearch();
-        // Highlight search term in the currently open note
         if(dbSearchQuery && dbSearchQuery.trim()){
           setTimeout(()=>dbHighlightInDoc(dbSearchQuery.trim()), 50);
         }
@@ -4274,19 +4312,6 @@
       document.getElementById('dbBodySearchClear').style.display = 'none';
       dbClearBodyHighlights();
       if(!dbSearchQuery) dbSearchCountEl.textContent = '';
-    });
-
-    // ── "Shto titull" button in header ──
-    document.getElementById('dbAddTitleBtn').addEventListener('click', () => {
-      if(dbActiveCat) {
-        dbNewTitle(dbActiveCat);
-      } else if(dbData.cats.length > 0) {
-        dbActiveCat = dbData.cats[0].id;
-        dbNewTitle(dbActiveCat);
-        dbRender();
-      } else {
-        alert((window._dbLang&&window._dbLang.noCatFirst)||'First add a category via ⚙️');
-      }
     });
 
     // ── Back to laws ──
