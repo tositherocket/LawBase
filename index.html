@@ -707,7 +707,7 @@
       align-items: center;
       gap: 6px;
       background: var(--panel);
-      padding: 8px 12px;
+      padding: 8px 16px;
       box-shadow: var(--box-shadow);
       border: 1px solid var(--border);
       border-top: none;
@@ -1672,28 +1672,59 @@
     ══════════════════════════════════════════════ */
 
     /* Overlay .app mbi gjithçka */
+    /* ── DESKTOP vetëm (>900px) ── */
     #dashboardView.app {
-      overflow-y: auto;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     #dashboardView .wrap {
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
     }
     #dashboardView .main {
       display: grid;
       grid-template-columns: 240px 1fr;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
     }
     #dashboardView .articles-list {
       max-height: unset;
-      height: auto;
-      overflow-y: visible;
+      height: 100%;
+      overflow-y: auto;
     }
     #dashboardView .doc {
       max-height: unset;
-      overflow-y: visible;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    /* ── MOBILE — kthe dashboardView si ishte (<900px) ── */
+    @media (max-width: 900px) {
+      #dashboardView.app {
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      #dashboardView .wrap {
+        flex: none;
+        min-height: unset;
+      }
+      #dashboardView .main {
+        flex: none;
+        min-height: unset;
+        overflow: visible;
+      }
+      #dashboardView .articles-list {
+        height: auto;
+        overflow-y: auto;
+      }
+      #dashboardView .doc {
+        height: auto;
+        overflow-y: visible;
+      }
     }
 
     /* ══════════════════════════════════════════
@@ -2781,17 +2812,16 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.1.0</span>
+      <span class="hint" style="opacity:0.6">v3.1.7</span>
     </div>
   </aside>
-
-  <!-- Settings drawer -->
   <aside id="drawer" class="drawer" aria-hidden="true">
     <header>
-      <strong><i class="fas fa-cog"></i> Settings</strong>
+      <strong><i class="fas fa-cog"></i> <span id="lbl-settings-title">Settings</span></strong>
       <div style="float:right"><button id="closeSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
     </header>
     <div class="body">
+      <!-- LawBase-only: Shto ligj + Menaxho ligjet -->
       <div class="group">
         <h4><i class="fas fa-plus"></i> <span id="lbl-add-law">Add Law</span></h4>
         <div class="row">
@@ -2799,50 +2829,41 @@
         </div>
       </div>
       <div class="group">
-        <h4><i class="fas fa-gavel"></i> Laws</h4>
+        <h4><i class="fas fa-gavel"></i> <span id="lbl-laws-title">Laws</span></h4>
         <div id="lawsManager"></div>
-        <div class="hint">Rename, edit content and delete laws here.</div>
+        <div class="hint" id="lbl-laws-hint">Rename, edit content and delete laws here.</div>
       </div>
+      <!-- Import / Export -->
       <div class="group">
-        <h4><i class="fas fa-file-import"></i> Import / Export</h4>
+        <h4><i class="fas fa-file-import"></i> <span id="lbl-imp-exp">Import / Export</span></h4>
         <div class="row">
-          <button id="exportBtn" class="btn btn-ghost"><i class="fas fa-file-export"></i> Export (JSON)</button>
-          <button id="importBtn" class="btn btn-ghost"><i class="fas fa-file-import"></i> Import</button>
+          <button id="exportBtn" class="btn btn-ghost"><i class="fas fa-file-export"></i> <span id="lbl-export">Export (JSON)</span></button>
+          <button id="importBtn" class="btn btn-ghost"><i class="fas fa-file-import"></i> <span id="lbl-import">Import</span></button>
           <input id="importFile" type="file" accept=".json" style="display:none" />
         </div>
-        <button id="clearAllBtn" class="btn btn-ghost" style="color:var(--danger)"><i class="fas fa-trash"></i> Clear all</button>
+        <button id="clearAllBtn" class="btn btn-ghost" style="color:var(--danger)"><i class="fas fa-trash"></i> <span id="lbl-clear-all">Clear all</span></button>
       </div>
+      <!-- Dropbox -->
       <div class="group">
-        <h4 id="themeGroupH4"><i class="fas fa-palette"></i> Theme</h4>
-        <!-- Light / Dark toggle -->
+        <h4><i class="fab fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h4>
+        <div class="row">
+          <button id="lbSettingsDriveBtn" class="btn btn-ghost" style="flex:1"><i class="fas fa-cloud"></i> <span id="lbl-dropbox">Configure / Sync</span></button>
+        </div>
+      </div>
+      <!-- Theme -->
+      <div class="group">
+        <h4 id="themeGroupH4"><i class="fas fa-palette"></i> <span id="lbl-theme-title">Theme</span></h4>
         <div class="theme-mode-row">
           <button class="theme-mode-btn active" data-mode="light"><i class="fas fa-sun"></i> Light</button>
           <button class="theme-mode-btn" data-mode="dark"><i class="fas fa-moon"></i> Dark</button>
         </div>
-        <!-- Style picker -->
         <div class="theme-picker">
-          <button class="theme-opt active" data-style="classic">
-            <span class="theme-swatch" id="sw-classic"></span>
-            <span>Classic</span>
-          </button>
-          <button class="theme-opt" data-style="legal">
-            <span class="theme-swatch" id="sw-legal"></span>
-            <span>Legal</span>
-          </button>
-          <button class="theme-opt" data-style="midnight">
-            <span class="theme-swatch" id="sw-midnight"></span>
-            <span>Midnight</span>
-          </button>
-          <button class="theme-opt" data-style="soft">
-            <span class="theme-swatch" id="sw-soft"></span>
-            <span>Soft</span>
-          </button>
-          <button class="theme-opt" data-style="corporate">
-            <span class="theme-swatch" id="sw-corporate"></span>
-            <span>Corporate</span>
-          </button>
+          <button class="theme-opt active" data-style="classic"><span class="theme-swatch" id="sw-classic"></span><span>Classic</span></button>
+          <button class="theme-opt" data-style="legal"><span class="theme-swatch" id="sw-legal"></span><span>Legal</span></button>
+          <button class="theme-opt" data-style="midnight"><span class="theme-swatch" id="sw-midnight"></span><span>Midnight</span></button>
+          <button class="theme-opt" data-style="soft"><span class="theme-swatch" id="sw-soft"></span><span>Soft</span></button>
+          <button class="theme-opt" data-style="corporate"><span class="theme-swatch" id="sw-corporate"></span><span>Corporate</span></button>
         </div>
-        <!-- Font size -->
         <div class="font-size-row">
           <span class="font-size-label" id="lbl-font-size">Text size</span>
           <div class="font-size-controls">
@@ -2853,6 +2874,7 @@
           </div>
         </div>
       </div>
+      <!-- Language -->
       <div class="group">
         <h4><i class="fas fa-language"></i> <span id="lbl-lang-title">Language</span></h4>
         <div class="row">
@@ -2862,7 +2884,10 @@
         </div>
       </div>
     </div>
-    <div class="footer" style="display:flex;flex-direction:column;gap:6px"><span class="hint"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span><span class="hint" style="opacity:0.6">v3.1.0</span></div>
+    <div class="footer" style="display:flex;flex-direction:column;gap:6px">
+      <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
+      <span class="hint" style="opacity:0.6">v3.1.7</span>
+    </div>
   </aside>
 
   <!-- Add/Edit modal -->
@@ -4057,7 +4082,6 @@
             <button class="btn db-act-edit" id="dbEditBtn"><i class="fas fa-pen"></i> ${L.dbEdit||'Edit'}</button>
             <button class="btn db-act-icon" id="dbDupBtn" title="${L.dbDuplicate||'Duplicate'}"><i class="fas fa-copy"></i></button>
             <button class="btn db-act-icon" id="dbPrintBtn" title="${L.dbPrint||'Print'}"><i class="fas fa-print"></i></button>
-            <button class="btn db-act-del" id="dbDelBtn"><i class="fas fa-trash"></i></button>
           </div>`;
         document.getElementById('dbEditBtn').addEventListener('click',()=>{ dbEditing=true; dbRenderDoc(); });
         document.getElementById('dbPrintBtn').addEventListener('click',()=>{
@@ -4087,11 +4111,6 @@
           cat.titles.splice(cat.titles.indexOf(t)+1, 0, dup);
           dbActiveTitle = dup.id;
           dbSave(); dbRender();
-        });
-        document.getElementById('dbDelBtn').addEventListener('click',()=>{
-          if(!confirm(L.dbConfirmDel||L.confirmDelete||'Delete?')) return;
-          cat.titles=cat.titles.filter(x=>x.id!==t.id);
-          dbActiveTitle=null; dbSave(); dbRender();
         });
 
         // Ref chip click → open law at article
@@ -5408,6 +5427,13 @@
       setTimeout(()=> document.getElementById('dbDriveBtn').click(), 80);
     });
 
+    // LawBase settings → Dropbox
+    document.getElementById('lbSettingsDriveBtn').addEventListener('click', ()=>{
+      drawer.classList.remove('open');
+      drawer.setAttribute('aria-hidden','true');
+      setTimeout(()=> document.getElementById('dbDriveBtnLB').click(), 80);
+    });
+
     document.getElementById('dbBackBtn').addEventListener('click', () => { setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); },50);
       dashboardView.style.display = 'none';
       appEl.style.display = '';
@@ -6115,13 +6141,18 @@
       setH('fulltextClear','<i class="fas fa-times"></i><span class="btn-text"> '+L.clearBtn+'</span>');
       setQ('#mobileStickySearch .label','textContent',L.mobileSrch);
 
-      var groups = document.querySelectorAll('#drawer .body .group');
-      if(groups[0]){ groups[0].querySelector('h4').innerHTML='<i class="fas fa-gavel"></i> '+L.drawerLawsH; var dh=groups[0].querySelector('.hint'); if(dh) dh.textContent=L.drawerLawsHint; }
-      if(groups[1]){ groups[1].querySelector('h4').innerHTML='<i class="fas fa-file-import"></i> '+L.drawerImpExp; setH('exportBtn','<i class="fas fa-file-export"></i> '+L.exportBtn); setH('importBtn','<i class="fas fa-file-import"></i> '+L.importBtn); setH('clearAllBtn','<i class="fas fa-trash"></i> '+L.clearAllBtn); }
-      if(groups[2]) groups[2].querySelector('h4').innerHTML='<i class="fas fa-palette"></i> '+L.themeH;
-      if(groups[3]) groups[3].querySelector('h4').innerHTML='<i class="fas fa-language"></i> '+L.langH;
-
       setQ('#drawer header strong','innerHTML','<i class="fas fa-cog"></i> '+L.drawerTitle);
+      setT('lbl-add-law', L.addLawLabel||L.addBtn);
+      setH('addLawBtn','<i class="fas fa-plus"></i> '+L.addBtn);
+      setT('lbl-laws-title', L.drawerLawsH);
+      var lhint=document.getElementById('lbl-laws-hint'); if(lhint) lhint.textContent=L.drawerLawsHint;
+      setT('lbl-imp-exp', L.drawerImpExp);
+      setH('exportBtn','<i class="fas fa-file-export"></i> '+L.exportBtn);
+      setH('importBtn','<i class="fas fa-file-import"></i> '+L.importBtn);
+      setH('clearAllBtn','<i class="fas fa-trash"></i> '+L.clearAllBtn);
+      setT('lbl-dropbox', L.dbDropboxSync||'Configure / Sync');
+      setT('lbl-theme-title', L.themeH);
+      setT('lbl-lang-title', L.langH);
       var ft=document.querySelector('#drawer .footer .hint');
       if(ft) ft.innerHTML='<i class="fas fa-info-circle"></i> '+L.footer+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
 
