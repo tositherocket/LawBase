@@ -2812,7 +2812,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.1.7</span>
+      <span class="hint" style="opacity:0.6">v3.2.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2886,7 +2886,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.1.7</span>
+      <span class="hint" style="opacity:0.6">v3.2.0</span>
     </div>
   </aside>
 
@@ -5857,11 +5857,15 @@
     const THRESH = 400;
     let currentContainer = null;
 
+    function isMobile(){ return window.innerWidth <= 900; }
+
     function findContainer(){
-      // If LegalBase is visible, use its doc panel
       const db = document.getElementById('dashboardView');
-      if(db && db.style.display !== 'none'){
-        return document.getElementById('dbDoc') || null;
+      const inDB = db && db.style.display !== 'none';
+      if(inDB){
+        // Mobile: dashboardView vetë scroll-on
+        // Desktop: #dbDoc scroll-on
+        return isMobile() ? db : (document.getElementById('dbDoc') || db);
       }
       return document.getElementById('doc') || null;
     }
@@ -5883,9 +5887,9 @@
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
 
-    function bind(){
+    function bind(force){
       const c = findContainer();
-      if(c === currentContainer) return;
+      if(!force && c === currentContainer) return;
       if(currentContainer) currentContainer.removeEventListener('scroll', update);
       currentContainer = c;
       if(currentContainer) currentContainer.addEventListener('scroll', update, { passive: true });
@@ -5894,13 +5898,11 @@
 
     btn.addEventListener('click', scrollToTop);
     window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', function(){ bind(); update(); });
-    window._backToTopBind = bind;
+    window.addEventListener('resize', function(){ bind(true); update(); });
+    window._backToTopBind = function(force){ bind(force||true); };
 
-    // Bind after load - only rebind when doc panel changes
-    window.addEventListener('load', bind);
-
-    bind();
+    window.addEventListener('load', function(){ bind(true); });
+    bind(true);
   })();
   </script>
   <script>
