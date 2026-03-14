@@ -1581,27 +1581,41 @@
       .back-to-top:active { transform: scale(0.95); }
 
       /* App scroll normale */
-      #dashboardView.app { overflow-y: auto; overflow-x: hidden; }
+      #dashboardView.app { overflow-y: auto; }
 
-      /* Wrap: identike me LawBase mobile */
+      /* Wrap: kolona pa overflow */
       #dashboardView .wrap {
+        overflow: visible;
         flex: none;
-        min-height: unset;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 0;
       }
 
-      /* Main: 1 kolonë, identike me LawBase mobile */
+      /* Main: grid 1 kolone */
       #dashboardView .main {
         overflow: visible;
         flex: none;
-        min-height: unset;
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        gap: 0;
+        padding: 0;
       }
 
-      /* Aside lista titujve: identike me .articles-list mobile */
+      /* Aside (lista titujve): max 35vh scroll */
       #dashboardView aside { overflow: hidden; }
       #dashboardView .articles-list {
-        height: auto;
+        max-height: 35vh !important;
+        height: auto !important;
+        flex: none;
         overflow-y: auto;
+        overflow-x: hidden;
+        border-radius: 0;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none;
+        margin: 0;
+        padding: 4px 10px;
       }
       #dashboardView .articles-list .art-link,
       #dashboardView .articles-list .db-title-link {
@@ -1610,10 +1624,17 @@
         text-overflow: ellipsis;
       }
 
-      /* Doc: identike me .doc mobile — window scroll */
+      /* Doc: scroll i brendshëm, pa kufij */
       #dashboardView .doc {
-        height: auto;
+        max-height: unset;
+        flex: none;
         overflow-y: visible;
+        border-radius: 0;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none;
+        margin: 0;
+        padding: 10px !important;
       }
 
       /* Tabs LegalBase — kompakt */
@@ -1662,26 +1683,53 @@
       min-height: 0;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     #dashboardView .main {
       display: grid;
       grid-template-columns: 240px 1fr;
-      flex: 1;
       min-height: 0;
+      flex: 1;
       overflow: hidden;
+      align-items: stretch;
     }
     #dashboardView .articles-list {
       max-height: unset;
       height: 100%;
+      min-height: 0;
       overflow-y: auto;
     }
     #dashboardView .doc {
       max-height: unset;
       height: 100%;
+      min-height: 0;
       overflow-y: auto;
     }
 
-
+    /* ── MOBILE — kthe dashboardView si ishte (<900px) ── */
+    @media (max-width: 900px) {
+      #dashboardView.app {
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      #dashboardView .wrap {
+        flex: none;
+        min-height: unset;
+      }
+      #dashboardView .main {
+        flex: none;
+        min-height: unset;
+        overflow: visible;
+      }
+      #dashboardView .articles-list {
+        height: auto;
+        overflow-y: auto;
+      }
+      #dashboardView .doc {
+        height: auto;
+        overflow-y: visible;
+      }
+    }
 
     /* ══════════════════════════════════════════
        LEGALBASE MOBILE @900px
@@ -2768,7 +2816,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.2.1</span>
+      <span class="hint" style="opacity:0.6">v3.3.2</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2842,7 +2890,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.2.1</span>
+      <span class="hint" style="opacity:0.6">v3.3.2</span>
     </div>
   </aside>
 
@@ -5394,7 +5442,7 @@
       dashboardView.style.display = 'none';
       appEl.style.display = '';
       localStorage.setItem('active-view', 'lawbase');
-      setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); }, 100);
+      setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 100);
     });
 
     // ── Dashboard toggle from header ──
@@ -5404,10 +5452,10 @@
       dashboardView.style.display = 'flex';
       localStorage.setItem('active-view', 'legalbase');
       if(!dbData.cats || !dbData.cats.length){
-        dbLoad().then(()=>{ dbRender(); setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); }, 100); });
+        dbLoad().then(()=>{ dbRender(); setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 100); });
       } else {
         dbRender();
-        setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); }, 100);
+        setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 100);
       }
       if(window._dbStartupSync) window._dbStartupSync();
     });
@@ -5565,7 +5613,7 @@
         dbRender();
         if(window._dbStartupSync) window._dbStartupSync();
       }
-      setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(); }, 200);
+      setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 200);
     })();
 
     // ── v3.1.0: Keyboard shortcuts ──
