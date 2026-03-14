@@ -2686,7 +2686,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.3</span>
+      <span class="hint" style="opacity:0.6">v3.5.4</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2760,7 +2760,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.3</span>
+      <span class="hint" style="opacity:0.6">v3.5.4</span>
     </div>
   </aside>
 
@@ -5534,25 +5534,61 @@
     }
   </script>
 
-  <!-- Swipe horizontal LawBase ↔ LegalBase -->
+  <!-- Swipe horizontal LawBase ↔ LegalBase me animacion -->
+  <style>
+    .app { transition: transform 0.32s cubic-bezier(0.4,0,0.2,1), opacity 0.32s ease; }
+    .app.slide-out-left  { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+    .app.slide-out-right { transform: translateX(100%);  opacity: 0; pointer-events: none; }
+    .app.slide-in-left   { transform: translateX(-100%); opacity: 0; }
+    .app.slide-in-right  { transform: translateX(100%);  opacity: 0; }
+  </style>
   <script>
   (function(){
-    var THRESH = 60;   // px minimum swipe
-    var VERT   = 40;   // px max vertical movement (to avoid scroll conflict)
-    var startX = 0, startY = 0, tracking = false;
+    var THRESH = 55;
+    var VERT   = 40;
+    var startX = 0, startY = 0, tracking = false, animating = false;
 
     function inDB(){
       var db = document.getElementById('dashboardView');
       return db && db.style.display !== 'none';
     }
 
-    function goToLegalBase(){
-      var btn = document.getElementById('dashboardBtn');
-      if(btn) btn.click();
-    }
-    function goToLawBase(){
-      var btn = document.getElementById('dbBackBtn');
-      if(btn) btn.click();
+    function switchView(direction){
+      if(animating) return;
+      animating = true;
+
+      var fromEl = inDB()
+        ? document.getElementById('dashboardView')
+        : document.querySelector('.app:not(#dashboardView)');
+      var outClass  = direction === 'left' ? 'slide-out-left'  : 'slide-out-right';
+      var inClass   = direction === 'left' ? 'slide-in-right'  : 'slide-in-left';
+
+      // Animate out current
+      fromEl.classList.add(outClass);
+
+      setTimeout(function(){
+        // Switch view
+        if(direction === 'left'){
+          document.getElementById('dashboardBtn').click();
+        } else {
+          document.getElementById('dbBackBtn').click();
+        }
+
+        var toEl = inDB()
+          ? document.getElementById('dashboardView')
+          : document.querySelector('.app:not(#dashboardView)');
+
+        // Start position for slide-in
+        toEl.classList.add(inClass);
+        // Force reflow
+        void toEl.offsetWidth;
+        toEl.classList.remove(inClass);
+
+        setTimeout(function(){
+          fromEl.classList.remove(outClass);
+          animating = false;
+        }, 350);
+      }, 200);
     }
 
     document.addEventListener('touchstart', function(e){
@@ -5567,10 +5603,10 @@
       tracking = false;
       var dx = e.changedTouches[0].clientX - startX;
       var dy = e.changedTouches[0].clientY - startY;
-      if(Math.abs(dy) > VERT) return;  // shumë vertikal — scroll normal
-      if(Math.abs(dx) < THRESH) return; // shumë i shkurtër
-      if(!inDB() && dx < 0) goToLegalBase();  // LawBase → swipe majtas → LegalBase
-      if(inDB()  && dx > 0) goToLawBase();    // LegalBase → swipe djathtas → LawBase
+      if(Math.abs(dy) > VERT)   return;
+      if(Math.abs(dx) < THRESH) return;
+      if(!inDB() && dx < 0) switchView('left');   // LawBase → LegalBase
+      if(inDB()  && dx > 0) switchView('right');  // LegalBase → LawBase
     }, { passive: true });
   })();
   </script>
