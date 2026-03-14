@@ -2694,7 +2694,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.6</span>
+      <span class="hint" style="opacity:0.6">v3.6.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2776,7 +2776,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.5.6</span>
+      <span class="hint" style="opacity:0.6">v3.6.0</span>
     </div>
   </aside>
 
@@ -3239,11 +3239,9 @@
           art.querySelector('h3').insertAdjacentElement('afterend', bar);
           bar.querySelectorAll('.art-ref-note-chip').forEach(chip=>{
             chip.addEventListener('click',()=>{
-              const appElR = document.querySelector('.app:not(#dashboardView)');
-              const dvR = document.getElementById('dashboardView');
-              if(appElR) appElR.style.display='none';
-              if(dvR) dvR.style.display='flex';
-              window._dbActivateCat && window._dbActivateCat(chip.dataset.cat, chip.dataset.tid);
+              const dashBtn = document.getElementById('dashboardBtn');
+              if(dashBtn) dashBtn.click();
+              setTimeout(()=>{ window._dbActivateCat && window._dbActivateCat(chip.dataset.cat, chip.dataset.tid); }, 80);
             });
           });
         });
@@ -4009,19 +4007,20 @@
             const i = parseInt(chip.dataset.refI);
             const r = (t.refs||[])[i]; if(!r) return;
             typeof dbLeaveReading==='function' && dbLeaveReading();
-            const appEl2 = document.querySelector('.app:not(#dashboardView)');
-            const dv = document.getElementById('dashboardView');
-            if(appEl2) appEl2.style.display='flex';
-            if(dv) dv.style.display='none';
+            // Switch to LawBase properly (removes legalbase-active class)
+            const backBtn = document.getElementById('dbBackBtn');
+            if(backBtn) backBtn.click();
             if(window._appState && window.setActive){
-              window.setActive(r.lawId);
               setTimeout(()=>{
-                const docPanel = document.getElementById('doc');
-                if(docPanel){
-                  const target = docPanel.querySelector('[data-index="'+r.artIndex+'"]');
-                  if(target){ target.scrollIntoView({behavior:'instant',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1500); }
-                }
-              }, 250);
+                window.setActive(r.lawId);
+                setTimeout(()=>{
+                  const docPanel = document.getElementById('doc');
+                  if(docPanel){
+                    const target = docPanel.querySelector('[data-index="'+r.artIndex+'"]');
+                    if(target){ target.scrollIntoView({behavior:'instant',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1500); }
+                  }
+                }, 150);
+              }, 50);
             }
           });
         });
@@ -5705,12 +5704,9 @@
         bar.querySelectorAll('.popup-ref-note').forEach(el=>{
           el.addEventListener('click',()=>{
             closePopup();
-            // Switch to LegalBase and open that note
-            const appElP = document.querySelector('.app:not(#dashboardView)');
-            const dv = document.getElementById('dashboardView');
-            if(appElP) appElP.style.display='none';
-            if(dv){ dv.style.display='flex'; }
-            window._dbActivateCat && window._dbActivateCat(el.dataset.cat, el.dataset.tid);
+            const dashBtn = document.getElementById('dashboardBtn');
+            if(dashBtn) dashBtn.click();
+            setTimeout(()=>{ window._dbActivateCat && window._dbActivateCat(el.dataset.cat, el.dataset.tid); }, 80);
           });
         });
       }
