@@ -809,7 +809,7 @@
     }
 
     #activeTitle, #dbActiveTitle {
-      margin-top: 6px;
+      margin-top: 2px;
       padding: 0 0 0 2px;
       font-size: 0.75rem;
       line-height: 1;
@@ -2701,7 +2701,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.6.4</span>
+      <span class="hint" style="opacity:0.6">v3.7.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2783,7 +2783,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.6.4</span>
+      <span class="hint" style="opacity:0.6">v3.7.0</span>
     </div>
   </aside>
 
@@ -3763,23 +3763,36 @@
               <button class="db-tb-btn" data-cmd="italic" title="Italic"><i>I</i></button>
               <button class="db-tb-btn" data-cmd="underline" title="Underline"><u>U</u></button>
               <button class="db-tb-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+              <button class="db-tb-btn" data-cmd="superscript" title="Superscript">x<sup>2</sup></button>
+              <button class="db-tb-btn" data-cmd="subscript" title="Subscript">x<sub>2</sub></button>
             </div>
             <div class="db-tb-sep"></div>
             <div class="db-tb-group">
-              <select class="db-tb-select" id="dbTbHeading" title="Heading">
+              <select class="db-tb-select" id="dbTbHeading" title="Paragraph style" style="max-width:90px">
                 <option value="p">Paragraph</option>
                 <option value="h1">H1</option>
                 <option value="h2">H2</option>
                 <option value="h3">H3</option>
                 <option value="h4">H4</option>
+                <option value="pre">Code block</option>
+                <option value="blockquote">Quote</option>
               </select>
-              <select class="db-tb-select" id="dbTbFontSize" title="Font size">
-                <option value="3" selected>Normal</option>
-                <option value="1">Small</option>
-                <option value="4">Large</option>
-                <option value="5">Larger</option>
-                <option value="6">Huge</option>
+              <select class="db-tb-select" id="dbTbFontFamily" title="Font family" style="max-width:100px">
+                <option value="">Default</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="Tahoma, sans-serif">Tahoma</option>
               </select>
+              <div style="display:flex;align-items:center;gap:2px">
+                <button class="db-tb-btn" id="dbTbFontMinus" title="Smaller font" style="font-size:0.7rem;padding:2px 5px">A−</button>
+                <input type="number" id="dbTbFontPx" min="6" max="96" value="15" title="Font size (px)"
+                  style="width:42px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:0.8rem;text-align:center">
+                <span style="font-size:0.7rem;color:var(--muted)">px</span>
+                <button class="db-tb-btn" id="dbTbFontPlus" title="Larger font" style="font-size:0.7rem;padding:2px 5px">A+</button>
+              </div>
             </div>
             <div class="db-tb-sep"></div>
             <div class="db-tb-group">
@@ -3805,6 +3818,7 @@
             <div class="db-tb-group">
               <button class="db-tb-btn" id="dbTbLink" title="Insert link"><i class="fas fa-link"></i></button>
               <button class="db-tb-btn" data-cmd="unlink" title="Remove link"><i class="fas fa-unlink"></i></button>
+              <button class="db-tb-btn" id="dbTbTable" title="Insert table"><i class="fas fa-table"></i></button>
               <button class="db-tb-btn" data-cmd="insertHorizontalRule" title="Horizontal line"><i class="fas fa-minus"></i></button>
             </div>
             <div class="db-tb-sep"></div>
@@ -3841,13 +3855,69 @@
 
         // Heading select
         document.getElementById('dbTbHeading').addEventListener('change', function(){
-          document.execCommand('formatBlock', false, this.value==='p'?'p':'h'+this.value.slice(1));
+          const val = this.value;
+          if(val === 'pre' || val === 'blockquote'){
+            document.execCommand('formatBlock', false, val);
+          } else {
+            document.execCommand('formatBlock', false, val === 'p' ? 'p' : 'h' + val.slice(1));
+          }
           editor.focus();
         });
 
-        // Font size
-        document.getElementById('dbTbFontSize').addEventListener('change', function(){
-          document.execCommand('fontSize', false, this.value);
+        // Font family
+        document.getElementById('dbTbFontFamily').addEventListener('change', function(){
+          if(this.value) document.execCommand('fontName', false, this.value);
+          editor.focus();
+        });
+
+        // Font size px — wraps selection in <span style="font-size:Xpx">
+        function applyFontPx(px){
+          const sel = window.getSelection();
+          if(!sel || sel.rangeCount === 0) return;
+          const range = sel.getRangeAt(0);
+          if(range.collapsed) return;
+          const span = document.createElement('span');
+          span.style.fontSize = px + 'px';
+          try { range.surroundContents(span); } catch(e){
+            // partial selection — extract and wrap
+            const frag = range.extractContents();
+            span.appendChild(frag);
+            range.insertNode(span);
+          }
+          sel.removeAllRanges();
+          editor.focus();
+        }
+
+        const fontPxInput = document.getElementById('dbTbFontPx');
+        fontPxInput.addEventListener('change', function(){ applyFontPx(parseInt(this.value)||15); });
+        fontPxInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); applyFontPx(parseInt(this.value)||15); }});
+
+        document.getElementById('dbTbFontMinus').addEventListener('mousedown', e=>{
+          e.preventDefault();
+          const v = Math.max(6, (parseInt(fontPxInput.value)||15) - 1);
+          fontPxInput.value = v; applyFontPx(v);
+        });
+        document.getElementById('dbTbFontPlus').addEventListener('mousedown', e=>{
+          e.preventDefault();
+          const v = Math.min(96, (parseInt(fontPxInput.value)||15) + 1);
+          fontPxInput.value = v; applyFontPx(v);
+        });
+
+        // Table insert
+        document.getElementById('dbTbTable').addEventListener('mousedown', e=>{
+          e.preventDefault();
+          const rows = parseInt(prompt('Rows:', '3'))||3;
+          const cols = parseInt(prompt('Columns:', '3'))||3;
+          let html = '<table style="border-collapse:collapse;width:100%">';
+          for(let r=0;r<rows;r++){
+            html += '<tr>';
+            for(let c=0;c<cols;c++){
+              html += '<td style="border:1px solid var(--border);padding:6px 10px;min-width:40px">&nbsp;</td>';
+            }
+            html += '</tr>';
+          }
+          html += '</table><p></p>';
+          document.execCommand('insertHTML', false, html);
           editor.focus();
         });
 
@@ -3873,10 +3943,20 @@
 
         // Update toolbar active states
         function dbUpdateToolbarState(){
-          ['bold','italic','underline','strikeThrough'].forEach(cmd=>{
+          ['bold','italic','underline','strikeThrough','superscript','subscript'].forEach(cmd=>{
             const btn = toolbar.querySelector('[data-cmd="'+cmd+'"]');
             if(btn) btn.classList.toggle('active', document.queryCommandState(cmd));
           });
+          // Reflect current font size in px input
+          const sel = window.getSelection();
+          if(sel && sel.rangeCount > 0){
+            const node = sel.getRangeAt(0).startContainer;
+            const el = node.nodeType === 3 ? node.parentElement : node;
+            if(el && editor.contains(el)){
+              const fs = window.getComputedStyle(el).fontSize;
+              if(fs) fontPxInput.value = parseInt(fs);
+            }
+          }
         }
         editor.addEventListener('keyup', dbUpdateToolbarState);
         editor.addEventListener('mouseup', dbUpdateToolbarState);
