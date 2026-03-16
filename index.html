@@ -76,11 +76,6 @@
       } catch(e) {}
     }
 
-    function registerSW(){
-      // SW via blob URL not supported on all platforms — PWA manifest alone handles installability
-      // Offline functionality handled by offlineInit() via localStorage
-    }
-
     let deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault(); deferredPrompt = e; showInstallBanner();
@@ -118,7 +113,6 @@
       document.getElementById('appleTouchIcon').href = svgB64;
       const faviconEl = document.getElementById('faviconIcon');
       if(faviconEl) makePng(64, png64 => { faviconEl.href = png64; });
-      registerSW();
       offlineInit();
       setTimeout(showiOSHint, 1500);
     });
@@ -180,9 +174,6 @@
       --border:       #e1e5eb;
       --text:         #1a1d2e;
       --muted:        #6c757d;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
-      --border-radius: 8px;
     }
     [data-style="classic"][data-mode="dark"] {
       --primary:      #7b96ff;
@@ -197,9 +188,6 @@
       --border:       #2e3347;
       --text:         #e2e5f0;
       --muted:        #7a80a0;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
-      --border-radius: 8px;
     }
 
     /* ══ LEGAL light ══ */
@@ -216,8 +204,6 @@
       --border:       #DDD9D0;
       --text:         #1E1C18;
       --muted:        #7A776E;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 3px;
     }
     [data-style="legal"][data-mode="dark"] {
@@ -233,8 +219,6 @@
       --border:       #2E2A22;
       --text:         #EAE6DC;
       --muted:        #6A6660;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 3px;
     }
 
@@ -252,8 +236,6 @@
       --border:       #D5D3EE;
       --text:         #1A1830;
       --muted:        #7874A8;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 6px;
     }
     [data-style="midnight"][data-mode="dark"] {
@@ -269,8 +251,6 @@
       --border:       #232236;
       --text:         #E4E2F5;
       --muted:        #5A5880;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 6px;
     }
 
@@ -288,8 +268,6 @@
       --border:       #CDD1F5;
       --text:         #1E2060;
       --muted:        #7B82C0;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 14px;
     }
     [data-style="soft"][data-mode="dark"] {
@@ -305,8 +283,6 @@
       --border:       #282A45;
       --text:         #DDE0F8;
       --muted:        #6668A0;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 14px;
     }
 
@@ -324,10 +300,7 @@
       --border:       #dde1e7;
       --text:         #1a1f36;
       --muted:        #697386;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 4px;
-      /* Corporate-specific */
       --corp-header:  #1a3a5c;
       --corp-sidebar: #ffffff;
       --corp-tabs-bg: #2c5f8a;
@@ -345,8 +318,6 @@
       --border:       #30363d;
       --text:         #c9d1d9;
       --muted:        #6e7681;
-      --font-body:    Arial, sans-serif;
-      --font-heading: Arial, sans-serif;
       --border-radius: 4px;
       --corp-header:  #0d1117;
       --corp-sidebar: #161b22;
@@ -787,14 +758,6 @@
       margin: 2px 0;
     }
 
-    .controls-vsep {
-      width: 1px;
-      height: 28px;
-      background: var(--border);
-      flex-shrink: 0;
-      margin: 0 2px;
-    }
-
     .controls .hint {
       margin: 0;
       padding: 0 2px;
@@ -921,6 +884,7 @@
       background: rgba(76, 201, 240, 0.1);
       border-radius: var(--border-radius);
       padding: 12px;
+      animation: highlight 2s ease;
     }
 
     /* Cross-reference clickable numbers */
@@ -1192,9 +1156,6 @@
       font-weight: 600;
     }
 
-    /* Responsive */
-    
-
     /* Sync toast animation */
     @keyframes slideUp {
       from { opacity:0; transform:translateX(-50%) translateY(12px); }
@@ -1205,10 +1166,6 @@
     @keyframes highlight {
       0% { background-color: rgba(76, 201, 240, 0.2); }
       100% { background-color: transparent; }
-    }
-
-    .article.highlight {
-      animation: highlight 2s ease;
     }
 
     .heart {
@@ -1308,24 +1265,11 @@
       opacity: 0.9;
       outline: 1px solid var(--primary);
     }
-  
 
     /* === Mobile sticky minimized search trigger === */
     .mobile-sticky-search { display: none; }
 
-    
-
-
-    /* === Mobile sticky: show ONLY fulltext (right) search when expanded === */
-    
-
-
-    /* === Back to top button (bottom-right) === */
-    .back-to-top { display: none; }
-
-    
-
-    /* === Back to top button (desktop) === */
+    /* === Back to top button === */
     .back-to-top {
       position: fixed;
       right: 12px;
@@ -2698,10 +2642,18 @@
           <span id="db-lbl-swipe-label">Swipe për të kaluar LawBase ↔ LegalBase</span>
         </label>
       </div>
+      <!-- Drag & Drop toggle -->
+      <div class="group">
+        <h4><i class="fas fa-arrows-alt"></i> <span id="db-lbl-dnd-title">Drag & Drop</span></h4>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem">
+          <input type="checkbox" id="dbDndToggle" style="width:16px;height:16px;cursor:pointer" />
+          <span id="db-lbl-dnd-label">Rirendit me tërheqje (ligje, kategori, tituj)</span>
+        </label>
+      </div>
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.7.0</span>
+      <span class="hint" style="opacity:0.6">v3.7.2</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2780,10 +2732,18 @@
           <span id="lbl-swipe-label">Swipe për të kaluar LawBase ↔ LegalBase</span>
         </label>
       </div>
+      <!-- Drag & Drop toggle -->
+      <div class="group">
+        <h4><i class="fas fa-arrows-alt"></i> <span id="lbl-dnd-title">Drag & Drop</span></h4>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem">
+          <input type="checkbox" id="dndToggle" style="width:16px;height:16px;cursor:pointer" />
+          <span id="lbl-dnd-label">Rirendit me tërheqje (ligje, kategori, tituj)</span>
+        </label>
+      </div>
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.7.0</span>
+      <span class="hint" style="opacity:0.6">v3.7.2</span>
     </div>
   </aside>
 
@@ -3256,6 +3216,7 @@
     }
     function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function renderAll(){ renderTabs(); renderMembers(); renderDoc(); renderLawsManager(); }
+    window.renderAll = renderAll; window.saveToStorage = saveToStorage;
 
     function setActive(id){
       state.activeId=id;
@@ -3648,7 +3609,6 @@
 
     function dbUid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
     function dbFmtDate(ts){ return new Date(ts).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
-    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function dbFindCat(id){ return dbData.cats.find(c=>c.id===id); }
 
     // ── Render tabs (kategorite) ──
@@ -4289,6 +4249,7 @@
         setTimeout(dbRunFulltext, 60);
       }
     }
+    window.dbRender = dbRender; window.dbSave = dbSave;
 
     // ── New title ──
     function dbNewTitle(catId){
@@ -4418,14 +4379,6 @@
     let dbFtIdx = -1;
 
     // Global search index: titleId -> title object (across ALL cats)
-    function dbBuildSearchIndex(){
-      const idx = {};
-      (dbData.cats||[]).forEach(cat=>{
-        (cat.titles||[]).forEach(t=>{ idx[t.id] = { t, cat }; });
-      });
-      return idx;
-    }
-
     // Search 1: filtron listën sipas TITULLIT
     function dbApplySearch(){
       const q = dbSearchQuery.toLowerCase().trim();
@@ -5935,7 +5888,7 @@
     });
 
     window.addEventListener('scroll', onScroll, {passive:true});
-    window.addEventListener('resize', update);
+    window.addEventListener('resize', onScroll);
     update();
   })();
   </script>
@@ -5990,9 +5943,13 @@
       update();
     }
 
+    var _bttTicking = false;
+    function _bttOnScroll(){
+      if(!_bttTicking){ _bttTicking = true; requestAnimationFrame(function(){ update(); _bttTicking = false; }); }
+    }
     btn.addEventListener('click', scrollToTop);
-    window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', function(){ bind(true); update(); });
+    window.addEventListener('scroll', _bttOnScroll, { passive: true });
+    window.addEventListener('resize', function(){ bind(true); _bttOnScroll(); });
     window._backToTopBind = function(force){ bind(force||true); };
 
     window.addEventListener('load', function(){ bind(true); });
@@ -6070,6 +6027,7 @@
         // v3.1.0
         errQuota:'⚠️ Hapësira e diskut u mbush! Eksporto dhe pastro të dhënat.', swipeLabel:'Swipe për të kaluar LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Gabim gjatë ruajtjes',
+        dndTitle:'Drag & Drop', dndLabel:'Rirendit me tërheqje (ligje, kategori, tituj)',
       },
       mk: {
         brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
@@ -6138,6 +6096,7 @@
         // v3.1.0
         errQuota:'⚠️ Дискот е полн! Извезете и исчистете ги податоците.', swipeLabel:'Swipe за префрлање LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Грешка при зачувување',
+        dndTitle:'Drag & Drop', dndLabel:'Подреди со влечење (закони, категории, наслови)',
       },
       en: {
         brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
@@ -6206,6 +6165,7 @@
         // v3.1.0
         errQuota:'⚠️ Storage quota exceeded! Export and clear your data.', swipeLabel:'Swipe to switch LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Error saving data',
+        dndTitle:'Drag & Drop', dndLabel:'Reorder by dragging (laws, categories, titles)',
       }
     };
 
@@ -6228,10 +6188,8 @@
       setQ('.brand','innerHTML','<i class="fas fa-scale-balanced"></i> '+L.brand);
       setH('addLawBtn','<i class="fas fa-plus"></i> '+L.addBtn);
       setH('openSettings','<i class="fas fa-cog"></i>');
-      setP('searchInput',L.searchPh);
       setH('searchBtn','<i class="fas fa-search"></i><span class="btn-text"> '+L.searchBtn+'</span>');
       setH('clearSearchBtn','<i class="fas fa-times"></i><span class="btn-text"> '+L.clearBtn+'</span>');
-      setP('fulltextInput',L.fulltextPh);
       setH('fulltextBtn','<i class="fas fa-search"></i><span class="btn-text"> '+L.searchBtn+'</span>');
       setH('fulltextNextBtn','<i class="fas fa-arrow-down"></i><span class="btn-text"> '+L.nextBtn+'</span>');
       setH('fulltextClear','<i class="fas fa-times"></i><span class="btn-text"> '+L.clearBtn+'</span>');
@@ -6239,9 +6197,8 @@
 
       setQ('#drawer header strong','innerHTML','<i class="fas fa-cog"></i> '+L.drawerTitle);
       setT('lbl-add-law', L.addLawLabel||L.addBtn);
-      setH('addLawBtn','<i class="fas fa-plus"></i> '+L.addBtn);
       setT('lbl-laws-title', L.drawerLawsH);
-      var lhint=document.getElementById('lbl-laws-hint'); if(lhint) lhint.textContent=L.drawerLawsHint;
+      setT('lbl-laws-hint', L.drawerLawsHint);
       setT('lbl-imp-exp', L.drawerImpExp);
       setH('exportBtn','<i class="fas fa-file-export"></i> '+L.exportBtn);
       setH('importBtn','<i class="fas fa-file-import"></i> '+L.importBtn);
@@ -6253,10 +6210,13 @@
       setT('lbl-swipe-label', L.swipeLabel||'Swipe për të kaluar LawBase ↔ LegalBase');
       setT('db-lbl-swipe-title', L.swipeTitle||'Swipe');
       setT('db-lbl-swipe-label', L.swipeLabel||'Swipe për të kaluar LawBase ↔ LegalBase');
+      setT('lbl-dnd-title', L.dndTitle||'Drag & Drop');
+      setT('lbl-dnd-label', L.dndLabel||'Rirendit me tërheqje (ligje, kategori, tituj)');
+      setT('db-lbl-dnd-title', L.dndTitle||'Drag & Drop');
+      setT('db-lbl-dnd-label', L.dndLabel||'Rirendit me tërheqje (ligje, kategori, tituj)');
       var ft=document.querySelector('#drawer .footer .hint');
       if(ft) ft.innerHTML='<i class="fas fa-info-circle"></i> '+L.footer+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
 
-      setP('formTitle',L.modalLabelTitle);
       setH('cancelLaw','<i class="fas fa-times"></i> '+L.cancelBtn);
       setH('saveLawBtn','<i class="fas fa-save"></i> '+L.saveBtn);
       setH('artPopup-goto', L.goToArt||'↗ Go to article');
@@ -6268,11 +6228,10 @@
       setP('formTitle', L.formTitlePh||L.modalLabelTitle);
       setP('formAlt', L.formAltPh);
       setP('formText', L.formTextPh);
-      var fal=document.getElementById('formAltLbl'); if(fal) fal.innerHTML='<i class="fas fa-info-circle"></i> '+(L.formAltLabel||'');
-      var lmt=document.getElementById('lawModalTitle'); if(lmt) lmt.innerHTML='<i class="fas fa-plus"></i> '+(L.modalAddTitle||L.addLawLabel);
-      var fsl=document.getElementById('lbl-font-size'); if(fsl) fsl.textContent=L.fontSizeLabel||'Text size';
-      var rmbtn=document.getElementById('readingModeBtn'); if(rmbtn){ rmbtn.title=L.readingModeTitleBtn||'Reading mode'; rmbtn.innerHTML='<i class="fas fa-book-open"></i>'; }
-      var rmdb=document.getElementById('readingModeBtnDB'); if(rmdb){ rmdb.title=L.readingModeTitleBtn||'Reading mode'; rmdb.innerHTML='<i class="fas fa-book-open"></i>'; }
+      setH('formAltLbl', '<i class="fas fa-info-circle"></i> '+(L.formAltLabel||''));
+      setH('lawModalTitle', '<i class="fas fa-plus"></i> '+(L.modalAddTitle||L.addLawLabel));
+      setT('lbl-font-size', L.fontSizeLabel||'Text size');
+      ['readingModeBtn','readingModeBtnDB'].forEach(function(id){ var b=document.getElementById(id); if(b){ b.title=L.readingModeTitleBtn||'Reading mode'; b.innerHTML='<i class="fas fa-book-open"></i>'; } });
       var dashb=document.getElementById('dashboardBtn'); if(dashb){ dashb.title=L.dashTitle||'Notes'; dashb.innerHTML='<i class="fas fa-sticky-note"></i> LegalBase'; }
       // Update static empty msgs if visible
       var aem=document.getElementById('articlesEmptyMsg'); if(aem) { var ic=aem.querySelector('i'); aem.innerHTML=''; if(ic) aem.appendChild(ic); aem.appendChild(document.createTextNode(' '+(L.articlesEmptyJs||''))); }
@@ -6291,20 +6250,18 @@
       var dbSettingsH = document.querySelector('#dbSettingsDrawer header strong span');
       if(dbSettingsH) dbSettingsH.textContent = L.settingsBtn||'Settings';
       // ── LegalBase settings drawer i18n ──
-      function _setTxt(id, txt){ var el=document.getElementById(id); if(el) el.textContent=txt; }
-      _setTxt('db-lbl-settings',   L.dbSettings2||L.settingsBtn||'Settings');
-      _setTxt('db-lbl-add-cat',    L.dbAddCat2||L.dbAddCat||'Add category');
-      _setTxt('db-lbl-add-cat-btn',L.addBtn||'Add');
-      _setTxt('db-lbl-manage-cats',L.dbManageCats2||L.dbManageCats||'Manage categories');
-      _setTxt('db-lbl-imp-exp',    L.dbImpExp||L.drawerImpExp||'Import / Export');
-      _setTxt('db-lbl-export',     (L.dbExport||'Export')+' (JSON)');
-      _setTxt('db-lbl-import',     L.dbImport||L.importBtn||'Import');
-      _setTxt('db-lbl-clear-all',  L.dbClearAll||L.clearAllBtn||'Clear all');
-      _setTxt('db-lbl-dropbox',    L.dbDropboxSync||'Configure / Sync');
-      _setTxt('db-lbl-theme',      L.dbTheme||L.themeH||'Theme');
-      _setTxt('db-lbl-lang',       L.dbLang||L.langH||'Language');
-      var dbFontLbl = document.getElementById('db-lbl-font-size');
-      if(dbFontLbl) dbFontLbl.textContent = L.fontSizeLabel||'Text size';
+      setT('db-lbl-settings',   L.dbSettings2||L.settingsBtn||'Settings');
+      setT('db-lbl-add-cat',    L.dbAddCat2||L.dbAddCat||'Add category');
+      setT('db-lbl-add-cat-btn',L.addBtn||'Add');
+      setT('db-lbl-manage-cats',L.dbManageCats2||L.dbManageCats||'Manage categories');
+      setT('db-lbl-imp-exp',    L.dbImpExp||L.drawerImpExp||'Import / Export');
+      setT('db-lbl-export',     (L.dbExport||'Export')+' (JSON)');
+      setT('db-lbl-import',     L.dbImport||L.importBtn||'Import');
+      setT('db-lbl-clear-all',  L.dbClearAll||L.clearAllBtn||'Clear all');
+      setT('db-lbl-dropbox',    L.dbDropboxSync||'Configure / Sync');
+      setT('db-lbl-theme',      L.dbTheme||L.themeH||'Theme');
+      setT('db-lbl-lang',       L.dbLang||L.langH||'Language');
+      setT('db-lbl-font-size',  L.fontSizeLabel||'Text size');
       setP('dbNewCatInput', L.catPh||'Category name...');
       var dbFtr = document.getElementById('db-lbl-footer');
       if(dbFtr) dbFtr.innerHTML = '<i class="fas fa-info-circle"></i> '+(L.footer||'Data stored locally.')+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
@@ -6455,6 +6412,432 @@
     });
 
     window.injectNoteButtons=injectNoteButtons;
+  })();
+  </script>
+  <!-- ═══════════════════════════════════════════════
+       PHASE 1 — Keyboard Shortcuts, TOC, Bookmarks, Accessibility
+       v3.7.1
+  ═══════════════════════════════════════════════ -->
+  <style>
+    /* ── Keyboard shortcut help modal ── */
+    #kbdHelp { display:none; position:fixed; inset:0; z-index:5000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; }
+    #kbdHelp.open { display:flex; }
+    #kbdHelp .kbd-box { background:var(--panel); border-radius:12px; padding:20px 24px; width:min(480px,92vw); max-height:80vh; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.3); }
+    #kbdHelp h3 { margin:0 0 14px; font-size:1rem; color:var(--primary); }
+    #kbdHelp .kbd-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:0.85rem; }
+    #kbdHelp .kbd-row:last-child { border-bottom:none; }
+    #kbdHelp kbd { display:inline-block; background:var(--chip); border:1px solid var(--border); border-radius:4px; padding:2px 7px; font-family:inherit; font-size:0.78rem; font-weight:600; min-width:24px; text-align:center; }
+    #kbdHelp .kbd-close { position:absolute; top:12px; right:16px; background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--muted); }
+  </style>
+
+  <!-- Keyboard help modal -->
+  <div id="kbdHelp" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"><div class="kbd-box" style="position:relative">
+    <button class="kbd-close" id="kbdHelpClose" aria-label="Close">&times;</button>
+    <h3 id="kbdHelpTitle">Keyboard shortcuts</h3>
+    <div id="kbdHelpBody"></div>
+  </div></div>
+
+  <script>
+  (function(){
+    /* ════════════════════════════════════════════
+       1. KEYBOARD SHORTCUTS
+    ════════════════════════════════════════════ */
+    var isMac = /Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);
+    var MOD = isMac ? 'metaKey' : 'ctrlKey';
+    var modLabel = isMac ? '⌘' : 'Ctrl';
+
+    var shortcuts = [
+      { key:'k', mod:true,  id:'quick-search',  desc:{sq:'Kërkim i shpejtë',mk:'Брзо пребарување',en:'Quick search'} },
+      { key:'f', mod:true,  id:'fulltext',       desc:{sq:'Kërko në tekst',mk:'Пребарај во текст',en:'Full-text search'} },
+      { key:'s', mod:true,  id:'save',           desc:{sq:'Ruaj',mk:'Зачувај',en:'Save'} },
+      { key:'ArrowUp',   mod:false, id:'prev-art', desc:{sq:'Artikulli i mëparshëm',mk:'Претходен член',en:'Previous article'} },
+      { key:'ArrowDown', mod:false, id:'next-art', desc:{sq:'Artikulli tjetër',mk:'Нареден член',en:'Next article'} },
+      { key:'/', mod:false, id:'help',           desc:{sq:'Shkurtesat e tastierës',mk:'Кратенки на тастатура',en:'Keyboard shortcuts'} },
+      { key:'Escape', mod:false, id:'close',     desc:{sq:'Mbyll panelet',mk:'Затвори панели',en:'Close panels'} },
+    ];
+
+    function isInInput(){ var t=document.activeElement; return t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable); }
+    function getLang(){ return localStorage.getItem('zakoni_lang')||'en'; }
+
+    document.addEventListener('keydown', function(e){
+      // Skip when in contenteditable/input (except mod+key combos)
+      var hasMod = e[MOD];
+      if(isInInput() && !hasMod) return;
+
+      for(var i=0; i<shortcuts.length; i++){
+        var s = shortcuts[i];
+        if(e.key.toLowerCase() !== s.key.toLowerCase()) continue;
+        if(s.mod && !hasMod) continue;
+        if(!s.mod && hasMod) continue;
+        if(s.shift && !e.shiftKey) continue;
+        if(!s.shift && e.shiftKey && s.mod) continue;
+
+        e.preventDefault();
+        handleShortcut(s.id);
+        return;
+      }
+    });
+
+    function handleShortcut(id){
+      switch(id){
+        case 'quick-search':
+          var inp = getVisibleInput('searchInput','dbSearchInput');
+          if(inp){ inp.focus(); inp.select(); }
+          break;
+        case 'fulltext':
+          var inp2 = getVisibleInput('fulltextInput','dbFulltextInput');
+          if(inp2){ inp2.focus(); inp2.select(); }
+          break;
+        case 'save':
+          // Trigger save in whichever view is active
+          var saveBtn = document.getElementById('saveLawBtn');
+          if(saveBtn && saveBtn.offsetParent) saveBtn.click();
+          break;
+        case 'prev-art': navigateArticle(-1); break;
+        case 'next-art': navigateArticle(1); break;
+        case 'help':
+          if(isInInput()) return;
+          toggleKbdHelp();
+          break;
+        case 'close':
+          closeAllPanels();
+          break;
+      }
+    }
+
+    function getVisibleInput(id1, id2){
+      var db = document.getElementById('dashboardView');
+      var inDB = db && db.style.display !== 'none';
+      var el = document.getElementById(inDB ? id2 : id1);
+      return (el && el.offsetParent !== null) ? el : null;
+    }
+
+    function closeAllPanels(){
+      var el = document.getElementById('kbdHelp');
+      if(el) el.classList.remove('open');
+    }
+
+    // Arrow key navigation between articles
+    function navigateArticle(dir){
+      var db = document.getElementById('dashboardView');
+      var inDB = db && db.style.display !== 'none';
+      var listEl = document.getElementById(inDB ? 'dbTitlesList' : 'articlesList');
+      if(!listEl) return;
+      var links = Array.from(listEl.querySelectorAll('.art-link'));
+      if(!links.length) return;
+      // Find currently highlighted/visible
+      var docPanel = document.getElementById(inDB ? 'dbDoc' : 'doc');
+      var articles = docPanel ? docPanel.querySelectorAll('.article') : [];
+      var curIdx = -1;
+      // Find which article is in viewport
+      for(var i=0; i<articles.length; i++){
+        var rect = articles[i].getBoundingClientRect();
+        if(rect.top >= 0 && rect.top < window.innerHeight*0.5){ curIdx = i; break; }
+      }
+      if(curIdx === -1) curIdx = 0;
+      var next = curIdx + dir;
+      if(next >= 0 && next < links.length) links[next].click();
+    }
+
+    // Kbd help modal
+    function toggleKbdHelp(){
+      var el = document.getElementById('kbdHelp');
+      el.classList.toggle('open');
+      if(el.classList.contains('open')) buildKbdHelp();
+    }
+    function buildKbdHelp(){
+      var lang = getLang();
+      var body = document.getElementById('kbdHelpBody');
+      var title = document.getElementById('kbdHelpTitle');
+      title.textContent = {sq:'Shkurtesat e tastierës',mk:'Кратенки на тастатура',en:'Keyboard shortcuts'}[lang]||'Keyboard shortcuts';
+      body.innerHTML = '';
+      shortcuts.forEach(function(s){
+        var row = document.createElement('div'); row.className='kbd-row';
+        var label = document.createElement('span'); label.textContent = s.desc[lang]||s.desc.en;
+        var keys = document.createElement('span');
+        var combo = '';
+        if(s.mod) combo += '<kbd>'+modLabel+'</kbd> + ';
+        if(s.shift) combo += '<kbd>Shift</kbd> + ';
+        var keyLabel = s.key === 'ArrowUp' ? '↑' : s.key === 'ArrowDown' ? '↓' : s.key === '/' ? '/' : s.key.toUpperCase();
+        combo += '<kbd>'+keyLabel+'</kbd>';
+        keys.innerHTML = combo;
+        row.appendChild(label); row.appendChild(keys);
+        body.appendChild(row);
+      });
+    }
+    document.getElementById('kbdHelpClose').addEventListener('click', function(){ document.getElementById('kbdHelp').classList.remove('open'); });
+    document.getElementById('kbdHelp').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+
+    /* ════════════════════════════════════════════
+       2. ACCESSIBILITY IMPROVEMENTS
+    ════════════════════════════════════════════ */
+    function improveA11y(){
+      // Add tabindex to interactive elements missing it
+      document.querySelectorAll('.law-tab, .art-link, .theme-opt, .theme-mode-btn, .lang-btn').forEach(function(el){
+        if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+        // Allow Enter/Space activation
+        el.addEventListener('keydown', function(e){
+          if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); }
+        });
+      });
+
+      // ARIA landmarks
+      var mainAside = document.querySelector('.app:not(#dashboardView) aside');
+      if(mainAside) mainAside.setAttribute('role','navigation');
+      var mainDoc = document.getElementById('doc');
+      if(mainDoc) mainDoc.setAttribute('role','main');
+      var header = document.querySelector('.app:not(#dashboardView) header');
+      if(header) header.setAttribute('role','banner');
+
+      // Skip to content link
+      if(!document.getElementById('skipToContent')){
+        var skip = document.createElement('a');
+        skip.id = 'skipToContent';
+        skip.href = '#doc';
+        skip.textContent = 'Skip to content';
+        skip.style.cssText = 'position:absolute;top:-40px;left:0;background:var(--primary);color:#fff;padding:8px 16px;z-index:10000;font-size:0.85rem;border-radius:0 0 8px 0;transition:top 0.2s;';
+        skip.addEventListener('focus', function(){ skip.style.top='0'; });
+        skip.addEventListener('blur', function(){ skip.style.top='-40px'; });
+        document.body.insertBefore(skip, document.body.firstChild);
+      }
+    }
+
+    /* ═══ INIT ═══ */
+    window.addEventListener('load', function(){
+      improveA11y();
+    });
+
+    // Re-apply a11y when view switches
+    var origSetActive = window.setActive;
+    if(origSetActive){
+      window.setActive = function(id){
+        origSetActive(id);
+        setTimeout(function(){ improveA11y(); }, 50);
+      };
+    }
+  })();
+  </script>
+  <!-- ═══════════════════════════════════════════════
+       PHASE 2 — Drag-and-drop Reorder + PDF Export
+       v3.7.2
+  ═══════════════════════════════════════════════ -->
+  <style>
+    /* ── Drag-and-drop ── */
+    .law-tab[draggable="true"] { cursor:grab; }
+    .law-tab.dragging { opacity:0.4; transform:scale(0.95); }
+    .law-tab.drag-over { border-left:3px solid var(--primary); }
+    .art-link[draggable="true"] { cursor:grab; }
+    .art-link.dragging { opacity:0.4; }
+    .art-link.drag-over { border-top:2px solid var(--primary); margin-top:-2px; }
+  </style>
+
+  <script>
+  (function(){
+    /* ════════════════════════════════════════════
+       5. DRAG-AND-DROP REORDER (with toggle)
+    ════════════════════════════════════════════ */
+    var DND_KEY = 'dnd-enabled';
+
+    function isDndEnabled(){ return localStorage.getItem(DND_KEY) !== 'false'; }
+
+    function syncDndCheckboxes(val){
+      var c1 = document.getElementById('dndToggle');
+      var c2 = document.getElementById('dbDndToggle');
+      if(c1) c1.checked = val;
+      if(c2) c2.checked = val;
+    }
+
+    function setDndEnabled(val){
+      localStorage.setItem(DND_KEY, val ? 'true' : 'false');
+      syncDndCheckboxes(val);
+      applyDraggable();
+    }
+
+    function initDndCheckboxes(){
+      syncDndCheckboxes(isDndEnabled());
+      ['dndToggle','dbDndToggle'].forEach(function(id){
+        var el = document.getElementById(id);
+        if(!el) return;
+        el.addEventListener('change', function(){ setDndEnabled(this.checked); });
+      });
+    }
+
+    // Set or remove draggable attribute based on toggle
+    function applyDraggable(){
+      var enabled = isDndEnabled();
+      var allTabs = document.querySelectorAll('#lawTabs .law-tab, #dbCatTabs .law-tab');
+      var allLinks = document.querySelectorAll('#dbTitlesList .art-link');
+      allTabs.forEach(function(el){
+        if(enabled) el.setAttribute('draggable','true');
+        else el.removeAttribute('draggable');
+      });
+      allLinks.forEach(function(el){
+        if(enabled) el.setAttribute('draggable','true');
+        else el.removeAttribute('draggable');
+      });
+    }
+
+    // ── Generic sortable for any container ──
+    function makeSortable(containerEl, getItems, onReorder, itemSelector){
+      var dragSrcIdx = -1;
+
+      containerEl.addEventListener('dragstart', function(e){
+        if(!isDndEnabled()) return;
+        var item = e.target.closest(itemSelector);
+        if(!item || !containerEl.contains(item)) return;
+        var items = Array.from(containerEl.querySelectorAll(itemSelector));
+        dragSrcIdx = items.indexOf(item);
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', dragSrcIdx);
+      });
+
+      containerEl.addEventListener('dragover', function(e){
+        if(!isDndEnabled()) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        var item = e.target.closest(itemSelector);
+        if(!item || !containerEl.contains(item)) return;
+        containerEl.querySelectorAll(itemSelector).forEach(function(el){ el.classList.remove('drag-over'); });
+        item.classList.add('drag-over');
+      });
+
+      containerEl.addEventListener('dragleave', function(e){
+        var item = e.target.closest(itemSelector);
+        if(item) item.classList.remove('drag-over');
+      });
+
+      containerEl.addEventListener('drop', function(e){
+        if(!isDndEnabled()) return;
+        e.preventDefault();
+        containerEl.querySelectorAll(itemSelector).forEach(function(el){
+          el.classList.remove('drag-over','dragging');
+        });
+        var item = e.target.closest(itemSelector);
+        if(!item || !containerEl.contains(item)) return;
+        var items = Array.from(containerEl.querySelectorAll(itemSelector));
+        var dropIdx = items.indexOf(item);
+        if(dragSrcIdx < 0 || dragSrcIdx === dropIdx) return;
+        onReorder(dragSrcIdx, dropIdx);
+        dragSrcIdx = -1;
+      });
+
+      containerEl.addEventListener('dragend', function(){
+        containerEl.querySelectorAll(itemSelector).forEach(function(el){
+          el.classList.remove('drag-over','dragging');
+        });
+        dragSrcIdx = -1;
+      });
+
+      // ── Touch support ──
+      var touchSrc = null, touchSrcIdx = -1, touchMoved = false;
+
+      containerEl.addEventListener('touchstart', function(e){
+        if(!isDndEnabled()) return;
+        var item = e.target.closest(itemSelector);
+        if(!item || !containerEl.contains(item)) return;
+        touchSrc = item;
+        touchMoved = false;
+        var items = Array.from(containerEl.querySelectorAll(itemSelector));
+        touchSrcIdx = items.indexOf(item);
+      }, {passive:true});
+
+      containerEl.addEventListener('touchmove', function(e){
+        if(!isDndEnabled() || !touchSrc) return;
+        if(!touchMoved){ touchMoved = true; touchSrc.classList.add('dragging'); }
+        var touch = e.touches[0];
+        var el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if(!el) return;
+        var over = el.closest(itemSelector);
+        containerEl.querySelectorAll(itemSelector).forEach(function(it){ it.classList.remove('drag-over'); });
+        if(over && containerEl.contains(over) && over !== touchSrc) over.classList.add('drag-over');
+      }, {passive:true});
+
+      containerEl.addEventListener('touchend', function(){
+        if(!touchSrc || !touchMoved){ touchSrc = null; return; }
+        var overEl = containerEl.querySelector(itemSelector+'.drag-over');
+        containerEl.querySelectorAll(itemSelector).forEach(function(el){
+          el.classList.remove('drag-over','dragging');
+        });
+        if(overEl){
+          var items = Array.from(containerEl.querySelectorAll(itemSelector));
+          var dropIdx = items.indexOf(overEl);
+          if(touchSrcIdx >= 0 && touchSrcIdx !== dropIdx) onReorder(touchSrcIdx, dropIdx);
+        }
+        touchSrc = null; touchSrcIdx = -1; touchMoved = false;
+      });
+    }
+
+    function arrayMove(arr, from, to){
+      var item = arr.splice(from, 1)[0];
+      arr.splice(to, 0, item);
+    }
+
+    // ── LawBase tabs ──
+    function initLawTabsDrag(){
+      var lawTabs = document.getElementById('lawTabs');
+      if(!lawTabs) return;
+      new MutationObserver(applyDraggable).observe(lawTabs, {childList:true});
+      makeSortable(lawTabs, null, function(from, to){
+        arrayMove(window._appState.laws, from, to);
+        if(typeof renderAll === 'function') renderAll();
+        if(typeof saveToStorage === 'function') saveToStorage();
+        setTimeout(applyDraggable, 30);
+      }, '.law-tab');
+    }
+
+    // ── LegalBase categories ──
+    function initDbCatDrag(){
+      var catTabs = document.getElementById('dbCatTabs');
+      if(!catTabs) return;
+      new MutationObserver(applyDraggable).observe(catTabs, {childList:true});
+      makeSortable(catTabs, null, function(from, to){
+        var dbData = window._dbData;
+        if(!dbData || !dbData.cats) return;
+        arrayMove(dbData.cats, from, to);
+        if(typeof dbRender === 'function') dbRender();
+        if(typeof dbSave === 'function') dbSave();
+        setTimeout(applyDraggable, 30);
+      }, '.law-tab');
+    }
+
+    // ── LegalBase titles ──
+    function initDbTitlesDrag(){
+      var titlesList = document.getElementById('dbTitlesList');
+      if(!titlesList) return;
+      new MutationObserver(applyDraggable).observe(titlesList, {childList:true});
+      makeSortable(titlesList, null, function(from, to){
+        var dbData = window._dbData;
+        if(!dbData) return;
+        var cats = dbData.cats || [];
+        var cat = null;
+        var activeTabs = document.getElementById('dbCatTabs').querySelectorAll('.law-tab');
+        activeTabs.forEach(function(tab, i){
+          if(tab.classList.contains('active') && cats[i]) cat = cats[i];
+        });
+        if(!cat || !cat.titles) return;
+        arrayMove(cat.titles, from, to);
+        if(typeof dbRender === 'function') dbRender();
+        if(typeof dbSave === 'function') dbSave();
+        setTimeout(applyDraggable, 30);
+      }, '.art-link');
+    }
+
+    /* ═══ INIT ═══ */
+    window.addEventListener('load', function(){
+      initDndCheckboxes();
+      initLawTabsDrag();
+      initDbCatDrag();
+      initDbTitlesDrag();
+      applyDraggable();
+    });
+
+    window._initDragDrop = function(){
+      initLawTabsDrag();
+      initDbCatDrag();
+      initDbTitlesDrag();
+      applyDraggable();
+    };
   })();
   </script>
 </body>
