@@ -2766,7 +2766,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.7.2</span>
+      <span class="hint" style="opacity:0.6">v3.8.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2853,10 +2853,18 @@
           <span id="lbl-dnd-label">Rirendit me tërheqje (ligje, kategori, tituj)</span>
         </label>
       </div>
+      <!-- Version History -->
+      <div class="group">
+        <h4><i class="fas fa-history"></i> <span id="lbl-ver-title">Version history</span></h4>
+        <button id="openVersionHistory" class="btn btn-ghost" style="width:100%;justify-content:center">
+          <i class="fas fa-history"></i> <span id="lbl-ver-btn">Show versions</span>
+        </button>
+        <div class="hint" style="margin-top:6px"><span id="lbl-ver-hint">View and restore previous versions of your laws.</span></div>
+      </div>
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.7.2</span>
+      <span class="hint" style="opacity:0.6">v3.8.0</span>
     </div>
   </aside>
 
@@ -3011,6 +3019,7 @@
       commit(); if(!articles.length) articles.push({index:0,indexStr:'0',title:'Text',text:raw});
       return articles;
     }
+    window.splitIntoArticles = splitIntoArticles;
 
     // Persistence -- IndexedDB (no 5MB limit, no compression needed)
     const DB_NAME='lawbase_db', DB_STORE='data', DB_KEY='state';
@@ -6141,6 +6150,7 @@
         errQuota:'⚠️ Hapësira e diskut u mbush! Eksporto dhe pastro të dhënat.', swipeLabel:'Swipe për të kaluar LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Gabim gjatë ruajtjes',
         dndTitle:'Drag & Drop', dndLabel:'Rirendit me tërheqje (ligje, kategori, tituj)',
+        verTitle:'Historiku i versioneve', verBtn:'Shfaq versionet', verHint:'Shiko dhe rikthe versionet e mëparshme të ligjeve.',
       },
       mk: {
         brand:'LawBase', addBtn:'Додај', settingsBtn:'Поставки', addLawLabel:'Додај Закон',
@@ -6210,6 +6220,7 @@
         errQuota:'⚠️ Дискот е полн! Извезете и исчистете ги податоците.', swipeLabel:'Swipe за префрлање LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Грешка при зачувување',
         dndTitle:'Drag & Drop', dndLabel:'Подреди со влечење (закони, категории, наслови)',
+        verTitle:'Историја на верзии', verBtn:'Прикажи верзии', verHint:'Прегледај и врати претходни верзии на законите.',
       },
       en: {
         brand:'LawBase', addBtn:'Add', settingsBtn:'Settings', addLawLabel:'Add Law',
@@ -6279,6 +6290,7 @@
         errQuota:'⚠️ Storage quota exceeded! Export and clear your data.', swipeLabel:'Swipe to switch LawBase ↔ LegalBase', swipeTitle:'Swipe',
         errSave:'Error saving data',
         dndTitle:'Drag & Drop', dndLabel:'Reorder by dragging (laws, categories, titles)',
+        verTitle:'Version history', verBtn:'Show versions', verHint:'View and restore previous versions of your laws.',
       }
     };
 
@@ -6327,6 +6339,9 @@
       setT('lbl-dnd-label', L.dndLabel||'Rirendit me tërheqje (ligje, kategori, tituj)');
       setT('db-lbl-dnd-title', L.dndTitle||'Drag & Drop');
       setT('db-lbl-dnd-label', L.dndLabel||'Rirendit me tërheqje (ligje, kategori, tituj)');
+      setT('lbl-ver-title', L.verTitle||'Version history');
+      setT('lbl-ver-btn', L.verBtn||'Show versions');
+      setT('lbl-ver-hint', L.verHint||'View and restore previous versions of your laws.');
       var ft=document.querySelector('#drawer .footer .hint');
       if(ft) ft.innerHTML='<i class="fas fa-info-circle"></i> '+L.footer+' With <i class="fa-solid fa-heart heart"></i> from J. Fatos';
 
@@ -6467,8 +6482,33 @@
           const btn=document.createElement('button');
           btn.className='note-btn'+(notes[idx]?' has-note':'');
           btn.type='button'; btn.title=notes[idx]?((window._uiLang&&window._uiLang.editNote)||'Edit note'):((window._uiLang&&window._uiLang.addNote)||'Add note'); btn.textContent='📝';
-          btn.addEventListener('click',e=>{e.stopPropagation();openNoteModal(law.id,idx,h3.textContent.replace('📝','').trim(),notes[idx]||'');});
+          btn.addEventListener('click',e=>{e.stopPropagation();openNoteModal(law.id,idx,h3.textContent.replace('📝','').replace('🖨','').trim(),notes[idx]||'');});
           h3.appendChild(btn);
+          // Print article button
+          if(!h3.querySelector('.art-print-btn')){
+            var pbtn=document.createElement('button');
+            pbtn.className='note-btn art-print-btn';
+            pbtn.type='button'; pbtn.title='Print'; pbtn.textContent='🖨';
+            pbtn.addEventListener('click',function(ev){
+              ev.stopPropagation();
+              var artEl=block;
+              var win=window.open('','_blank','width=800,height=600');
+              var artTitle=h3.textContent.replace('📝','').replace('🖨','').trim();
+              var preEl=artEl.querySelector('pre');
+              var bodyText=preEl?preEl.innerHTML:(artEl.innerText||'');
+              var lawTitle=law.title||'';
+              win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+lawTitle+' - '+artTitle+'</title>'
+                +'<style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:20px;color:#111}'
+                +'h1{font-size:1.2rem;margin:0 0 2px;color:#333}h2{font-size:1rem;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:16px}'
+                +'.body{line-height:1.7;white-space:pre-wrap;word-wrap:break-word;font-size:0.95rem}'
+                +'@media print{body{margin:0;padding:15mm}}</style></head><body>'
+                +'<h1>'+lawTitle+'</h1><h2>'+artTitle+'</h2>'
+                +'<div class="body">'+bodyText+'</div></body></html>');
+              win.document.close();
+              setTimeout(function(){win.focus();win.print();},400);
+            });
+            h3.appendChild(pbtn);
+          }
           if(notes[idx]){
             block.classList.add('has-note');
             const prev=document.createElement('div');
@@ -6951,6 +6991,397 @@
       initDbTitlesDrag();
       applyDraggable();
     };
+  })();
+  </script>
+  <!-- ═══════════════════════════════════════════════
+       PHASE 3 — Law Compare, Version History
+       v3.8.0
+  ═══════════════════════════════════════════════ -->
+  <style>
+    /* ── Compare modal — table-aligned ── */
+    #compareModal { display:none; position:fixed; inset:0; z-index:5000; background:rgba(0,0,0,0.55); align-items:center; justify-content:center; }
+    #compareModal.open { display:flex; }
+    #compareModal .cmp-box { background:var(--panel); border-radius:12px; width:min(95vw,1100px); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 12px 48px rgba(0,0,0,0.3); overflow:hidden; }
+    #compareModal .cmp-head { padding:12px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    #compareModal .cmp-head h3 { margin:0; font-size:0.95rem; color:var(--primary); }
+    #compareModal .cmp-close { background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--muted); padding:2px 6px; }
+    #compareModal .cmp-controls { display:flex; gap:8px; padding:10px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; align-items:center; }
+    #compareModal .cmp-controls select { flex:1; min-width:120px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--border-radius); background:var(--bg); color:var(--text); font-size:0.82rem; }
+    #compareModal .cmp-controls .cmp-search { flex:2; min-width:120px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--border-radius); background:var(--bg); color:var(--text); font-size:0.82rem; }
+    #compareModal .cmp-controls .cmp-search:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-soft); }
+    .cmp-table-wrap { overflow-y:auto; flex:1; }
+    .cmp-table { width:100%; border-collapse:collapse; table-layout:fixed; }
+    .cmp-table th { position:sticky; top:0; z-index:2; padding:8px 14px; font-size:0.82rem; font-weight:600; color:var(--muted); background:var(--chip); border-bottom:2px solid var(--border); text-align:left; width:50%; }
+    .cmp-table td { padding:8px 14px; vertical-align:top; border-bottom:1px solid var(--border); width:50%; font-size:0.78rem; line-height:1.5; }
+    .cmp-table td:first-child { border-right:1px solid var(--border); }
+    .cmp-art-title { font-size:0.82rem; font-weight:700; color:var(--accent); margin-bottom:4px; }
+    .cmp-row-found td { background:var(--primary-soft) !important; }
+    .cmp-line { padding:1px 0; }
+    .cmp-line.added { background:rgba(45,198,83,0.15); }
+    .cmp-line.removed { background:rgba(230,57,70,0.15); text-decoration:line-through; opacity:0.7; }
+    .cmp-empty-cell { color:var(--muted); font-style:italic; }
+    .cmp-stats { padding:6px 18px; border-top:1px solid var(--border); font-size:0.75rem; color:var(--muted); display:flex; gap:16px; flex-shrink:0; }
+    .cmp-stats .stat-added { color:#2dc653; } .cmp-stats .stat-removed { color:#e63946; }
+    @media(max-width:700px){ .cmp-table td, .cmp-table th { font-size:0.72rem; padding:6px 8px; } }
+    @media print {
+      body > *:not(#compareModal) { display:none !important; }
+      #compareModal { display:flex !important; position:static !important; background:none !important; }
+      #compareModal .cmp-box { max-height:none !important; box-shadow:none !important; border-radius:0 !important; width:100% !important; }
+      #compareModal .cmp-close, #compareModal .cmp-controls, #compareModal #cmpPrint { display:none !important; }
+      #compareModal .cmp-head { border-bottom:2px solid #333; }
+      #compareModal .cmp-head h3 { color:#000 !important; font-size:14pt; }
+      #compareModal .cmp-table-wrap { overflow:visible !important; }
+      .cmp-table { font-size:9pt; }
+      .cmp-table th { background:#eee !important; color:#000 !important; font-size:10pt; }
+      .cmp-table td { border-bottom:1px solid #ccc; }
+      .cmp-table td:first-child { border-right:1px solid #999; }
+      .cmp-line.added { background:rgba(45,198,83,0.2) !important; }
+      .cmp-line.removed { background:rgba(230,57,70,0.15) !important; }
+      .cmp-stats { border-top:2px solid #333; font-size:8pt; }
+      @page { margin:10mm; size:landscape; }
+    }
+
+    /* ── Version history panel ── */
+    #versionPanel { display:none; position:fixed; top:60px; right:12px; z-index:900; background:var(--panel); border:1px solid var(--border); border-radius:var(--border-radius); box-shadow:0 4px 24px rgba(0,0,0,0.15); width:320px; max-height:calc(100vh - 120px); overflow-y:auto; padding:10px 0; }
+    #versionPanel.open { display:block; }
+    #versionPanel .ver-head { padding:6px 14px 8px; font-size:0.82rem; font-weight:700; color:var(--primary); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    #versionPanel .ver-close { background:none; border:none; cursor:pointer; color:var(--muted); font-size:0.9rem; padding:2px 6px; }
+    #versionPanel .ver-item { display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:0.8rem; color:var(--text); cursor:pointer; border-bottom:1px solid var(--border); transition:background 0.1s; }
+    #versionPanel .ver-item:hover { background:var(--chip); }
+    #versionPanel .ver-item:last-child { border-bottom:none; }
+    #versionPanel .ver-time { font-size:0.72rem; color:var(--muted); }
+    #versionPanel .ver-size { font-size:0.68rem; color:var(--muted); margin-left:auto; }
+    #versionPanel .ver-restore { background:none; border:1px solid var(--primary); color:var(--primary); border-radius:4px; padding:2px 8px; font-size:0.72rem; cursor:pointer; margin-left:auto; }
+    #versionPanel .ver-restore:hover { background:var(--primary); color:#fff; }
+    #versionPanel .ver-empty { padding:12px 14px; font-size:0.8rem; color:var(--muted); font-style:italic; }
+  </style>
+
+  <!-- Compare modal -->
+  <div id="compareModal"><div class="cmp-box">
+    <div class="cmp-head"><h3 id="cmpTitle">Compare laws</h3><button class="cmp-close" id="cmpClose">&times;</button></div>
+    <div class="cmp-controls">
+      <select id="cmpLeft"></select>
+      <select id="cmpRight"></select>
+      <button class="btn btn-primary" id="cmpRun" style="flex-shrink:0;padding:6px 12px;font-size:0.82rem"><i class="fas fa-balance-scale"></i> <span id="cmpRunLabel">Compare</span></button>
+      <button class="btn btn-ghost" id="cmpPrint" style="flex-shrink:0;padding:6px 12px;font-size:0.82rem" title="Print"><i class="fas fa-print"></i></button>
+    </div>
+    <div class="cmp-controls" style="padding-top:0">
+      <input type="text" class="cmp-search" id="cmpSearch" placeholder="Search article (e.g. 12, Neni 45, Член 3)..." />
+    </div>
+    <div class="cmp-table-wrap" id="cmpTableWrap">
+      <table class="cmp-table"><thead><tr><th id="cmpThLeft">Left</th><th id="cmpThRight">Right</th></tr></thead><tbody id="cmpTbody"></tbody></table>
+    </div>
+    <div class="cmp-stats" id="cmpStats"></div>
+  </div></div>
+
+  <!-- Version history panel -->
+  <div id="versionPanel"><div class="ver-head"><span id="verTitle">Version history</span><button class="ver-close" id="verClose">&times;</button></div><div id="verList"></div></div>
+
+  <script>
+  (function(){
+    var VER_KEY = 'lb-versions';
+    var MAX_VERSIONS = 20;
+    function getLang(){ return localStorage.getItem('zakoni_lang')||'en'; }
+    function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    /* ════════════════════════════════════════════
+       10. LAW COMPARE (side-by-side diff)
+    ════════════════════════════════════════════ */
+    function openCompare(){
+      var modal = document.getElementById('compareModal');
+      var state = window._appState;
+      if(!state || !state.laws || state.laws.length < 2) return;
+      var lang = getLang();
+      document.getElementById('cmpTitle').textContent = {sq:'Krahaso ligjet',mk:'Спореди закони',en:'Compare laws'}[lang]||'Compare laws';
+      document.getElementById('cmpRunLabel').textContent = {sq:'Krahaso',mk:'Спореди',en:'Compare'}[lang]||'Compare';
+      document.getElementById('cmpSearch').placeholder = {sq:'Kërko nenin (psh. 12, Neni 45)...',mk:'Пребарај член (пр. 12, Член 45)...',en:'Search article (e.g. 12, Член 3)...'}[lang]||'Search article...';
+
+      var leftSel = document.getElementById('cmpLeft');
+      var rightSel = document.getElementById('cmpRight');
+      leftSel.innerHTML = ''; rightSel.innerHTML = '';
+      state.laws.forEach(function(l,i){
+        leftSel.innerHTML += '<option value="'+i+'">'+escH(l.title)+'</option>';
+        rightSel.innerHTML += '<option value="'+i+'">'+escH(l.title)+'</option>';
+      });
+      if(state.laws.length >= 2) rightSel.selectedIndex = 1;
+      document.getElementById('cmpTbody').innerHTML = '';
+      document.getElementById('cmpStats').innerHTML = '';
+      document.getElementById('cmpSearch').value = '';
+      modal.classList.add('open');
+    }
+
+    document.getElementById('cmpClose').addEventListener('click', function(){ document.getElementById('compareModal').classList.remove('open'); });
+    document.getElementById('compareModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
+    document.getElementById('cmpPrint').addEventListener('click', function(){ window.print(); });
+    document.getElementById('cmpRun').addEventListener('click', runCompare);
+
+    function runCompare(){
+      var state = window._appState;
+      if(!state) return;
+      var leftIdx = parseInt(document.getElementById('cmpLeft').value);
+      var rightIdx = parseInt(document.getElementById('cmpRight').value);
+      var lawL = state.laws[leftIdx], lawR = state.laws[rightIdx];
+      if(!lawL || !lawR) return;
+
+      document.getElementById('cmpThLeft').textContent = lawL.title;
+      document.getElementById('cmpThRight').textContent = lawR.title;
+
+      var artsL = window.splitIntoArticles ? window.splitIntoArticles(lawL.content||'') : [{index:0,title:'Text',text:lawL.content||''}];
+      var artsR = window.splitIntoArticles ? window.splitIntoArticles(lawR.content||'') : [{index:0,title:'Text',text:lawR.content||''}];
+
+      var indexL = {}, indexR = {};
+      artsL.forEach(function(a){ indexL[a.index] = a; });
+      artsR.forEach(function(a){ indexR[a.index] = a; });
+
+      var allIndices = {};
+      artsL.forEach(function(a){ allIndices[a.index] = true; });
+      artsR.forEach(function(a){ allIndices[a.index] = true; });
+      var sorted = Object.keys(allIndices).map(Number).sort(function(a,b){ return a-b; });
+
+      var tbody = document.getElementById('cmpTbody');
+      tbody.innerHTML = '';
+      var addedCount = 0, removedCount = 0, changedCount = 0, sameCount = 0;
+
+      sorted.forEach(function(idx){
+        var aL = indexL[idx], aR = indexR[idx];
+        var tr = document.createElement('tr');
+        tr.id = 'cmpRow-'+idx;
+        tr.dataset.artidx = idx;
+        var tdL = document.createElement('td');
+        var tdR = document.createElement('td');
+
+        if(aL && aR){
+          var linesL = (aL.text||'').split('\n');
+          var linesR = (aR.text||'').split('\n');
+          var diff = simpleDiff(linesL, linesR);
+          var hasChanges = diff.some(function(d){ return d.type !== 'equal'; });
+          if(hasChanges) changedCount++; else sameCount++;
+
+          tdL.innerHTML = '<div class="cmp-art-title"'+(hasChanges?' style="color:var(--danger)"':'')+'>'+escH(aL.title)+'</div>';
+          tdR.innerHTML = '<div class="cmp-art-title"'+(hasChanges?' style="color:var(--danger)"':'')+'>'+escH(aR.title)+'</div>';
+          diff.forEach(function(d){
+            if(d.type === 'equal'){
+              tdL.innerHTML += '<div class="cmp-line">'+escH(d.line)+'</div>';
+              tdR.innerHTML += '<div class="cmp-line">'+escH(d.line)+'</div>';
+            } else if(d.type === 'removed'){
+              tdL.innerHTML += '<div class="cmp-line removed">'+escH(d.line)+'</div>';
+              tdR.innerHTML += '<div class="cmp-line">&nbsp;</div>';
+            } else if(d.type === 'added'){
+              tdL.innerHTML += '<div class="cmp-line">&nbsp;</div>';
+              tdR.innerHTML += '<div class="cmp-line added">'+escH(d.line)+'</div>';
+            }
+          });
+        } else if(aL && !aR){
+          removedCount++;
+          tdL.innerHTML = '<div class="cmp-art-title" style="color:var(--danger)">'+escH(aL.title)+' ⛔</div><div class="cmp-line removed">'+escH(aL.text||'')+'</div>';
+          tdR.innerHTML = '<span class="cmp-empty-cell">—</span>';
+        } else if(!aL && aR){
+          addedCount++;
+          tdL.innerHTML = '<span class="cmp-empty-cell">—</span>';
+          tdR.innerHTML = '<div class="cmp-art-title" style="color:#2dc653">'+escH(aR.title)+' ✚</div><div class="cmp-line added">'+escH(aR.text||'')+'</div>';
+        }
+
+        tr.appendChild(tdL);
+        tr.appendChild(tdR);
+        tbody.appendChild(tr);
+      });
+
+      var lang = getLang();
+      var total = sorted.length;
+      document.getElementById('cmpStats').innerHTML =
+        '<span>'+total+' '+({sq:'artikuj gjithsej',mk:'членови вкупно',en:'articles total'}[lang]||'total')+'</span>'+
+        '<span class="stat-added">+'+addedCount+' '+({sq:'të reja',mk:'нови',en:'new'}[lang]||'new')+'</span>'+
+        '<span class="stat-removed">−'+removedCount+' '+({sq:'të hequra',mk:'отстранети',en:'removed'}[lang]||'removed')+'</span>'+
+        '<span>'+changedCount+' '+({sq:'të ndryshuara',mk:'изменети',en:'changed'}[lang]||'changed')+'</span>'+
+        '<span>'+sameCount+' '+({sq:'identike',mk:'исти',en:'identical'}[lang]||'identical')+'</span>';
+    }
+
+    // Search: scroll to article row
+    var _cmpSearchTimeout = null;
+    document.getElementById('cmpSearch').addEventListener('input', function(){
+      clearTimeout(_cmpSearchTimeout);
+      var val = this.value;
+      _cmpSearchTimeout = setTimeout(function(){ cmpSearchArticle(val); }, 200);
+    });
+
+    function cmpSearchArticle(query){
+      // Remove previous highlights
+      document.querySelectorAll('#cmpTbody .cmp-row-found').forEach(function(r){ r.classList.remove('cmp-row-found'); });
+      if(!query || !query.trim()) return;
+      query = query.trim();
+      var numMatch = query.match(/\d+/);
+      var searchNum = numMatch ? parseInt(numMatch[0]) : null;
+
+      // Try by number
+      if(searchNum !== null){
+        var row = document.getElementById('cmpRow-'+searchNum);
+        if(row){
+          row.classList.add('cmp-row-found');
+          row.scrollIntoView({behavior:'smooth', block:'center'});
+          return;
+        }
+      }
+      // Try by title text
+      var rows = document.querySelectorAll('#cmpTbody tr[data-artidx]');
+      for(var i=0; i<rows.length; i++){
+        var title = rows[i].querySelector('.cmp-art-title');
+        if(title && title.textContent.toLowerCase().indexOf(query.toLowerCase()) >= 0){
+          rows[i].classList.add('cmp-row-found');
+          rows[i].scrollIntoView({behavior:'smooth', block:'center'});
+          return;
+        }
+      }
+    }
+
+    function simpleDiff(a, b){
+      var m = a.length, n = b.length;
+      var dp = [];
+      for(var i=0;i<=m;i++){ dp[i]=[]; for(var j=0;j<=n;j++) dp[i][j]=0; }
+      for(i=1;i<=m;i++) for(j=1;j<=n;j++) dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j],dp[i][j-1]);
+      var result = [];
+      i = m; j = n;
+      while(i>0 || j>0){
+        if(i>0 && j>0 && a[i-1]===b[j-1]){ result.unshift({type:'equal', line:a[i-1]}); i--; j--; }
+        else if(j>0 && (i===0 || dp[i][j-1]>=dp[i-1][j])){ result.unshift({type:'added', line:b[j-1]}); j--; }
+        else { result.unshift({type:'removed', line:a[i-1]}); i--; }
+      }
+      return result;
+    }
+
+    // Add compare button to LawBase nav
+    function injectCompareBtn(){
+      var navRight = document.querySelector('.app:not(#dashboardView) .nav-right');
+      if(!navRight || document.getElementById('compareBtn')) return;
+      var btn = document.createElement('button');
+      btn.id = 'compareBtn';
+      btn.className = 'btn btn-ghost';
+      btn.title = 'Compare laws';
+      btn.innerHTML = '<i class="fas fa-columns"></i>';
+      btn.setAttribute('aria-label','Compare laws');
+      btn.addEventListener('click', openCompare);
+      var settingsBtn = document.getElementById('openSettings');
+      if(settingsBtn) navRight.insertBefore(btn, settingsBtn);
+      else navRight.appendChild(btn);
+    }
+
+    /* ════════════════════════════════════════════
+       11. VERSION HISTORY
+    ════════════════════════════════════════════ */
+    function loadVersions(){ try { return JSON.parse(localStorage.getItem(VER_KEY))||{}; } catch(e){ return {}; } }
+    function saveVersions(v){ try { localStorage.setItem(VER_KEY, JSON.stringify(v)); } catch(e){} }
+
+    // Save a snapshot before each law edit
+    function saveSnapshot(lawId, title, content){
+      var versions = loadVersions();
+      if(!versions[lawId]) versions[lawId] = [];
+      var hist = versions[lawId];
+      // Don't save if identical to last version
+      if(hist.length && hist[hist.length-1].content === content) return;
+      hist.push({ ts:Date.now(), title:title, content:content, size:content.length });
+      // Limit
+      if(hist.length > MAX_VERSIONS) hist.splice(0, hist.length - MAX_VERSIONS);
+      versions[lawId] = hist;
+      saveVersions(versions);
+    }
+
+    // Hook into saveToStorage to auto-snapshot
+    var origSave = window.saveToStorage;
+    if(origSave){
+      window.saveToStorage = function(){
+        var state = window._appState;
+        if(state && state.laws){
+          state.laws.forEach(function(l){
+            if(l.content) saveSnapshot(l.id, l.title, l.content);
+          });
+        }
+        return origSave.apply(this, arguments);
+      };
+    }
+
+    function openVersionPanel(){
+      var panel = document.getElementById('versionPanel');
+      var state = window._appState;
+      if(!state || !state.activeId) return;
+      var lang = getLang();
+      document.getElementById('verTitle').textContent = {sq:'Historiku i versioneve',mk:'Историја на верзии',en:'Version history'}[lang]||'Version history';
+
+      var list = document.getElementById('verList');
+      var versions = loadVersions();
+      var hist = versions[state.activeId] || [];
+      list.innerHTML = '';
+
+      if(!hist.length){
+        list.innerHTML = '<div class="ver-empty">'+({sq:'Nuk ka versione',mk:'Нема верзии',en:'No versions yet'}[lang]||'No versions yet')+'</div>';
+        panel.classList.add('open');
+        return;
+      }
+
+      // Show newest first
+      hist.slice().reverse().forEach(function(v, ri){
+        var i = hist.length - 1 - ri;
+        var item = document.createElement('div');
+        item.className = 'ver-item';
+        var date = new Date(v.ts);
+        var timeStr = date.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}) + ' ' + date.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+        var sizeStr = v.size > 1024 ? Math.round(v.size/1024)+'KB' : v.size+'B';
+        item.innerHTML = '<div><div style="font-weight:500;font-size:0.78rem">'+escH(v.title)+'</div><div class="ver-time">'+timeStr+'</div></div><span class="ver-size">'+sizeStr+'</span><button class="ver-restore">'+({sq:'Rikthe',mk:'Врати',en:'Restore'}[lang]||'Restore')+'</button>';
+        item.querySelector('.ver-restore').addEventListener('click', function(e){
+          e.stopPropagation();
+          var L = window._uiLang||{};
+          if(!confirm(L.verRestoreConfirm||'Restore this version? Current content will be saved as a new version first.')){return;}
+          // Save current as snapshot first
+          var law = state.laws.find(function(l){return l.id===state.activeId;});
+          if(law && law.content) saveSnapshot(law.id, law.title, law.content);
+          // Restore
+          if(law){
+            law.content = v.content;
+            law.articles = typeof splitIntoArticles==='function' ? splitIntoArticles(v.content) : [];
+            law.updatedAt = Date.now();
+            if(window._docCache) Object.keys(window._docCache).filter(function(k){return k.startsWith(law.id);}).forEach(function(k){delete window._docCache[k];});
+            if(typeof renderAll==='function') renderAll();
+            if(typeof saveToStorage==='function') origSave();
+          }
+          panel.classList.remove('open');
+        });
+        list.appendChild(item);
+      });
+      panel.classList.add('open');
+    }
+
+    document.getElementById('verClose').addEventListener('click', function(){ document.getElementById('versionPanel').classList.remove('open'); });
+
+    // Wire settings drawer button
+    function initVersionBtn(){
+      var btn = document.getElementById('openVersionHistory');
+      if(btn){
+        btn.addEventListener('click', function(){
+          // Close the drawer first
+          var drawer = document.getElementById('drawer');
+          if(drawer) drawer.classList.remove('open');
+          setTimeout(openVersionPanel, 200);
+        });
+      }
+    }
+
+    // Close panels on outside click
+    document.addEventListener('click', function(e){
+      var vp = document.getElementById('versionPanel');
+      if(vp && vp.classList.contains('open') && !vp.contains(e.target)){
+        vp.classList.remove('open');
+      }
+    });
+
+    /* ═══ INIT ═══ */
+    window.addEventListener('load', function(){
+      injectCompareBtn();
+      initVersionBtn();
+    });
+
+    // Expose splitIntoArticles for version restore
+    if(!window.splitIntoArticles && typeof splitIntoArticles==='undefined'){
+      // Fallback — the main script has it but it's scoped
+      window.splitIntoArticles = function(raw){ return [{index:'0',title:'',text:raw}]; };
+    }
   })();
   </script>
 </body>
