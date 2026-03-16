@@ -46,34 +46,136 @@
     }
 
     // ── Offline: cache FontAwesome + Mammoth in localStorage ──
+    var FA_CSS_KEY = 'lb-fa-css-v1';
+    var FA_FONT_KEY = 'lb-fa-font-v1';
+
     async function offlineInit(){
-      // FA icons load from <link> tag — no caching needed, works from CDN
-      // Only cache Mammoth.js for offline Word import
-      const KEY = 'lb-mammoth-v1';
+      var MAMMOTH_KEY = 'lb-mammoth-v1';
+
       if(!navigator.onLine){
-        // Load mammoth from cache if offline
+        // ── OFFLINE: load from cache ──
+        // FontAwesome CSS
         try {
-          const cached = localStorage.getItem(KEY);
-          if(cached && cached.length > 10000 && !window.mammoth){
-            const sc = document.createElement('script');
-            sc.textContent = cached;
+          var cachedCSS = localStorage.getItem(FA_CSS_KEY);
+          if(cachedCSS && cachedCSS.length > 5000){
+            var style = document.createElement('style');
+            style.textContent = cachedCSS;
+            document.head.appendChild(style);
+            // Remove the CDN link since we're using cached
+            var faLink = document.querySelector('link[href*="font-awesome"]');
+            if(faLink) faLink.remove();
+          }
+        } catch(e){}
+        // FontAwesome WOFF2 font
+        try {
+          var cachedFont = localStorage.getItem(FA_FONT_KEY);
+          if(cachedFont && cachedFont.length > 10000){
+            var fontStyle = document.createElement('style');
+            fontStyle.textContent = '@font-face{font-family:"Font Awesome 6 Free";font-style:normal;font-weight:900;font-display:block;src:url('+cachedFont+') format("woff2")}'
+              + '@font-face{font-family:"Font Awesome 6 Free";font-style:normal;font-weight:400;font-display:block;src:url('+cachedFont+') format("woff2")}';
+            document.head.appendChild(fontStyle);
+          }
+        } catch(e){}
+        // Mammoth
+        try {
+          var cachedM = localStorage.getItem(MAMMOTH_KEY);
+          if(cachedM && cachedM.length > 10000 && !window.mammoth){
+            var sc = document.createElement('script');
+            sc.textContent = cachedM;
             document.head.appendChild(sc);
           }
         } catch(e) {}
         return;
       }
-      // Online: cache mammoth in background
+
+      // ── ONLINE: cache resources in background ──
+      // Cache FontAwesome CSS
       try {
-        const existing = localStorage.getItem(KEY);
-        if(existing && existing.length > 10000) return; // already cached
-        const mr = await fetch('https://unpkg.com/mammoth/mammoth.browser.min.js');
-        const ct = mr.headers.get('content-type') || '';
+        if(!localStorage.getItem(FA_CSS_KEY)){
+          var faResp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+          if(faResp.ok){
+            var faTxt = await faResp.text();
+            if(faTxt && faTxt.length > 5000){
+              // Rewrite font URLs to be absolute
+              faTxt = faTxt.replace(/url\(\.\.\/webfonts\//g, 'url(https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/');
+              try { localStorage.setItem(FA_CSS_KEY, faTxt); } catch(e){}
+            }
+          }
+        }
+      } catch(e){}
+
+      // Cache FontAwesome solid WOFF2 font as data URL
+      try {
+        if(!localStorage.getItem(FA_FONT_KEY)){
+          var fontResp = await fetch('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2');
+          if(fontResp.ok){
+            var blob = await fontResp.blob();
+            var reader = new FileReader();
+            reader.onload = function(){
+              try { localStorage.setItem(FA_FONT_KEY, reader.result); } catch(e){}
+            };
+            reader.readAsDataURL(blob);
+          }
+        }
+      } catch(e){}
+
+      // Cache mammoth.js
+      try {
+        var existing = localStorage.getItem(MAMMOTH_KEY);
+        if(existing && existing.length > 10000) return;
+        var mr = await fetch('https://unpkg.com/mammoth/mammoth.browser.min.js');
+        var ct = mr.headers.get('content-type') || '';
         if(!mr.ok || !ct.includes('javascript')) return;
-        const txt = await mr.text();
+        var txt = await mr.text();
         if(txt && txt.length > 10000 && '!(/'.includes(txt[0])){
-          try { localStorage.setItem(KEY, txt); } catch(e) {}
+          try { localStorage.setItem(MAMMOTH_KEY, txt); } catch(e) {}
         }
       } catch(e) {}
+    }
+
+    // ── Service Worker for offline page caching ──
+    function registerSW(){
+      if(!('serviceWorker' in navigator)) return;
+      var swCode = `
+        var CACHE = 'lawbase-v3';
+        var URLS = ['./', self.location.href];
+        self.addEventListener('install', function(e){
+          e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(URLS); }));
+          self.skipWaiting();
+        });
+        self.addEventListener('activate', function(e){
+          e.waitUntil(caches.keys().then(function(names){
+            return Promise.all(names.filter(function(n){ return n !== CACHE; }).map(function(n){ return caches.delete(n); }));
+          }));
+          self.clients.claim();
+        });
+        self.addEventListener('fetch', function(e){
+          // Only cache same-origin navigations and FontAwesome CDN
+          var url = e.request.url;
+          var isNav = e.request.mode === 'navigate';
+          var isFA = url.indexOf('font-awesome') > -1;
+          if(!isNav && !isFA) return;
+          e.respondWith(
+            caches.match(e.request).then(function(cached){
+              var fetchPromise = fetch(e.request).then(function(resp){
+                if(resp && resp.ok){
+                  var clone = resp.clone();
+                  caches.open(CACHE).then(function(c){ c.put(e.request, clone); });
+                }
+                return resp;
+              }).catch(function(){ return cached; });
+              return cached || fetchPromise;
+            })
+          );
+        });
+      `;
+      try {
+        var blob = new Blob([swCode], {type:'application/javascript'});
+        var swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl, {scope:'./'}).catch(function(){
+          // Blob SW not supported (e.g. some browsers) — fallback to localStorage caching only
+        });
+      } catch(e){}
     }
 
     let deferredPrompt = null;
@@ -114,6 +216,7 @@
       const faviconEl = document.getElementById('faviconIcon');
       if(faviconEl) makePng(64, png64 => { faviconEl.href = png64; });
       offlineInit();
+      registerSW();
       setTimeout(showiOSHint, 1500);
     });
     window.addEventListener('appinstalled', () => { const b=document.getElementById('pwaInstallBanner'); if(b)b.remove(); });
@@ -148,6 +251,16 @@
   </script>
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Fallback: if FontAwesome fails to load, buttons still show text -->
+  <style id="faFallback">
+    .fas,.far,.fa-solid,.fa-regular { font-family:'Font Awesome 6 Free',sans-serif; }
+  </style>
+  <script>
+    // Remove fallback if FA loads successfully
+    document.querySelector('link[href*="font-awesome"]').addEventListener('load', function(){
+      var fb = document.getElementById('faFallback'); if(fb) fb.remove();
+    });
+  </script>
   <!-- Google Fonts removed — using system Arial -->
   <style>
     /* ══════════════════════════════════════════════════════════════
