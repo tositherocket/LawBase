@@ -2766,7 +2766,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.8.0</span>
+      <span class="hint" style="opacity:0.6">v3.9.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2861,10 +2861,26 @@
         </button>
         <div class="hint" style="margin-top:6px"><span id="lbl-ver-hint">View and restore previous versions of your laws.</span></div>
       </div>
+      <!-- AI Extract (Claude API) -->
+      <div class="group">
+        <h4><i class="fas fa-robot"></i> <span id="lbl-ai-title">AI Extract</span></h4>
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:6px" id="lbl-ai-hint">Auto-extract court decision data using AI</label>
+        <select id="aiProvider" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.8rem;margin-bottom:6px;box-sizing:border-box">
+          <option value="gemini">Google Gemini 2.5 Flash (free tier available)</option>
+          <option value="claude">Anthropic Claude Sonnet (paid)</option>
+        </select>
+        <input id="aiApiKey" type="password" placeholder="" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:0.8rem;box-sizing:border-box" />
+        <div style="font-size:0.68rem;color:var(--muted);margin-top:3px" id="aiKeyHint">Get free key: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com/apikey</a></div>
+        <div style="display:flex;gap:6px;margin-top:6px;align-items:center">
+          <button id="aiSaveKey" class="btn btn-ghost" style="font-size:0.78rem;padding:4px 10px"><i class="fas fa-save"></i> Save</button>
+          <button id="aiClearKey" class="btn btn-ghost" style="font-size:0.78rem;padding:4px 10px;color:var(--danger)"><i class="fas fa-trash"></i> Clear</button>
+          <span id="aiKeyStatus" style="font-size:0.7rem;color:var(--muted)"></span>
+        </div>
+      </div>
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.8.0</span>
+      <span class="hint" style="opacity:0.6">v3.9.0</span>
     </div>
   </aside>
 
@@ -3027,11 +3043,12 @@
     function openDB(){
       return new Promise((res,rej)=>{
         if(_db){res(_db);return;}
-        const req=indexedDB.open(DB_NAME,2);
+        const req=indexedDB.open(DB_NAME,3);
         req.onupgradeneeded=e=>{
           const db=e.target.result;
           if(!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
           if(!db.objectStoreNames.contains('annotations')) db.createObjectStore('annotations');
+          if(!db.objectStoreNames.contains('courtpractice')) db.createObjectStore('courtpractice');
         };
         req.onsuccess=e=>{_db=e.target.result;res(_db);};
         req.onerror=e=>rej(e);
@@ -3131,6 +3148,14 @@
           req.onerror = e=>rej(e.target.error);
         });
 
+        // Read court practice
+        const courtPractice = await new Promise((res, rej)=>{
+          if(!db.objectStoreNames.contains('courtpractice')){res(null);return;}
+          const req = db.transaction('courtpractice','readonly').objectStore('courtpractice').get('cpv2::all');
+          req.onsuccess = e=>res(e.target.result||null);
+          req.onerror = ()=>res(null);
+        });
+
         const payload = {
           version:    3,
           exportedAt: new Date().toISOString(),
@@ -3140,7 +3165,8 @@
                         content: l.content, updatedAt: l.updatedAt||Date.now()
                       })),
           annotations,
-          legalbase
+          legalbase,
+          courtPractice
         };
 
         const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
@@ -3201,7 +3227,16 @@
           }
         }
 
-        // ── 4. Render UI ──
+        // ── 4. Restore court practice ──
+        if(data.courtPractice && Array.isArray(data.courtPractice) && data.courtPractice.length){
+          if(db.objectStoreNames.contains('courtpractice')){
+            await dbTx(db, 'courtpractice', 'readwrite', tx=>{
+              tx.objectStore('courtpractice').put(data.courtPractice, 'cpv2::all');
+            });
+          }
+        }
+
+        // ── 5. Render UI ──
         renderAll();
 
         const lbCats  = (data.legalbase && data.legalbase.cats) ? data.legalbase.cats.length : 0;
@@ -4972,7 +5007,7 @@
       // ══════════════════════════════════════════════
       function exportDB(){
         return new Promise(function(resolve){
-          var req=indexedDB.open('lawbase_db',2);
+          var req=indexedDB.open('lawbase_db',3);
           req.onsuccess=function(e){
             var db=e.target.result;
             var tx=db.transaction(['data','annotations'],'readonly');
@@ -5000,7 +5035,7 @@
 
       function importDB(data){
         return new Promise(function(resolve,reject){
-          var req=indexedDB.open('lawbase_db',2);
+          var req=indexedDB.open('lawbase_db',3);
           req.onsuccess=function(e){
             var db=e.target.result;
             var tx=db.transaction(['data','annotations'],'readwrite');
@@ -5460,7 +5495,7 @@
     document.getElementById('dbClearAllBtn').addEventListener('click', ()=>{
       if(!confirm((window._dbLang&&window._dbLang.dbClearAll)||'Clear all notes?')) return;
       if(!confirm((window._dbLang&&window._dbLang.clearConfirm)||'Are you sure? ALL categories and titles will be deleted permanently.')) return;
-      const req = indexedDB.open('lawbase_db', 2);
+      const req = indexedDB.open('lawbase_db', 3);
       req.onsuccess = e => {
         const db = e.target.result;
         db.transaction(['data'],'readwrite').objectStore('data').delete('dashboard-notes').onsuccess = ()=>{
@@ -6491,21 +6526,29 @@
             pbtn.type='button'; pbtn.title='Print'; pbtn.textContent='🖨';
             pbtn.addEventListener('click',function(ev){
               ev.stopPropagation();
-              var artEl=block;
-              var win=window.open('','_blank','width=800,height=600');
               var artTitle=h3.textContent.replace('📝','').replace('🖨','').trim();
-              var preEl=artEl.querySelector('pre');
-              var bodyText=preEl?preEl.innerHTML:(artEl.innerText||'');
+              var preEl=block.querySelector('pre');
+              var bodyText=preEl?preEl.innerHTML:(block.innerText||'');
               var lawTitle=law.title||'';
-              win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+lawTitle+' - '+artTitle+'</title>'
-                +'<style>body{font-family:Georgia,serif;max-width:800px;margin:40px auto;padding:20px;color:#111}'
-                +'h1{font-size:1.2rem;margin:0 0 2px;color:#333}h2{font-size:1rem;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:16px}'
+              // Use hidden iframe for reliable print
+              var iframe=document.getElementById('_printFrame');
+              if(!iframe){
+                iframe=document.createElement('iframe');
+                iframe.id='_printFrame';
+                iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:800px;height:600px;border:none;';
+                document.body.appendChild(iframe);
+              }
+              var doc=iframe.contentDocument||iframe.contentWindow.document;
+              doc.open();
+              doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+lawTitle+' — '+artTitle+'</title>'
+                +'<style>body{font-family:Georgia,serif;max-width:800px;margin:0 auto;padding:20px;color:#111}'
+                +'h1{font-size:1.1rem;margin:0 0 2px;color:#555}h2{font-size:1.05rem;color:#222;border-bottom:2px solid #333;padding-bottom:6px;margin-bottom:16px}'
                 +'.body{line-height:1.7;white-space:pre-wrap;word-wrap:break-word;font-size:0.95rem}'
-                +'@media print{body{margin:0;padding:15mm}}</style></head><body>'
+                +'@media print{body{margin:0;padding:10mm 15mm}}</style></head><body>'
                 +'<h1>'+lawTitle+'</h1><h2>'+artTitle+'</h2>'
                 +'<div class="body">'+bodyText+'</div></body></html>');
-              win.document.close();
-              setTimeout(function(){win.focus();win.print();},400);
+              doc.close();
+              setTimeout(function(){iframe.contentWindow.focus();iframe.contentWindow.print();},300);
             });
             h3.appendChild(pbtn);
           }
@@ -6995,7 +7038,7 @@
   </script>
   <!-- ═══════════════════════════════════════════════
        PHASE 3 — Law Compare, Version History
-       v3.8.0
+       v3.9.0
   ═══════════════════════════════════════════════ -->
   <style>
     /* ── Compare modal — table-aligned ── */
@@ -7023,23 +7066,6 @@
     .cmp-stats { padding:6px 18px; border-top:1px solid var(--border); font-size:0.75rem; color:var(--muted); display:flex; gap:16px; flex-shrink:0; }
     .cmp-stats .stat-added { color:#2dc653; } .cmp-stats .stat-removed { color:#e63946; }
     @media(max-width:700px){ .cmp-table td, .cmp-table th { font-size:0.72rem; padding:6px 8px; } }
-    @media print {
-      body > *:not(#compareModal) { display:none !important; }
-      #compareModal { display:flex !important; position:static !important; background:none !important; }
-      #compareModal .cmp-box { max-height:none !important; box-shadow:none !important; border-radius:0 !important; width:100% !important; }
-      #compareModal .cmp-close, #compareModal .cmp-controls, #compareModal #cmpPrint { display:none !important; }
-      #compareModal .cmp-head { border-bottom:2px solid #333; }
-      #compareModal .cmp-head h3 { color:#000 !important; font-size:14pt; }
-      #compareModal .cmp-table-wrap { overflow:visible !important; }
-      .cmp-table { font-size:9pt; }
-      .cmp-table th { background:#eee !important; color:#000 !important; font-size:10pt; }
-      .cmp-table td { border-bottom:1px solid #ccc; }
-      .cmp-table td:first-child { border-right:1px solid #999; }
-      .cmp-line.added { background:rgba(45,198,83,0.2) !important; }
-      .cmp-line.removed { background:rgba(230,57,70,0.15) !important; }
-      .cmp-stats { border-top:2px solid #333; font-size:8pt; }
-      @page { margin:10mm; size:landscape; }
-    }
 
     /* ── Version history panel ── */
     #versionPanel { display:none; position:fixed; top:60px; right:12px; z-index:900; background:var(--panel); border:1px solid var(--border); border-radius:var(--border-radius); box-shadow:0 4px 24px rgba(0,0,0,0.15); width:320px; max-height:calc(100vh - 120px); overflow-y:auto; padding:10px 0; }
@@ -7112,7 +7138,65 @@
 
     document.getElementById('cmpClose').addEventListener('click', function(){ document.getElementById('compareModal').classList.remove('open'); });
     document.getElementById('compareModal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
-    document.getElementById('cmpPrint').addEventListener('click', function(){ window.print(); });
+    document.getElementById('cmpPrint').addEventListener('click', function(){
+      var thL = document.getElementById('cmpThLeft').textContent;
+      var thR = document.getElementById('cmpThRight').textContent;
+      var tbody = document.getElementById('cmpTbody');
+      if(!tbody || !tbody.innerHTML.trim()) return;
+
+      // Find which row to print: highlighted row, or the one currently visible in viewport
+      var targetRow = tbody.querySelector('.cmp-row-found');
+      if(!targetRow){
+        // Find the row currently visible in the scroll container
+        var wrap = document.getElementById('cmpTableWrap');
+        var rows = tbody.querySelectorAll('tr[data-artidx]');
+        var wrapRect = wrap.getBoundingClientRect();
+        for(var i=0; i<rows.length; i++){
+          var rect = rows[i].getBoundingClientRect();
+          if(rect.top >= wrapRect.top && rect.top < wrapRect.top + wrapRect.height * 0.5){
+            targetRow = rows[i]; break;
+          }
+        }
+        if(!targetRow && rows.length) targetRow = rows[0];
+      }
+      if(!targetRow) return;
+
+      // Get article title from the row
+      var artTitleL = targetRow.querySelector('td:first-child .cmp-art-title');
+      var artTitleR = targetRow.querySelector('td:last-child .cmp-art-title');
+      var artName = (artTitleL ? artTitleL.textContent : '') || (artTitleR ? artTitleR.textContent : '') || '';
+
+      var iframe = document.getElementById('_printFrame');
+      if(!iframe){
+        iframe = document.createElement('iframe');
+        iframe.id = '_printFrame';
+        iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1000px;height:800px;border:none;';
+        document.body.appendChild(iframe);
+      }
+      var doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+artName+' — '+thL+' vs '+thR+'</title>'
+        +'<style>body{font-family:Arial,sans-serif;margin:0;padding:10mm 15mm;color:#111;font-size:9pt}'
+        +'h2{font-size:12pt;margin:0 0 4px;text-align:center}'
+        +'.sub{font-size:9pt;color:#555;text-align:center;margin-bottom:12px;border-bottom:2px solid #333;padding-bottom:8px}'
+        +'table{width:100%;border-collapse:collapse;table-layout:fixed}'
+        +'th{background:#eee;padding:6px 10px;font-size:9pt;text-align:left;border-bottom:2px solid #333;width:50%}'
+        +'td{padding:8px 10px;vertical-align:top;font-size:8.5pt;line-height:1.6;width:50%}'
+        +'td:first-child{border-right:1px solid #999}'
+        +'.cmp-art-title{font-weight:700;font-size:9pt;margin-bottom:3px}'
+        +'.cmp-line{padding:1px 0}'
+        +'.cmp-line.added{background:rgba(45,198,83,0.2)}'
+        +'.cmp-line.removed{background:rgba(230,57,70,0.15);text-decoration:line-through}'
+        +'.cmp-empty-cell{color:#888;font-style:italic}'
+        +'@page{margin:10mm}</style></head><body>'
+        +'<h2>'+artName+'</h2>'
+        +'<div class="sub">'+thL+' &mdash; '+thR+'</div>'
+        +'<table><thead><tr><th>'+thL+'</th><th>'+thR+'</th></tr></thead><tbody>'
+        +targetRow.outerHTML
+        +'</tbody></table></body></html>');
+      doc.close();
+      setTimeout(function(){ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 300);
+    });
     document.getElementById('cmpRun').addEventListener('click', runCompare);
 
     function runCompare(){
@@ -7196,28 +7280,28 @@
         '<span>'+sameCount+' '+({sq:'identike',mk:'исти',en:'identical'}[lang]||'identical')+'</span>';
     }
 
-    // Search: scroll to article row
-    var _cmpSearchTimeout = null;
+    // Search: instant jump to article row (like LawBase search)
     document.getElementById('cmpSearch').addEventListener('input', function(){
-      clearTimeout(_cmpSearchTimeout);
-      var val = this.value;
-      _cmpSearchTimeout = setTimeout(function(){ cmpSearchArticle(val); }, 200);
+      cmpSearchArticle(this.value);
+    });
+    document.getElementById('cmpSearch').addEventListener('keydown', function(e){
+      if(e.key==='Enter'){ e.preventDefault(); cmpSearchArticle(this.value); }
     });
 
     function cmpSearchArticle(query){
-      // Remove previous highlights
+      // Clear previous highlights
       document.querySelectorAll('#cmpTbody .cmp-row-found').forEach(function(r){ r.classList.remove('cmp-row-found'); });
       if(!query || !query.trim()) return;
       query = query.trim();
       var numMatch = query.match(/\d+/);
       var searchNum = numMatch ? parseInt(numMatch[0]) : null;
 
-      // Try by number
+      // Try by article number first
       if(searchNum !== null){
         var row = document.getElementById('cmpRow-'+searchNum);
         if(row){
           row.classList.add('cmp-row-found');
-          row.scrollIntoView({behavior:'smooth', block:'center'});
+          row.scrollIntoView({behavior:'instant', block:'start'});
           return;
         }
       }
@@ -7227,7 +7311,7 @@
         var title = rows[i].querySelector('.cmp-art-title');
         if(title && title.textContent.toLowerCase().indexOf(query.toLowerCase()) >= 0){
           rows[i].classList.add('cmp-row-found');
-          rows[i].scrollIntoView({behavior:'smooth', block:'center'});
+          rows[i].scrollIntoView({behavior:'instant', block:'start'});
           return;
         }
       }
@@ -7382,6 +7466,846 @@
       // Fallback — the main script has it but it's scoped
       window.splitIntoArticles = function(raw){ return [{index:'0',title:'',text:raw}]; };
     }
+  })();
+  </script>
+  <!-- ═══════════════════════════════════════════════
+       COURT PRACTICE v2 — Complete Redesign
+       Dedicated panel, full formatting, advanced AI
+  ═══════════════════════════════════════════════ -->
+  <style>
+    /* ── Nav button ── */
+    #cpNavBtn{position:relative}
+    /* Article ⚖ buttons */
+    .cp-art-btn{cursor:pointer;color:var(--muted);font-size:.72rem;margin-left:5px;opacity:.5;transition:opacity .15s;vertical-align:middle;background:none;border:none;padding:0}
+    .cp-art-btn:hover{opacity:1;color:var(--primary)}.cp-art-btn.has-cp{opacity:1;color:var(--primary)}
+
+    /* ── Main Panel (slides from right) ── */
+    #cpPanel{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.5);align-items:center;justify-content:center}
+    #cpPanel.open{display:flex}
+    .cpl-box{background:var(--panel);border-radius:12px;width:min(95vw,800px);height:min(92vh,750px);display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.3);overflow:hidden}
+    .cpl-head{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+    .cpl-head h3{margin:0;font-size:.95rem;color:var(--primary);flex:1}
+    .cpl-head button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:1rem;padding:4px}
+    .cpl-search{padding:8px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .cpl-search input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:.82rem;box-sizing:border-box}
+    .cpl-search input:focus{outline:none;border-color:var(--primary)}
+    .cpl-body{flex:1;overflow-y:auto;padding:8px 0}
+    .cpl-card{padding:8px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;display:flex;align-items:center;gap:12px}
+    .cpl-card:hover{background:var(--primary-soft)}
+    .cpl-card-icon{color:var(--primary);font-size:.8rem;flex-shrink:0}
+    .cpl-card-info{flex:1;min-width:0}
+    .cpl-card-row1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .cpl-card-num{font-weight:700;font-size:.82rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cpl-card-date{font-size:.68rem;color:var(--muted);white-space:nowrap;flex-shrink:0}
+    .cpl-card-row2{font-size:.72rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cpl-card-arrow{color:var(--muted);font-size:.7rem;flex-shrink:0}
+    .cpl-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:40px 20px}
+    .cpl-foot{padding:8px 16px;border-top:1px solid var(--border);font-size:.68rem;color:var(--muted);text-align:center;flex-shrink:0}
+
+    /* ── Add Modal ── */
+    #cpAddModal{display:none;position:fixed;inset:0;z-index:4500;background:rgba(0,0,0,.5);align-items:center;justify-content:center}
+    #cpAddModal.open{display:flex}
+    .cpa-box{background:var(--panel);border-radius:12px;width:min(640px,95vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.3);overflow:hidden}
+    .cpa-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .cpa-head h4{margin:0;font-size:.95rem;color:var(--primary)}.cpa-head button{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)}
+    .cpa-scroll{padding:16px 18px;overflow-y:auto;flex:1}
+    /* Drop zone */
+    .cpa-drop{border:2px dashed var(--border);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg);margin-bottom:14px}
+    .cpa-drop:hover,.cpa-drop.over{border-color:var(--primary);background:var(--primary-soft)}
+    .cpa-drop-icon{font-size:2.2rem;color:var(--muted);margin-bottom:8px}
+    .cpa-drop.over .cpa-drop-icon{color:var(--primary)}
+    .cpa-drop-text{font-size:.85rem;color:var(--muted)}.cpa-drop-text b{color:var(--primary);cursor:pointer}
+    .cpa-drop-fmts{font-size:.68rem;color:var(--muted);margin-top:4px}
+    .cpa-drop input[type=file]{display:none}
+    .cpa-status{font-size:.78rem;color:var(--muted);margin-bottom:12px;min-height:20px}
+    .cpa-status .ok{color:#2dc653}.cpa-status .err{color:var(--danger)}
+    /* AI bar */
+    .cpa-ai{display:none;gap:8px;align-items:center;margin-bottom:14px;padding:10px 14px;background:linear-gradient(135deg,var(--chip),var(--primary-soft));border-radius:8px;border:1px solid var(--border)}
+    .cpa-ai.show{display:flex}
+    .cpa-ai button{padding:7px 16px;border:none;border-radius:6px;background:var(--primary);color:#fff;font-weight:600;font-size:.82rem;cursor:pointer;white-space:nowrap}
+    .cpa-ai button:disabled{opacity:.5}
+    /* Fields */
+    .cpa-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+    .cpa-fields label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .cpa-fields .cpa-row{display:flex;gap:6px}
+    .cpa-fields input,.cpa-fields textarea,.cpa-fields select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:.82rem;font-family:inherit;box-sizing:border-box}
+    .cpa-fields input:focus,.cpa-fields textarea:focus{border-color:var(--primary);outline:none}
+    .cpa-fields textarea{min-height:100px;resize:vertical}
+    .cpa-save{width:100%;padding:11px;border:none;border-radius:8px;font-weight:700;font-size:.88rem;cursor:pointer;background:var(--primary);color:#fff;margin-bottom:6px}
+    .cpa-save:hover{filter:brightness(1.1)}
+
+    /* ── View/Edit Popup ── */
+    #cpViewPopup{display:none;position:fixed;inset:0;z-index:4600;background:rgba(0,0,0,.6);align-items:center;justify-content:center}
+    #cpViewPopup.open{display:flex}
+    .cpv-box{background:var(--panel);border-radius:12px;width:min(95vw,940px);height:min(93vh,850px);display:flex;flex-direction:column;box-shadow:0 12px 48px rgba(0,0,0,.3);overflow:hidden}
+    .cpv-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0}
+    .cpv-head h4{margin:0;font-size:.95rem;color:var(--primary);flex:1}
+    .cpv-hbtn{padding:5px 10px;border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer}
+    .cpv-edit{border:1px solid var(--primary);background:transparent;color:var(--primary)}.cpv-edit:hover{background:var(--primary);color:#fff}
+    .cpv-del{border:1px solid var(--danger);background:transparent;color:var(--danger)}.cpv-del:hover{background:var(--danger);color:#fff}
+    .cpv-save{border:none;background:var(--primary);color:#fff}
+    .cpv-cancel{border:1px solid var(--border);background:transparent;color:var(--text)}
+    .cpv-close{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted);margin-left:6px}
+    .cpv-meta{padding:8px 18px;font-size:.78rem;color:var(--muted);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:14px;flex-wrap:wrap}
+    .cpv-meta span{display:flex;align-items:center;gap:4px}.cpv-meta i{font-size:.7rem}
+    /* DeJure-style metadata table */
+    .cpv-meta-table{border-bottom:1px solid var(--border);flex-shrink:0;max-height:220px;overflow-y:auto}
+    .cpv-meta-table table{width:100%;border-collapse:collapse;font-size:.8rem}
+    .cpv-meta-table tr{border-bottom:1px solid var(--border)}
+    .cpv-meta-table tr:last-child{border-bottom:none}
+    .cpv-ml{padding:5px 14px;font-weight:600;color:var(--muted);white-space:nowrap;width:130px;vertical-align:top;font-size:.75rem;text-transform:uppercase;letter-spacing:.3px}
+    .cpv-mv{padding:5px 14px;color:var(--text);font-size:.8rem;line-height:1.4}
+    .cpv-emeta{padding:8px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+    .cpv-emeta input{padding:6px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:.8rem;box-sizing:border-box}
+    /* Tabs */
+    .cpv-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+    .cpv-tab{padding:9px 18px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+    .cpv-tab:hover{color:var(--text)}.cpv-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+    .cpv-pane{display:none;flex:1;overflow-y:auto;padding:20px 24px;font-size:.88rem;line-height:1.75;color:var(--text)}
+    .cpv-pane.active{display:block}
+    .cpv-pane p{margin:0 0 8px;text-align:justify}.cpv-pane h3{margin:12px 0 6px;font-size:.95rem;color:var(--primary)}
+    .cpv-pane hr{border:none;border-top:1px dashed var(--border);margin:14px 0}
+    .cpv-analysis{white-space:pre-wrap;font-size:.85rem;line-height:1.6}
+    /* Edit */
+    .cpv-toolbar{border-bottom:1px solid var(--border);flex-shrink:0}
+    .cpv-ebody{flex:1;overflow-y:auto;padding:16px 20px;font-size:.88rem;line-height:1.7;outline:none}
+    .cpv-ebody:focus{box-shadow:inset 0 0 0 2px var(--primary-soft)}
+  </style>
+
+  <!-- SIDE PANEL — list of all decisions -->
+  <div id="cpPanel"><div class="cpl-box">
+    <div class="cpl-head">
+      <h3 id="cplTitle"><i class="fas fa-gavel"></i> Court Practice</h3>
+      <button id="cplAddBtn" title="Add decision" style="font-size:1.1rem;color:var(--primary)"><i class="fas fa-plus-circle"></i></button>
+      <button id="cplCloseBtn">&times;</button>
+    </div>
+    <div class="cpl-search"><input id="cplSearch" type="text" placeholder="Search decisions..." /></div>
+    <div class="cpl-body" id="cplBody"></div>
+    <div class="cpl-foot" id="cplFoot"></div>
+  </div></div>
+
+  <!-- ADD MODAL -->
+  <div id="cpAddModal"><div class="cpa-box">
+    <div class="cpa-head"><h4 id="cpaTitle"><i class="fas fa-gavel"></i> Add Court Decision</h4><button id="cpaClose">&times;</button></div>
+    <div class="cpa-scroll">
+      <!-- Drop zone -->
+      <div class="cpa-drop" id="cpaDrop">
+        <div class="cpa-drop-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+        <div class="cpa-drop-text">Drag file here or <b id="cpaBrowse">browse</b> · or paste (Ctrl+V)</div>
+        <div class="cpa-drop-fmts">.docx · .pdf · .txt · .html</div>
+        <input type="file" id="cpaFile2" accept=".docx,.doc,.pdf,.txt,.html,.htm" style="display:none" />
+      </div>
+      <div class="cpa-status" id="cpaStatus"></div>
+      <!-- AI bar -->
+      <div class="cpa-ai" id="cpaAi">
+        <i class="fas fa-robot" style="color:var(--primary);font-size:1.1rem"></i>
+        <span style="flex:1;font-size:.78rem;color:var(--muted)">AI extract + analyze</span>
+        <button id="cpaAiBtn"><i class="fas fa-magic"></i> AI Analyze</button>
+      </div>
+      <!-- Fields -->
+      <div class="cpa-fields">
+        <label>Case no. / Court / Date</label>
+        <div class="cpa-row">
+          <input id="cpaCaseNum" type="text" placeholder="ПРКЖ-1025/23" />
+          <input id="cpaCourt" type="text" placeholder="Апелационен суд Скопје" />
+          <input id="cpaDate" type="text" placeholder="27.06.2023" />
+        </div>
+        <label>Linked article</label>
+        <div class="cpa-row">
+          <select id="cpaLaw" style="flex:1"></select>
+          <input id="cpaArtNum" type="text" placeholder="Article no." style="flex:0 0 100px" />
+        </div>
+        <label>AI Analysis</label>
+        <textarea id="cpaAnalysis" placeholder="AI will fill this, or write your own..."></textarea>
+      </div>
+      <button class="cpa-save" id="cpaSaveBtn"><i class="fas fa-save"></i> Save Decision</button>
+    </div>
+  </div></div>
+
+  <!-- VIEW/EDIT POPUP -->
+  <div id="cpViewPopup"><div class="cpv-box">
+    <div class="cpv-head">
+      <h4 id="cpvTitle"></h4>
+      <button class="cpv-hbtn cpv-edit" id="cpvEdit"><i class="fas fa-pen"></i> Edit</button>
+      <button class="cpv-hbtn" id="cpvPrint" style="border:1px solid var(--muted);background:transparent;color:var(--muted)"><i class="fas fa-print"></i></button>
+      <button class="cpv-hbtn cpv-del" id="cpvDel"><i class="fas fa-trash"></i></button>
+      <button class="cpv-hbtn cpv-save" id="cpvSave" style="display:none"><i class="fas fa-save"></i> Save</button>
+      <button class="cpv-hbtn cpv-cancel" id="cpvCancel" style="display:none">Cancel</button>
+      <button class="cpv-close" id="cpvClose">&times;</button>
+    </div>
+    <!-- DeJure-style metadata table -->
+    <div class="cpv-meta-table" id="cpvMetaTable">
+      <table>
+        <tr><td class="cpv-ml">Предмет број</td><td class="cpv-mv" id="cpvMCaseNum"></td></tr>
+        <tr><td class="cpv-ml">Датум</td><td class="cpv-mv" id="cpvMDate"></td></tr>
+        <tr><td class="cpv-ml">Суд</td><td class="cpv-mv" id="cpvMCourt"></td></tr>
+        <tr><td class="cpv-ml">Судија</td><td class="cpv-mv" id="cpvMJudge"></td></tr>
+        <tr><td class="cpv-ml">Правна област</td><td class="cpv-mv" id="cpvMLegalArea"></td></tr>
+        <tr><td class="cpv-ml">Вид предмет</td><td class="cpv-mv" id="cpvMCaseType"></td></tr>
+        <tr><td class="cpv-ml">Основ</td><td class="cpv-mv" id="cpvMBasis"></td></tr>
+        <tr><td class="cpv-ml">Спомнати закони</td><td class="cpv-mv" id="cpvMLaws"></td></tr>
+        <tr><td class="cpv-ml">Поврзан член</td><td class="cpv-mv" id="cpvMArticle"></td></tr>
+      </table>
+    </div>
+    <!-- Edit fields (replaces meta table) -->
+    <div class="cpv-emeta" id="cpvEmeta" style="display:none">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <input id="cpvECase" type="text" placeholder="Case no." style="flex:1;min-width:120px" />
+        <input id="cpvECourt" type="text" placeholder="Court" style="flex:1;min-width:120px" />
+        <input id="cpvEDate" type="text" placeholder="Date" style="flex:0 0 100px" />
+        <input id="cpvEJudge" type="text" placeholder="Judge" style="flex:1;min-width:100px" />
+      </div>
+    </div>
+    <!-- Tabs -->
+    <div class="cpv-tabs" id="cpvTabs">
+      <div class="cpv-tab active" data-t="text"><i class="fas fa-file-alt"></i> Full Text</div>
+      <div class="cpv-tab" data-t="analysis"><i class="fas fa-brain"></i> Analysis</div>
+    </div>
+    <!-- Edit toolbar -->
+    <div class="cpv-toolbar" id="cpvToolbar" style="display:none">
+      <div class="db-editor-toolbar">
+        <div class="db-tb-group">
+          <button class="db-tb-btn" data-cmd2="bold"><b>B</b></button>
+          <button class="db-tb-btn" data-cmd2="italic"><i>I</i></button>
+          <button class="db-tb-btn" data-cmd2="underline"><u>U</u></button>
+        </div><div class="db-tb-sep"></div><div class="db-tb-group">
+          <button class="db-tb-btn" data-cmd2="justifyLeft"><i class="fas fa-align-left"></i></button>
+          <button class="db-tb-btn" data-cmd2="justifyCenter"><i class="fas fa-align-center"></i></button>
+          <button class="db-tb-btn" data-cmd2="justifyFull"><i class="fas fa-align-justify"></i></button>
+        </div><div class="db-tb-sep"></div><div class="db-tb-group">
+          <button class="db-tb-btn" data-cmd2="undo"><i class="fas fa-undo"></i></button>
+          <button class="db-tb-btn" data-cmd2="redo"><i class="fas fa-redo"></i></button>
+          <button class="db-tb-btn" data-cmd2="removeFormat"><i class="fas fa-remove-format"></i></button>
+        </div>
+      </div>
+    </div>
+    <!-- Panels -->
+    <div class="cpv-pane active" id="cpvText"></div>
+    <div class="cpv-pane cpv-analysis" id="cpvAnalysis"></div>
+    <div class="cpv-ebody" id="cpvEbody" contenteditable="true" style="display:none"></div>
+  </div></div>
+
+  <script>
+  (function(){
+    'use strict';
+    var STORE='courtpractice',DB_KEY_PREFIX='cpv2::';
+    function db(){return window._openDB();}
+    function key(id){return DB_KEY_PREFIX+id;}
+    function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+    function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+    function fmtSize(b){return b>1024?Math.round(b/1024)+'KB':b+'B';}
+
+    // ── Simple parser — case number, court, date from end ──
+    function autoParseFields(text){
+      var lines=text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l;});
+      var last10=lines.slice(-10).join(' ');
+      var full=lines.join(' ');
+      // Pattern: Gjykata «NUMRI» од «DATA» година
+      var sigRe=/((?:Апелационен|Апелациониот|Основен|Основниот|Врховен|Врховниот)\s+суд\s+[\wА-Ша-ш]+)\s+[«„]?\s*([A-ZА-Ш]{1,8}[\-\s]*\d{1,6}\s*[\/\.]\s*\d{2,4})\s*[»"]?\s+од\s+[«„]?\s*(\d{1,2}\.\d{1,2}\.\d{4})\s*[»"]?\s*година/i;
+      var sig=last10.match(sigRe)||full.match(sigRe);
+      if(sig){
+        document.getElementById('cpaCaseNum').value=sig[2].replace(/\s+/g,'');
+        document.getElementById('cpaCourt').value=sig[1].replace(/\s+/g,' ').trim();
+        document.getElementById('cpaDate').value=sig[3];
+        showAiBar();
+        return;
+      }
+      // Fallback: just find case number pattern anywhere
+      var caseRe=/[«„]?\s*([A-ZА-Ш]{1,8}[\-\.]\d{1,6}[\/\.]\d{2,4})\s*[»"]/i;
+      var cm=full.match(caseRe);if(cm)document.getElementById('cpaCaseNum').value=cm[1].trim();
+      var dateRe=/од\s+[«„]?\s*(\d{1,2}\.\d{1,2}\.\d{4})\s*[»"]?\s*годин/i;
+      var dm=(last10.match(dateRe))||(full.match(dateRe));
+      if(dm)document.getElementById('cpaDate').value=dm[1];
+      showAiBar();
+    }
+
+    function autoExtract(){
+      if(!_importHtml) return;
+      var tmp=document.createElement('div');tmp.innerHTML=_importHtml;
+      var text=(tmp.textContent||tmp.innerText||'').trim();
+      if(text.length>20) autoParseFields(text);
+      showAiBar();
+      // Auto-trigger AI if key exists
+      if(getAiKey()&&_importHtml.length>50){
+        setTimeout(function(){document.getElementById('cpaAiBtn').click();},400);
+      }
+    }
+
+    var _importHtml='';
+    var _lastAiResult=null;
+    var _decisions=[];
+    async function loadDecisions(){
+      try{var d=await db();return new Promise(function(r){
+        var tx=d.transaction(STORE,'readonly'),st=tx.objectStore(STORE),req=st.get(key('all'));
+        req.onsuccess=function(e){_decisions=e.target.result||[];r(_decisions);};
+        req.onerror=function(){r([]);};
+      });}catch(e){return[];}
+    }
+    async function saveDecisions(){
+      var d=await db();var tx=d.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).put(_decisions,key('all'));
+    }
+
+    // ── HTML cleaner — MINIMAL: keep all formatting ──
+    function cleanHtml(html){
+      if(!html)return'';
+      var d=document.createElement('div');d.innerHTML=html;
+      d.querySelectorAll('*').forEach(function(el){el.removeAttribute('class');el.removeAttribute('id');});
+      d.querySelectorAll('o\\:p,xml,meta,link,style,script,title,head').forEach(function(el){el.remove();});
+      // Remove comments
+      var walker=document.createTreeWalker(d,NodeFilter.SHOW_COMMENT);
+      var comments=[];while(walker.nextNode())comments.push(walker.currentNode);
+      comments.forEach(function(c){c.remove();});
+      return d.innerHTML;
+    }
+
+    // ── PDF.js ──
+    var _pdfOk=false;
+    function loadPdf(){
+      return new Promise(function(r){
+        if(_pdfOk&&window.pdfjsLib){r(true);return;}
+        var s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload=function(){if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';_pdfOk=true;r(true);};
+        s.onerror=function(){r(false);};document.head.appendChild(s);
+      });
+    }
+    async function pdfToHtml(buf){
+      if(!await loadPdf())throw new Error('PDF.js failed');
+      var pdf=await pdfjsLib.getDocument({data:buf}).promise,html='';
+      for(var p=1;p<=pdf.numPages;p++){
+        var pg=await pdf.getPage(p),ct=await pg.getTextContent();
+        var parts=[],lastY=null;
+        ct.items.forEach(function(it){
+          var y=Math.round(it.transform[5]),bold=it.fontName&&/bold/i.test(it.fontName),txt=it.str;
+          if(lastY!==null&&Math.abs(y-lastY)>3){parts.push('</p><p>');} 
+          parts.push(bold?'<b>'+txt+'</b>':txt);lastY=y;
+        });
+        html+='<p>'+parts.join('')+'</p>';
+        if(p<pdf.numPages)html+='<hr>';
+      }
+      return html;
+    }
+
+    // ── File import ──
+    async function importFile(file){
+      var ext=file.name.split('.').pop().toLowerCase(),status=document.getElementById('cpaStatus');
+      status.innerHTML='<i class="fas fa-spinner fa-spin"></i> '+file.name+'...';
+      try{
+        var html='';
+        if(ext==='docx'){
+          if(!window.mammoth){status.textContent='⚠️ Mammoth loading...';return;}
+          var r=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});
+          html=cleanHtml(r.value||'');
+        }else if(ext==='pdf'){
+          html=cleanHtml(await pdfToHtml(await file.arrayBuffer()));
+        }else if(ext==='html'||ext==='htm'){
+          var t=await file.text(),m=t.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+          html=cleanHtml(m?m[1]:t);
+        }else if(ext==='txt'||ext==='md'){
+          var t=await file.text();
+          html=t.split(/\n\s*\n/).map(function(p){
+            p=p.trim().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            return p?'<p>'+p.replace(/\n/g,'<br>')+'</p>':'';
+          }).join('');
+        }else{status.innerHTML='<span class="err">⚠️ Unsupported</span>';return;}
+        _importHtml=html;
+        status.innerHTML='<span class="ok">✅ '+file.name+'</span> ('+fmtSize(html.length)+')';
+        autoExtract();
+      }catch(e){status.innerHTML='<span class="err">❌ '+e.message+'</span>';}
+    }
+
+    // ── Drop zone ──
+    var dz=document.getElementById('cpaDrop');
+    dz.addEventListener('click',function(){document.getElementById('cpaFile2').click();});
+    document.getElementById('cpaFile2').addEventListener('change',function(){if(this.files[0])importFile(this.files[0]);this.value='';});
+    dz.addEventListener('dragover',function(e){e.preventDefault();this.classList.add('over');});
+    dz.addEventListener('dragleave',function(){this.classList.remove('over');});
+    dz.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('over');if(e.dataTransfer.files.length)importFile(e.dataTransfer.files[0]);});
+    // Paste in add modal
+    document.getElementById('cpAddModal').addEventListener('paste',function(e){
+      if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+      var html=e.clipboardData.getData('text/html');
+      var text=e.clipboardData.getData('text/plain');
+      if(html){_importHtml=cleanHtml(html);}
+      else if(text){_importHtml=text.split(/\n\s*\n/).map(function(p){p=p.trim().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');return p?'<p>'+p.replace(/\n/g,'<br>')+'</p>':'';}).join('');}
+      if(_importHtml){document.getElementById('cpaStatus').innerHTML='<span class="ok">✅ Pasted</span> ('+fmtSize(_importHtml.length)+')';autoExtract();}
+    });
+
+    // ── AI ──
+    var AI_KEY='lb-ai-apikey',AI_PROV='lb-ai-provider';
+    function getAiKey(){return localStorage.getItem(AI_KEY)||'';}
+    function getAiProv(){return localStorage.getItem(AI_PROV)||'gemini';}
+    function showAiBar(){
+      document.getElementById('cpaAi').classList.toggle('show',!!(getAiKey()&&_importHtml&&_importHtml.length>30));
+    }
+
+    var MODELS=['gemini-2.5-flash-lite','gemini-2.5-flash','gemini-2.0-flash-lite','gemini-2.0-flash'];
+    var PROMPT='You are a senior judge analyzing court decisions. CRITICAL: Respond ONLY in the SAME language as the document. If document is in Macedonian, respond in Macedonian. If Albanian, respond in Albanian. Return ONLY valid JSON, no markdown, no comments:\n'
+      +'{"caseNum":"exact case number","court":"full court name","date":"DD.MM.YYYY","articleNum":"main article number (just digits)",'
+      +'"instance":"first/second/supreme","procedureType":"criminal/misdemeanor","defendant":"defendant name","offense":"offense with legal qualification","legalProvisions":"legal provisions applied",'
+      +'"judge":"presiding judge name","legalArea":"legal area (criminal/misdemeanor/civil)","caseType":"case type","basis":"legal basis/grounds",'
+      +'"keyFacts":"key facts 2-3 sentences","prosecutionVersion":"prosecution version","defenseVersion":"defense version","verdict":"what court decided",'
+      +'"faultForm":"intent/negligence","aggravatingMitigating":"aggravating and mitigating circumstances",'
+      +'"evidenceAnalysis":["evidence 1","evidence 2"],"proceduralIssues":["issue 1","issue 2"],"courtReasoning":["reasoning 1","reasoning 2","reasoning 3"],'
+      +'"interInstanceAnalysis":"what lower court decided vs what changed",'
+      +'"criticalAssessment":"is decision legally sound, main errors, proportionality",'
+      +'"practicalImplications":"impact on practice, precedent",'
+      +'"keyFindings":["finding 1","finding 2","finding 3"]}\n\nDocument:\n';
+
+    async function callAi(text){
+      var key=getAiKey(),prov=getAiProv();
+      var excerpt=text.length>12000?(text.slice(0,8000)+'\n...\n'+text.slice(-4000)):text;
+      if(prov==='gemini'){
+        for(var i=0;i<MODELS.length;i++){
+          try{
+            var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+MODELS[i]+':generateContent?key='+encodeURIComponent(key),{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({contents:[{parts:[{text:PROMPT+excerpt}]}],generationConfig:{maxOutputTokens:2000,temperature:0.1}})
+            });
+            if(r.status===429)continue;if(!r.ok)continue;
+            var d=await r.json(),t=d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]&&d.candidates[0].content.parts[0].text;
+            if(t)return t;
+          }catch(e){continue;}
+        }
+        throw new Error('All Gemini models failed');
+      }else{
+        var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+          body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:PROMPT+excerpt}]})
+        });
+        if(!r.ok)throw new Error('Claude '+r.status);
+        var d=await r.json();return(d.content&&d.content[0]&&d.content[0].text)||'';
+      }
+    }
+
+    function parseAiJson(raw){
+      var clean=raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+      var m=clean.match(/\{[\s\S]*\}/);
+      if(m){
+        var s=m[0].replace(/,\s*([}\]])/g,'$1');
+        try{return JSON.parse(s);}catch(e){
+          s=s.replace(/[\x00-\x1f\x7f]/g,' ');
+          try{return JSON.parse(s);}catch(e2){}
+        }
+      }
+      // Fallback: extract fields individually
+      var p={};
+      var fm=function(k){var r=clean.match(new RegExp('"?'+k+'"?\\s*:\\s*"([^"]*)"','i'));return r?r[1]:'';};
+      p.caseNum=fm('caseNum');p.court=fm('court');p.date=fm('date');p.summary=fm('summary');
+      p.legalBasis=fm('legalBasis');p.acceptedRejected=fm('acceptedRejected');
+      p.lowerCourtDecision=fm('lowerCourtDecision');p.articleNum=fm('articleNum');
+      return p;
+    }
+
+    function buildAnalysisText(p){
+      var L=[];
+      L.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      L.push('1. TË DHËNAT BAZË');
+      L.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      if(p.instance)L.push('  Shkalla: '+p.instance);
+      if(p.procedureType)L.push('  Procedura: '+p.procedureType);
+      if(p.defendant)L.push('  I pandehuri: '+p.defendant);
+      if(p.offense)L.push('  Vepra: '+p.offense);
+      if(p.legalProvisions)L.push('  Dispozitat: '+p.legalProvisions);
+      L.push('');
+
+      L.push('2. PËRMBLEDHJE FAKTIKE');
+      L.push('─────────────────────');
+      if(p.keyFacts)L.push('  '+p.keyFacts);
+      if(p.prosecutionVersion)L.push('  📋 Prokuroria: '+p.prosecutionVersion);
+      if(p.defenseVersion)L.push('  🛡️ Mbrojtja: '+p.defenseVersion);
+      if(p.verdict)L.push('  📌 Dispozitivi: '+p.verdict);
+      L.push('');
+
+      if(p.faultForm||p.aggravatingMitigating){
+        L.push('3. ELEMENTET E VEPRËS');
+        L.push('─────────────────────');
+        if(p.faultForm)L.push('  Faji: '+p.faultForm);
+        if(p.aggravatingMitigating)L.push('  Rrethanat: '+p.aggravatingMitigating);
+        L.push('');
+      }
+
+      if(p.evidenceAnalysis&&p.evidenceAnalysis.length){
+        L.push('4. ANALIZA E PROVAVE');
+        L.push('─────────────────────');
+        p.evidenceAnalysis.forEach(function(e){L.push('  • '+e);});
+        L.push('');
+      }
+
+      if(p.proceduralIssues&&p.proceduralIssues.length){
+        L.push('5. ANALIZA PROCEDURALE');
+        L.push('─────────────────────');
+        p.proceduralIssues.forEach(function(e){L.push('  • '+e);});
+        L.push('');
+      }
+
+      if(p.courtReasoning&&p.courtReasoning.length){
+        L.push('6. ARSYETIMI I GJYKATËS');
+        L.push('─────────────────────');
+        p.courtReasoning.forEach(function(e){L.push('  • '+e);});
+        L.push('');
+      }
+
+      if(p.interInstanceAnalysis){
+        L.push('7. ANALIZA NDËR-SHKALLORE');
+        L.push('─────────────────────');
+        L.push('  '+p.interInstanceAnalysis);
+        L.push('');
+      }
+
+      if(p.criticalAssessment){
+        L.push('8. VLERËSIM KRITIK');
+        L.push('─────────────────────');
+        L.push('  '+p.criticalAssessment);
+        L.push('');
+      }
+
+      if(p.practicalImplications){
+        L.push('9. IMPLIKIME PRAKTIKE');
+        L.push('─────────────────────');
+        L.push('  '+p.practicalImplications);
+        L.push('');
+      }
+
+      if(p.keyFindings&&p.keyFindings.length){
+        L.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        L.push('10. GJETJET KRYESORE');
+        L.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        p.keyFindings.forEach(function(f){L.push('  ▸ '+f);});
+      }
+      return L.join('\n').trim();
+    }
+
+    // AI button
+    document.getElementById('cpaAiBtn').addEventListener('click',async function(){
+      var text=(_importHtml?(function(){var t=document.createElement('div');t.innerHTML=_importHtml;return(t.textContent||'').trim();}()):'');
+      if(text.length<30){document.getElementById('cpaStatus').innerHTML='<span class="err">⚠️ Import or paste text first</span>';return;}
+      if(!getAiKey()){document.getElementById('cpaStatus').innerHTML='<span class="err">⚠️ Set API key in Settings</span>';return;}
+      var st=document.getElementById('cpaStatus');
+      st.innerHTML='<i class="fas fa-spinner fa-spin"></i> 🤖 Analyzing...';this.disabled=true;
+      try{
+        var raw=await callAi(text);console.log('AI raw:',raw);
+        var p=parseAiJson(raw);
+        _lastAiResult=p; // Store for save
+        if(p.caseNum)document.getElementById('cpaCaseNum').value=p.caseNum;
+        if(p.court)document.getElementById('cpaCourt').value=p.court;
+        if(p.date)document.getElementById('cpaDate').value=p.date;
+        if(p.articleNum&&!_panelArtIdx)document.getElementById('cpaArtNum').value=p.articleNum;
+        document.getElementById('cpaAnalysis').value=buildAnalysisText(p);
+        st.innerHTML='<span class="ok">🤖 ✅ AI analysis complete</span>';
+      }catch(e){console.error(e);st.innerHTML='<span class="err">🤖 ❌ '+e.message+'</span>';}
+      this.disabled=false;
+    });
+
+    // ── Populate law selector ──
+    function populateLaws(){
+      var sel=document.getElementById('cpaLaw');sel.innerHTML='<option value="">— Select law —</option>';
+      var state=window._appState;if(!state||!state.laws)return;
+      state.laws.forEach(function(l){sel.innerHTML+='<option value="'+esc(l.id)+'">'+esc(l.title)+'</option>';});
+    }
+
+    // ── Save ──
+    document.getElementById('cpaSaveBtn').addEventListener('click',async function(){
+      var cn=document.getElementById('cpaCaseNum').value.trim();
+      var ct=document.getElementById('cpaCourt').value.trim();
+      var dt=document.getElementById('cpaDate').value.trim();
+      var an=document.getElementById('cpaAnalysis').value.trim();
+      var lawId=_panelLawId||document.getElementById('cpaLaw').value;
+      var artNum=_panelArtIdx||document.getElementById('cpaArtNum').value.trim();
+      
+      var ft=_importHtml||'';
+      if(ft==='<p><br></p>')ft='';
+      if(!cn&&!ft)return;
+      var lawTitle='';var state=window._appState;
+      if(state&&state.laws){var l=state.laws.find(function(x){return x.id===lawId;});if(l)lawTitle=l.title;}
+      _decisions.push({id:genId(),caseNum:cn,court:ct,date:dt,analysis:an,fullText:ft,lawId:lawId,lawTitle:lawTitle,artNum:artNum,
+        judge:(_lastAiResult&&_lastAiResult.judge)||'',
+        legalArea:(_lastAiResult&&_lastAiResult.legalArea)||'',
+        caseType:(_lastAiResult&&(_lastAiResult.caseType||_lastAiResult.procedureType))||'',
+        basis:(_lastAiResult&&(_lastAiResult.basis||_lastAiResult.offense))||'',
+        legalProvisions:(_lastAiResult&&_lastAiResult.legalProvisions)||'',
+        ts:Date.now()});
+      await saveDecisions();
+      
+      document.getElementById('cpaCaseNum').value='';document.getElementById('cpaCourt').value='';
+      document.getElementById('cpaDate').value='';document.getElementById('cpaAnalysis').value='';
+      document.getElementById('cpaArtNum').value='';document.getElementById('cpaStatus').textContent='';
+      document.getElementById('cpAddModal').classList.remove('open');
+      renderList();if(window.injectCpButtons)injectCpButtons();
+    });
+
+    // ── Panel ──
+    var _panelLawId=null,_panelArtIdx=null;
+    function openPanel(lawId,artIdx){
+      _panelLawId=lawId||null;_panelArtIdx=(artIdx!==undefined&&artIdx!==null)?String(artIdx):null;
+      loadDecisions().then(function(){
+        var lang=localStorage.getItem('zakoni_lang')||'en';
+        var title={sq:'Praktikë gjyqësore',mk:'Судска пракса',en:'Court Practice'}[lang]||'Court Practice';
+        if(_panelArtIdx!==null){
+          var state=window._appState;
+          var lawTitle='';if(state&&state.laws){var l=state.laws.find(function(x){return x.id===_panelLawId;});if(l)lawTitle=l.title;}
+          title+=' — Art. '+_panelArtIdx+(lawTitle?' ('+lawTitle+')':'');
+        }
+        document.getElementById('cplTitle').innerHTML='<i class="fas fa-gavel"></i> '+title;
+        document.getElementById('cplSearch').value='';
+        renderList();if(window.injectCpButtons)injectCpButtons();
+        document.getElementById('cpPanel').classList.add('open');
+      });
+    }
+    function closePanel(){document.getElementById('cpPanel').classList.remove('open');_panelLawId=null;_panelArtIdx=null;}
+    document.getElementById('cplCloseBtn').addEventListener('click',closePanel);
+    document.getElementById('cpPanel').addEventListener('click',function(e){if(e.target===this)closePanel();});
+    document.getElementById('cplAddBtn').addEventListener('click',function(){
+      _importHtml='';_lastAiResult=null;
+      populateLaws();
+      document.getElementById('cpaCaseNum').value='';document.getElementById('cpaCourt').value='';
+      document.getElementById('cpaDate').value='';document.getElementById('cpaAnalysis').value='';
+      document.getElementById('cpaArtNum').value=_panelArtIdx||'';
+      if(_panelLawId){var sel=document.getElementById('cpaLaw');for(var i=0;i<sel.options.length;i++){if(sel.options[i].value===_panelLawId){sel.selectedIndex=i;break;}}}
+      document.getElementById('cpaStatus').textContent='';
+      showAiBar();
+      document.getElementById('cpAddModal').classList.add('open');
+    });
+    document.getElementById('cpaClose').addEventListener('click',function(){document.getElementById('cpAddModal').classList.remove('open');});
+    document.getElementById('cpAddModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+
+    // ── Render list ──
+    function renderList(filter){
+      var body=document.getElementById('cplBody');
+      var q=(filter||document.getElementById('cplSearch').value||'').toLowerCase();
+      var filtered=_decisions.filter(function(d){
+        // Panel filter by law/article
+        if(_panelLawId&&d.lawId!==_panelLawId)return false;
+        if(_panelArtIdx!==null){
+          var dArt=String(d.artNum||'').replace(/\D/g,''); // extract just digits
+          var pArt=String(_panelArtIdx).replace(/\D/g,'');
+          if(dArt!==pArt)return false;
+        }
+        // Search filter
+        if(!q)return true;
+        return(d.caseNum||'').toLowerCase().indexOf(q)>=0||(d.court||'').toLowerCase().indexOf(q)>=0
+          ||(d.lawTitle||'').toLowerCase().indexOf(q)>=0||(d.analysis||'').toLowerCase().indexOf(q)>=0
+          ||(d.artNum||'').indexOf(q)>=0;
+      }).sort(function(a,b){return(b.ts||0)-(a.ts||0)});
+      if(!filtered.length){body.innerHTML='<div class="cpl-empty"><i class="fas fa-gavel" style="font-size:2rem;opacity:.3;display:block;margin-bottom:12px"></i>'+(q?'No matches':'No decisions yet<br><small>Click + to add</small>')+'</div>';updateFoot();return;}
+      body.innerHTML='';
+      filtered.forEach(function(d){
+        var card=document.createElement('div');card.className='cpl-card';
+        var courtArt=(d.court||'')+(d.caseType?' · '+d.caseType:'')+(d.artNum?' · Art.'+d.artNum:'')+(d.lawTitle?' · '+d.lawTitle:'');
+        card.innerHTML='<span class="cpl-card-icon"><i class="fas fa-gavel"></i></span>'
+          +'<div class="cpl-card-info">'
+          +'<div class="cpl-card-row1"><span class="cpl-card-num">'+esc(d.caseNum||'Untitled')+'</span><span class="cpl-card-date">'+esc(d.date||'')+'</span></div>'
+          +'<div class="cpl-card-row2">'+esc(courtArt)+'</div>'
+          +'</div>'
+          +'<span class="cpl-card-arrow"><i class="fas fa-chevron-right"></i></span>';
+        card.addEventListener('click',function(){openView(d);});
+        body.appendChild(card);
+      });
+      updateFoot();
+    }
+    document.getElementById('cplSearch').addEventListener('input',function(){renderList(this.value);});
+
+    function updateFoot(){
+      var total=JSON.stringify(_decisions).length;
+      document.getElementById('cplFoot').textContent='💾 '+_decisions.length+' decisions · '+fmtSize(total);
+    }
+    // ── View popup ──
+    var _viewId=null;
+    function openView(d){
+      _viewId=d.id;
+      document.getElementById('cpvTitle').innerHTML='<i class="fas fa-gavel" style="margin-right:6px"></i>'+esc(d.caseNum||'Untitled');
+      // Fill metadata table
+      document.getElementById('cpvMCaseNum').innerHTML='<b>'+esc(d.caseNum||'—')+'</b>';
+      document.getElementById('cpvMDate').textContent=d.date||'—';
+      document.getElementById('cpvMCourt').textContent=d.court||'—';
+      document.getElementById('cpvMJudge').textContent=d.judge||'—';
+      document.getElementById('cpvMLegalArea').textContent=d.legalArea||'—';
+      document.getElementById('cpvMCaseType').textContent=d.caseType||'—';
+      document.getElementById('cpvMBasis').textContent=d.basis||'—';
+      document.getElementById('cpvMLaws').textContent=d.legalProvisions||'—';
+      document.getElementById('cpvMArticle').textContent=(d.lawTitle||'')+(d.artNum?' — Art. '+d.artNum:'');
+      // Hide empty rows
+      document.querySelectorAll('#cpvMetaTable tr').forEach(function(tr){
+        var val=tr.querySelector('.cpv-mv');
+        if(val&&(val.textContent==='—'||!val.textContent.trim()))tr.style.display='none';
+        else tr.style.display='';
+      });
+      document.getElementById('cpvText').innerHTML=d.fullText||'<div class="cpl-empty">No full text</div>';
+      document.getElementById('cpvAnalysis').textContent=d.analysis||'No analysis';
+      setEditMode(false);
+      switchTab('text');
+      document.getElementById('cpViewPopup').classList.add('open');
+    }
+
+    function switchTab(name){
+      document.querySelectorAll('#cpvTabs .cpv-tab').forEach(function(t){t.classList.toggle('active',t.dataset.t===name);});
+      document.getElementById('cpvText').classList.toggle('active',name==='text');
+      document.getElementById('cpvAnalysis').classList.toggle('active',name==='analysis');
+    }
+    document.getElementById('cpvTabs').addEventListener('click',function(e){var t=e.target.closest('.cpv-tab');if(t)switchTab(t.dataset.t);});
+
+    function setEditMode(on){
+      document.getElementById('cpvEdit').style.display=on?'none':'';
+      document.getElementById('cpvDel').style.display=on?'none':'';
+      document.getElementById('cpvSave').style.display=on?'inline-block':'none';
+      document.getElementById('cpvCancel').style.display=on?'inline-block':'none';
+      document.getElementById('cpvToolbar').style.display=on?'block':'none';
+      document.getElementById('cpvEmeta').style.display=on?'block':'none';
+      document.getElementById('cpvMetaTable').style.display=on?'none':'';
+      document.getElementById('cpvTabs').style.display=on?'none':'flex';
+      document.getElementById('cpvText').style.display=on?'none':'';
+      document.getElementById('cpvAnalysis').style.display=on?'none':'';
+      document.getElementById('cpvEbody').style.display=on?'block':'none';
+      if(on){
+        document.getElementById('cpvEbody').innerHTML=document.getElementById('cpvText').innerHTML;
+        setTimeout(function(){document.getElementById('cpvEbody').focus();},50);
+      }
+    }
+
+    document.getElementById('cpvEdit').addEventListener('click',function(){
+      var d=_decisions.find(function(x){return x.id===_viewId;});if(!d)return;
+      document.getElementById('cpvECase').value=d.caseNum||'';
+      document.getElementById('cpvECourt').value=d.court||'';
+      document.getElementById('cpvEDate').value=d.date||'';
+      document.getElementById('cpvEJudge').value=d.judge||'';
+      setEditMode(true);
+    });
+    document.getElementById('cpvCancel').addEventListener('click',function(){
+      var d=_decisions.find(function(x){return x.id===_viewId;});if(d)openView(d);else setEditMode(false);
+    });
+    document.getElementById('cpvSave').addEventListener('click',async function(){
+      var d=_decisions.find(function(x){return x.id===_viewId;});if(!d)return;
+      d.caseNum=document.getElementById('cpvECase').value.trim();
+      d.court=document.getElementById('cpvECourt').value.trim();
+      d.date=document.getElementById('cpvEDate').value.trim();
+      d.judge=document.getElementById('cpvEJudge').value.trim();
+      d.fullText=cleanHtml(document.getElementById('cpvEbody').innerHTML);
+      await saveDecisions();openView(d);renderList();
+    });
+    document.getElementById('cpvDel').addEventListener('click',async function(){
+      if(!confirm('Delete this decision?'))return;
+      _decisions=_decisions.filter(function(x){return x.id!==_viewId;});
+      await saveDecisions();
+      document.getElementById('cpViewPopup').classList.remove('open');
+      renderList();if(window.injectCpButtons)injectCpButtons();
+    });
+
+    document.getElementById('cpvToolbar').addEventListener('click',function(e){
+      var b=e.target.closest('[data-cmd2]');if(!b)return;
+      document.getElementById('cpvEbody').focus();document.execCommand(b.dataset.cmd2,false,null);
+    });
+
+    document.getElementById('cpvClose').addEventListener('click',function(){document.getElementById('cpViewPopup').classList.remove('open');setEditMode(false);});
+    document.getElementById('cpViewPopup').addEventListener('click',function(e){if(e.target===this){this.classList.remove('open');setEditMode(false);}});
+
+    // Escape key closes all popups
+    document.addEventListener('keydown',function(e){
+      if(e.key!=='Escape')return;
+      var vp=document.getElementById('cpViewPopup');
+      var am=document.getElementById('cpAddModal');
+      var pp=document.getElementById('cpPanel');
+      if(vp.classList.contains('open')){vp.classList.remove('open');setEditMode(false);}
+      else if(am.classList.contains('open')){am.classList.remove('open');}
+      else if(pp.classList.contains('open')){closePanel();}
+    });
+
+    // Print current decision
+    document.getElementById('cpvPrint').addEventListener('click',function(){
+      var d=_decisions.find(function(x){return x.id===_viewId;});if(!d)return;
+      var iframe=document.getElementById('_printFrame');
+      if(!iframe){iframe=document.createElement('iframe');iframe.id='_printFrame';iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:900px;height:700px;border:none';document.body.appendChild(iframe);}
+      var doc=iframe.contentDocument||iframe.contentWindow.document;
+      doc.open();
+      doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(d.caseNum||'')+'</title>'
+        +'<style>body{font-family:Arial,serif;margin:0;padding:15mm 20mm;color:#111;font-size:10pt;line-height:1.6}'
+        +'h1{font-size:13pt;margin:0 0 4px;color:#333}table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:9pt}'
+        +'td{padding:4px 8px;border-bottom:1px solid #ddd;vertical-align:top}.ml{font-weight:600;color:#555;width:120px}'
+        +'hr{border:none;border-top:1px solid #ccc;margin:12px 0}p{margin:0 0 6px;text-align:justify}'
+        +'@page{margin:12mm}</style></head><body>'
+        +'<h1>⚖ '+esc(d.caseNum||'')+'</h1>'
+        +'<table>'
+        +(d.court?'<tr><td class="ml">Суд</td><td>'+esc(d.court)+'</td></tr>':'')
+        +(d.date?'<tr><td class="ml">Датум</td><td>'+esc(d.date)+'</td></tr>':'')
+        +(d.judge?'<tr><td class="ml">Судија</td><td>'+esc(d.judge)+'</td></tr>':'')
+        +(d.legalArea?'<tr><td class="ml">Правна област</td><td>'+esc(d.legalArea)+'</td></tr>':'')
+        +(d.legalProvisions?'<tr><td class="ml">Спомнати закони</td><td>'+esc(d.legalProvisions)+'</td></tr>':'')
+        +'</table><hr>'
+        +(d.fullText||'')
+        +'</body></html>');
+      doc.close();
+      setTimeout(function(){iframe.contentWindow.focus();iframe.contentWindow.print();},300);
+    });
+
+    // ── AI settings (reuse from settings drawer) ──
+    document.getElementById('aiProvider').addEventListener('change',function(){localStorage.setItem(AI_PROV,this.value);updateAiUi();});
+    function updateAiUi(){
+      var p=getAiProv(),inp=document.getElementById('aiApiKey'),hint=document.getElementById('aiKeyHint'),sel=document.getElementById('aiProvider');
+      if(sel)sel.value=p;
+      if(p==='gemini'){inp.placeholder='Google AI Key (AIza...)';hint.innerHTML='Free: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary)">aistudio.google.com/apikey</a>';}
+      else{inp.placeholder='Anthropic Key (sk-ant-...)';hint.innerHTML='<a href="https://console.anthropic.com/" target="_blank" style="color:var(--primary)">console.anthropic.com</a>';}
+    }
+    document.getElementById('aiSaveKey').addEventListener('click',function(){
+      var k=document.getElementById('aiApiKey').value.trim();if(!k)return;
+      localStorage.setItem(AI_KEY,k);localStorage.setItem(AI_PROV,document.getElementById('aiProvider').value);
+      document.getElementById('aiApiKey').value='';document.getElementById('aiKeyStatus').textContent='✅ Saved';
+    });
+    document.getElementById('aiClearKey').addEventListener('click',function(){
+      localStorage.removeItem(AI_KEY);document.getElementById('aiApiKey').value='';document.getElementById('aiKeyStatus').textContent='Cleared';
+    });
+    (function(){updateAiUi();if(getAiKey())document.getElementById('aiKeyStatus').textContent='✅ '+getAiProv()+' key';})();
+
+    // ── Nav button ──
+    function injectNavBtn(){
+      var nav=document.querySelector('.app:not(#dashboardView) .nav-right');
+      if(!nav||document.getElementById('cpNavBtn'))return;
+      var btn=document.createElement('button');btn.id='cpNavBtn';btn.className='btn btn-ghost';
+      btn.title='Court Practice';btn.innerHTML='<i class="fas fa-gavel"></i>';
+      btn.addEventListener('click',function(){openPanel();});
+      var settings=document.getElementById('openSettings');
+      if(settings)nav.insertBefore(btn,settings);else nav.appendChild(btn);
+    }
+
+    // ── Inject ⚖ buttons per article ──
+    function injectCpButtons(){
+      var state=window._appState;if(!state)return;
+      var law=state.laws&&state.laws.find(function(l){return l.id===state.activeId;});if(!law)return;
+      var articles=document.querySelectorAll('#doc .article');if(!articles.length)return;
+      loadDecisions().then(function(){
+        var counts={};
+        _decisions.forEach(function(d){
+          if(d.lawId===law.id&&d.artNum){
+            var digits=String(d.artNum).replace(/\D/g,'');
+            if(digits)counts[digits]=(counts[digits]||0)+1;
+          }
+        });
+        articles.forEach(function(block){
+          var idx=String(block.dataset.index).replace(/\D/g,'');
+          var h3=block.querySelector('h3');if(!h3)return;
+          var old=h3.querySelector('.cp-art-btn');if(old)old.remove();
+          var count=counts[idx]||0;
+          var btn=document.createElement('button');
+          btn.className='cp-art-btn'+(count?' has-cp':'');
+          btn.type='button';
+          btn.title='Court practice'+(count?' ('+count+')':'');
+          btn.innerHTML='<i class="fas fa-gavel" style="font-size:.7rem"></i>'+(count?'<sup style="font-size:.55rem;color:var(--primary);margin-left:1px">'+count+'</sup>':'');
+          btn.addEventListener('click',function(e){
+            e.stopPropagation();
+            openPanel(law.id,idx);
+          });
+          h3.appendChild(btn);
+        });
+      });
+    }
+
+    // Watch doc changes
+    var _docEl=document.getElementById('doc');
+    if(_docEl){var _cpT2=null;new MutationObserver(function(){clearTimeout(_cpT2);_cpT2=setTimeout(injectCpButtons,100);}).observe(_docEl,{childList:true});}
+    window.injectCpButtons=injectCpButtons;
+
+    document.addEventListener('DOMContentLoaded',injectNavBtn);
+    setTimeout(injectNavBtn,500);
+
   })();
   </script>
 </body>
