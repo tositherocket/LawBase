@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>LawBase</title>
+  <title>LawBase v4.0</title>
 
   <!-- PWA Meta Tags -->
   <meta name="application-name" content="LawBase" />
@@ -2462,10 +2462,10 @@
     <header>
       <div class="nav">
         <div class="nav-left">
-          <div class="brand"><i class="fas fa-scale-balanced"></i> LawBase</div>
+          <div class="brand" id="brandLawBase" style="cursor:pointer" title="Go to LegalBase"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
-          <button id="dashboardBtn" class="btn btn-ghost" title=""><i class="fas fa-sticky-note"></i> LegalBase</button>
+          <button id="dashboardBtn" class="btn btn-ghost" title="LegalBase"><i class="fas fa-sticky-note"></i></button>
           <button id="readingModeBtn" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
           <button id="dbDriveBtnLB" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
           <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
@@ -2519,10 +2519,10 @@
     <header>
       <div class="nav">
         <div class="nav-left">
-          <div class="brand"><i class="fas fa-sticky-note"></i> LegalBase</div>
+          <div class="brand" id="brandLegalBase" style="cursor:pointer" title="Go to LawBase"><i class="fas fa-sticky-note"></i> LegalBase</div>
         </div>
         <div class="nav-right">
-          <button id="dbBackBtn" class="btn btn-ghost" title="Kthehu te LawBase"><i class="fas fa-arrow-left"></i></button>
+          <button id="dbBackBtn" class="btn btn-ghost" title="LawBase"><i class="fas fa-scale-balanced"></i></button>
           <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
           <button id="dbDriveBtn" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
           <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
@@ -2766,7 +2766,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.9.0</span>
+      <span class="hint" style="opacity:0.6">v4.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
@@ -2880,7 +2880,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v3.9.0</span>
+      <span class="hint" style="opacity:0.6">v4.0</span>
     </div>
   </aside>
 
@@ -5528,6 +5528,12 @@
       setTimeout(()=>{ if(window._backToTopBind) window._backToTopBind(true); }, 100);
     });
 
+    // Brand links — click title to switch
+    var brandLB = document.getElementById('brandLawBase');
+    if(brandLB) brandLB.addEventListener('click', () => { document.getElementById('dashboardBtn').click(); });
+    var brandLgB = document.getElementById('brandLegalBase');
+    if(brandLgB) brandLgB.addEventListener('click', () => { document.getElementById('dbBackBtn').click(); });
+
     // ── Dashboard toggle from header ──
     document.getElementById('dashboardBtn').addEventListener('click', () => {
       if(document.body.classList.contains('reading-mode')) leaveReadingMode();
@@ -6395,13 +6401,13 @@
       setH('lawModalTitle', '<i class="fas fa-plus"></i> '+(L.modalAddTitle||L.addLawLabel));
       setT('lbl-font-size', L.fontSizeLabel||'Text size');
       ['readingModeBtn','readingModeBtnDB'].forEach(function(id){ var b=document.getElementById(id); if(b){ b.title=L.readingModeTitleBtn||'Reading mode'; b.innerHTML='<i class="fas fa-book-open"></i>'; } });
-      var dashb=document.getElementById('dashboardBtn'); if(dashb){ dashb.title=L.dashTitle||'Notes'; dashb.innerHTML='<i class="fas fa-sticky-note"></i> LegalBase'; }
+      var dashb=document.getElementById('dashboardBtn'); if(dashb){ dashb.title=L.dashTitle||'LegalBase'; dashb.innerHTML='<i class="fas fa-sticky-note"></i>'; }
       // Update static empty msgs if visible
       var aem=document.getElementById('articlesEmptyMsg'); if(aem) { var ic=aem.querySelector('i'); aem.innerHTML=''; if(ic) aem.appendChild(ic); aem.appendChild(document.createTextNode(' '+(L.articlesEmptyJs||''))); }
       // ── LegalBase i18n ──
       var dbAddTitleEl = document.getElementById('dbAddTitleBtn');
       if(dbAddTitleEl) dbAddTitleEl.querySelector('.title').innerHTML = '<i class="fas fa-plus"></i> '+(L.dbAddTitle||L.addBtn);
-      setH('dbBackBtn', '<i class="fas fa-arrow-left"></i> LawBase');
+      setH('dbBackBtn', '<i class="fas fa-scale-balanced"></i>');
       setH('dbOpenSettings', '<i class="fas fa-cog"></i>');
       setP('dbSearchInput', L.dbSearchPh||'Kërko sipas titullit...');
       setH('dbSearchBtn', '<i class="fas fa-search"></i><span class="btn-text"> '+(L.dbSearchBtn||L.searchBtn)+'</span>');
@@ -7038,7 +7044,7 @@
   </script>
   <!-- ═══════════════════════════════════════════════
        PHASE 3 — Law Compare, Version History
-       v3.9.0
+       v4.0
   ═══════════════════════════════════════════════ -->
   <style>
     /* ── Compare modal — table-aligned ── */
