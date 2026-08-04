@@ -3,7 +3,225 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>LawBase v4.4.1</title>
+
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com;
+    style-src  'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+    font-src   'self' data: https://cdnjs.cloudflare.com;
+    img-src    'self' data: blob:;
+    worker-src 'self' blob:;
+    connect-src 'self' blob: data:
+                https://api.dropbox.com https://api.dropboxapi.com https://content.dropboxapi.com
+                https://generativelanguage.googleapis.com https://api.anthropic.com
+                https://api.groq.com https://openrouter.ai https://api.mistral.ai
+                https://api.cerebras.ai https://cdnjs.cloudflare.com https://unpkg.com;
+    object-src 'none'; frame-src 'none'; base-uri 'self';" />
+
+  <!-- ══════════════════════════════════════════════════════════════
+       LB CORE  v5.0.0
+       Berthama e perbashket. Ngarkohet e PARA, pa asnje varesi.
+       Cdo moduli tjeter e merr me:  const { esc, uid, $, t } = LB;
+       Fajlli mbetet NJE - ndarja eshte ne scope, jo ne fajlla.
+       ══════════════════════════════════════════════════════════════ -->
+  <script>
+  /* ── Mburoje e ruajtjes ──────────────────────────────────────────
+     Ne disa kontekste localStorage/sessionStorage HEDHIN SecurityError
+     ne vete qasjen: Safari ne modalitet privat, kur cookies jane te
+     bllokuara, iframe sandbox, ose politika te caktuara te file://.
+     Ne kod ka ~45 vende qe i perdorin direkt; nje shim ne kujtese i ben
+     te gjitha te sigurta pernjehere. Te dhenat e verteta rrine ne
+     IndexedDB, ndaj humbet vetem gjendja e preferencave — jo permbajtja. */
+  (function(){
+    function memShim(){
+      var m = Object.create(null);
+      return {
+        getItem:function(k){ return (k in m)? m[k] : null; },
+        setItem:function(k,v){ m[k]=String(v); },
+        removeItem:function(k){ delete m[k]; },
+        clear:function(){ Object.keys(m).forEach(function(k){ delete m[k]; }); },
+        key:function(i){ var ks=Object.keys(m); return i<ks.length?ks[i]:null; },
+        get length(){ return Object.keys(m).length; },
+        __lbShim:true
+      };
+    }
+    ['localStorage','sessionStorage'].forEach(function(name){
+      var okStore=false;
+      try{ var st=window[name]; st.setItem('__lb_probe','1'); st.removeItem('__lb_probe'); okStore=true; }
+      catch(e){ okStore=false; }
+      if(okStore) return;
+      try{
+        Object.defineProperty(window, name, {value:memShim(), configurable:true});
+        console.warn('[LB] '+name+' s\u2019eshte i disponueshem — po perdoret kujtesa e perkohshme.');
+      }catch(e){ /* s'mund te zevendesohet — kodi ka try/catch ne vendet kritike */ }
+    });
+  })();
+
+  window.LB = (function(){
+    'use strict';
+
+    /* ── Escape (nje implementim, jo shtate) ── */
+    var esc  = function(v){ return String(v==null?'':v)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+    var escA = function(v){ return esc(v).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
+
+    /* ── ID pa perplasje mes pajisjeve (P1.4) ── */
+    var uid = function(){
+      try{ if(crypto && crypto.randomUUID) return crypto.randomUUID().slice(0,13); }catch(e){}
+      var a=new Uint8Array(8);
+      try{ crypto.getRandomValues(a); }catch(e){ for(var i=0;i<8;i++)a[i]=Math.random()*256|0; }
+      return Date.now().toString(36)+'-'+Array.from(a).map(function(b){
+        return b.toString(16).padStart(2,'0'); }).join('').slice(0,8);
+    };
+
+    /* ── Selektore ── */
+    var $  = function(sel,root){ return (root||document).querySelector(sel); };
+    var $$ = function(sel,root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); };
+
+    /* ── Bus ngjarjesh (zevendeson window._* + setTimeout arbitrar) ── */
+    var _bus = new EventTarget();
+    var emit = function(name,detail){ _bus.dispatchEvent(new CustomEvent(name,{detail:detail})); };
+    var on   = function(name,fn){
+      var h=function(e){ fn(e.detail); };
+      _bus.addEventListener(name,h);
+      return function(){ _bus.removeEventListener(name,h); };
+    };
+
+    /* ── Gabimet nuk gelltiten me (P1.6) ── */
+    var _errs=[];
+    function warn(ctx,e){
+      _errs.push({ctx:ctx,msg:(e&&e.message)||String(e),ts:Date.now()});
+      if(_errs.length>50)_errs.shift();
+      try{ console.warn('[LB] '+ctx+':',e); }catch(_){}
+    }
+    function guard(ctx,fn,fallback){
+      try{ return fn(); }catch(e){ warn(ctx,e); return fallback; }
+    }
+
+    /* ── localStorage i mbrojtur ── */
+    var ls = {
+      get:function(k,d){ return guard('ls.get '+k,function(){
+             var v=localStorage.getItem(k); return v===null?(d===undefined?null:d):v; },d); },
+      set:function(k,v){ try{ localStorage.setItem(k,v); return true; }
+             catch(e){ warn('ls.set '+k,e);
+               if(e&&(e.name==='QuotaExceededError'||/quota/i.test(String(e))))
+                 emit('storage:quota',{key:k});
+               return false; } },
+      del:function(k){ try{ localStorage.removeItem(k); }catch(e){ warn('ls.del '+k,e); } }
+    };
+
+    /* ── Sanitizues me ALLOWLIST mbi dokument INERT (P0.2) ── */
+    var OK_TAGS = ['P','BR','B','STRONG','I','EM','U','S','SUP','SUB','H1','H2','H3','H4','H5','H6',
+      'UL','OL','LI','BLOCKQUOTE','PRE','CODE','HR','DIV','SPAN','MARK','A','FONT',
+      'TABLE','THEAD','TBODY','TFOOT','TR','TD','TH','CAPTION','COLGROUP','COL'];
+    var OK_ATTRS = { A:['href','title','target','rel'],
+      TD:['colspan','rowspan','align'], TH:['colspan','rowspan','align'],
+      COL:['span','width'], FONT:['color','face'],
+      SPAN:['style'], DIV:['style'], P:['style'], MARK:['style'],
+      TABLE:['style','border'], TR:['style'], LI:['style'],
+      B:['style'], I:['style'], U:['style'], H1:['style'],H2:['style'],H3:['style'],H4:['style'] };
+    var STYLE_OK = /^(color|background-color|font-weight|font-style|font-size|font-family|text-align|text-decoration|padding|margin|border|width|line-height)$/i;
+
+    function cleanStyle(v){
+      return String(v||'').split(';').map(function(d){
+        var i=d.indexOf(':'); if(i<0) return '';
+        var prop=d.slice(0,i).trim(), val=d.slice(i+1).trim();
+        if(!STYLE_OK.test(prop)) return '';
+        if(/url\s*\(|expression|javascript:|@import/i.test(val)) return '';
+        return prop+':'+val;
+      }).filter(Boolean).join(';');
+    }
+
+    // Tage qe hiqen BASHKE me permbajtjen (jo vetem "unwrap")
+    var DROP_TAGS = ['SCRIPT','STYLE','LINK','META','TITLE','HEAD','BASE','TEMPLATE',
+      'NOSCRIPT','IFRAME','FRAME','FRAMESET','OBJECT','EMBED','APPLET','PORTAL',
+      'SVG','MATH','CANVAS','AUDIO','VIDEO','SOURCE','TRACK','INPUT','TEXTAREA',
+      'SELECT','OPTION','BUTTON','DIALOG','SLOT'];
+
+    function cleanHtml(html){
+      if(!html) return '';
+      // parseFromString => dokument INERT: asgje nuk ekzekutohet, asnje img nuk ngarkohet
+      var doc = new DOMParser().parseFromString(String(html),'text/html');
+      var budget = 200000;   // mburoje kunder HTML-se qellimisht te thelle
+      (function walk(node){
+        var i = 0;
+        while(i < node.childNodes.length){
+          if(--budget < 0) return;
+          var c = node.childNodes[i];
+          if(c.nodeType === 8){ c.remove(); continue; }         // komentet
+          if(c.nodeType !== 1){ i++; continue; }                 // teksti - ok
+          var tag = (c.tagName||'').toUpperCase();
+          if(DROP_TAGS.indexOf(tag) !== -1){ c.remove(); continue; }
+          if(OK_TAGS.indexOf(tag) === -1){
+            // ruaj tekstin/femijet, hiq vetem elementin
+            while(c.firstChild) node.insertBefore(c.firstChild, c);
+            c.remove();
+            continue;    // MOS e rrit i-ne: rishiko te njejten pozite,
+                         // qe femijet e ngritur te kontrollohen edhe ata
+          }
+          var allow = OK_ATTRS[tag] || [];
+          Array.prototype.slice.call(c.attributes).forEach(function(a){
+            var n = a.name.toLowerCase();
+            if(n.indexOf('on') === 0){ c.removeAttribute(a.name); return; }
+            if(allow.indexOf(n) === -1){ c.removeAttribute(a.name); return; }
+            if(n === 'style'){
+              var cs = cleanStyle(a.value);
+              if(cs) c.setAttribute('style', cs); else c.removeAttribute('style');
+            }
+            if((n === 'href' || n === 'src') &&
+               !/^(https?:|mailto:|tel:|#)/i.test(String(a.value).trim()))
+              c.removeAttribute(a.name);
+          });
+          if(tag === 'A' && c.getAttribute('target') === '_blank')
+            c.setAttribute('rel', 'noopener noreferrer');
+          walk(c);
+          i++;
+        }
+      })(doc.body);
+      return doc.body.innerHTML;
+    }
+
+    /* ── Fingerprint i qendrueshem (per sync-un me permbajtje) ── */
+    function stableStringify(v){
+      if(v===null||typeof v!=='object') return JSON.stringify(v);
+      if(Array.isArray(v)) return '['+v.map(stableStringify).join(',')+']';
+      return '{'+Object.keys(v).sort().map(function(k){
+        return JSON.stringify(k)+':'+stableStringify(v[k]); }).join(',')+'}';
+    }
+    async function sha256(str){
+      var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(function(b){
+        return b.toString(16).padStart(2,'0'); }).join('');
+    }
+
+    /* ── i18n ── */
+    var _lang = (function(){ try{ return localStorage.getItem('zakoni_lang')||'en'; }catch(e){ return 'en'; } })();
+    function lang(){ return _lang; }
+    function setLang(l){
+      _lang=l; ls.set('zakoni_lang',l);
+      document.documentElement.lang=l;        // P2.6: lang i sakte per screen readers
+      emit('lang:changed',l);
+    }
+    try{ document.documentElement.lang=_lang; }catch(e){}
+
+    /* ── Debounce ── */
+    function debounce(fn,ms){
+      var t=null;
+      var d=function(){ var a=arguments,c=this; clearTimeout(t);
+        t=setTimeout(function(){ fn.apply(c,a); },ms); };
+      d.cancel=function(){ clearTimeout(t); t=null; };
+      d.flush=function(){ if(t){ clearTimeout(t); t=null; fn(); } };
+      return d;
+    }
+
+    return { version:'5.0.0', esc:esc, escA:escA, uid:uid, $:$, $$:$$,
+             emit:emit, on:on, warn:warn, guard:guard, ls:ls,
+             cleanHtml:cleanHtml, stableStringify:stableStringify, sha256:sha256,
+             lang:lang, setLang:setLang, debounce:debounce,
+             errors:function(){ return _errs.slice(); } };
+  })();
+  </script>
+  <title>LawBase v5.0.0</title>
 
   <!-- PWA Meta Tags -->
   <meta name="application-name" content="LawBase" />
@@ -16,6 +234,23 @@
   <link rel="apple-touch-icon" id="appleTouchIcon" />
   <link rel="icon" id="faviconIcon" type="image/png" />
   <link rel="manifest" id="pwaManifest" />
+
+  <!-- ══ LB OAUTH RELAY (P1.9) ══
+       Kur Dropbox-i kthen popup-in me ?code=, kjo faqe e dergon kodin te
+       dritarja prinderore dhe mbyllet. Duhet te jete PARA cdo kodi tjeter. -->
+  <script>
+  (function(){
+    try{
+      if(!window.opener || window.opener===window) return;
+      var q=new URLSearchParams(location.search);
+      if(!q.has('code') && !q.has('error')) return;
+      window.opener.postMessage({type:'lb-dbx-auth',
+        code:q.get('code')||'', error:q.get('error')||''}, location.origin);
+      document.documentElement.innerHTML='<body style="font:14px system-ui;padding:40px;text-align:center">U autorizua. Mund ta mbyllni këtë dritare.</body>';
+      setTimeout(function(){ try{ window.close(); }catch(e){} },300);
+    }catch(e){}
+  })();
+  </script>
 
   <!-- Inline PWA Setup -->
   <script>
@@ -47,21 +282,63 @@
       img.src = iconB64;
     }
 
-    function injectManifest(icon192, icon512){
-      const pageUrl = location.href.split('#')[0];
-      const manifest = {
+    // ══════════════════════════════════════════════════════════════
+    //  v5.0.0 — RREGULLIM: ikona zhdukej nga ekrani kryesor i Android-it
+    //
+    //  Shkaku 1 (kryesori): manifesti ishte nje URL "blob:".
+    //    Nje blob: URL jeton vetem sa jeton dokumenti qe e krijoi. Chrome
+    //    ne Android e ri-lexon manifestin periodikisht per te kontrolluar
+    //    perditesimet e WebAPK-se. Ne ate moment blob-i i sesionit te vjeter
+    //    nuk ekziston me -> manifesti "i paarritshem" -> Android e degradon
+    //    ose e heq ikonen. Tani perdoret "data:" qe eshte i vetepermbajtur
+    //    dhe nuk skadon kurre.
+    //
+    //  Shkaku 2: te dyja ikonat ishin purpose:'any maskable'. Nje ikone
+    //    e vetme s'duhet te sherbeje per te dyja — Android e pret ne rrethin
+    //    e maskes dhe rezultati del bosh/i prere. Tani jane te ndara.
+    //
+    //  Shtese: id/start_url tani heqin edhe "?query", jo vetem "#hash".
+    //    Nese hapesh me parametra te ndryshem, Chrome e merrte si aplikacion
+    //    TJETER dhe krijonte ikone te dyte ose e zevendesonte te vjetren.
+    // ══════════════════════════════════════════════════════════════
+    var _lbManifestHref = null;
+    function injectManifest(icon144, icon192, icon512){
+      // URL e qendrueshme: pa hash, pa query — identiteti i aplikacionit
+      var pageUrl = location.origin + location.pathname;
+      var scopeUrl = pageUrl.slice(0, pageUrl.lastIndexOf('/')+1);
+      var manifest = {
         id: pageUrl,
         name: 'LawBase', short_name: 'LawBase',
         description: 'LawBase -- Search and browse laws',
-        start_url: pageUrl, scope: pageUrl.slice(0, pageUrl.lastIndexOf('/')+1), display: 'standalone',
-        background_color: '#f5f7fb', theme_color: '#4361ee', orientation: 'any',
+        start_url: pageUrl, scope: scopeUrl, display: 'standalone',
+        background_color: '#f5f7fb', theme_color: '#4361ee',
+        orientation: 'any', lang: (document.documentElement.lang||'en'), dir: 'ltr',
         icons: [
-          { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-          { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          { src: icon144, sizes: '144x144', type: 'image/png', purpose: 'any' },
+          { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       };
-      const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
-      document.getElementById('pwaManifest').href = URL.createObjectURL(blob);
+      try{
+        var json = JSON.stringify(manifest);
+        var b64  = btoa(unescape(encodeURIComponent(json)));
+        var href = 'data:application/manifest+json;base64,' + b64;
+        // Mos e prek nese s'ka ndryshuar — cdo ndryshim i detyron Android-it
+        // te ri-krijoje WebAPK-ne, dhe pikerisht atehere humbet ikona.
+        if(href === _lbManifestHref) return;
+        _lbManifestHref = href;
+        var link = document.getElementById('pwaManifest');
+        if(link) link.href = href;
+      }catch(e){
+        console.warn('[LB] manifest:', e);
+        // Rezerve: blob (punon per instalimin e pare, jo per rikontrollin)
+        try{
+          var blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+          document.getElementById('pwaManifest').href = URL.createObjectURL(blob);
+        }catch(e2){ console.warn('[LB] manifest fallback:', e2); }
+      }
     }
 
     // ── Offline: cache FontAwesome + Mammoth (Cache Storage API, me fallback localStorage) ──
@@ -89,10 +366,17 @@
         + '@font-face{font-family:"Font Awesome 6 Free";font-style:normal;font-weight:400;font-display:block;src:url('+srcUrl+') format("woff2")}';
       document.head.appendChild(fontStyle);
     }
+    // ══ P0.6 (v5.0.0) ══
+    // Me pare: sc.textContent = jsText ku jsText vinte nga localStorage.
+    // Cdo XSS mund te shkruante aty kod qe ekzekutohej ne cdo hapje te app-it
+    // (persistence). Tani ekzekutohet VETEM permbajtje e ardhur nga Cache
+    // Storage / rrjeti, dhe nuk ruhet me kurre ne localStorage.
     function _injectMammoth(jsText){
+      if(typeof jsText!=='string' || jsText.length<1000) return false;
       var sc = document.createElement('script');
       sc.textContent = jsText;
       document.head.appendChild(sc);
+      return true;
     }
 
     async function _cachePut(url){
@@ -185,10 +469,16 @@
           var cachedFont = localStorage.getItem(FA_FONT_KEY);
           if(cachedFont && cachedFont.length > 10000) _injectFaFont(cachedFont);
         } catch(e){}
+        // v5.0.0: JS-i lexohet VETEM nga Cache Storage (i shkruar nga fetch-i yne),
+        // kurre nga localStorage — qe asnje XSS te mos fusi dot kod te perhershem.
         try {
-          var cachedM = localStorage.getItem(MAMMOTH_KEY);
-          if(cachedM && cachedM.length > 10000 && !window.mammoth) _injectMammoth(cachedM);
-        } catch(e) {}
+          if(!window.mammoth && window.caches){
+            var _c = await caches.open(ASSET_CACHE);
+            var _hit = await _c.match(MAMMOTH_URL);
+            if(_hit){ _injectMammoth(await _hit.text()); }
+          }
+        } catch(e) { console.warn('[LB] mammoth cache:', e); }
+        try { localStorage.removeItem(MAMMOTH_KEY); } catch(e) {}
         return;
       }
 
@@ -220,34 +510,28 @@
       } catch(e){}
 
       try {
-        var existing = localStorage.getItem(MAMMOTH_KEY);
-        if(existing && existing.length > 10000) return;
+        try { localStorage.removeItem(MAMMOTH_KEY); } catch(e) {}   // migrim
+        if(!window.caches) return;
+        var _c2 = await caches.open(ASSET_CACHE);
+        if(await _c2.match(MAMMOTH_URL)) return;
         var mr = await fetch(MAMMOTH_URL);
         var ct = mr.headers.get('content-type') || '';
         if(!mr.ok || !ct.includes('javascript')) return;
-        var txt = await mr.text();
-        if(txt && txt.length > 10000 && '!(/'.includes(txt[0])){
-          try { localStorage.setItem(MAMMOTH_KEY, txt); } catch(e) {}
-        }
-      } catch(e) {}
+        await _c2.put(MAMMOTH_URL, mr.clone());
+      } catch(e) { console.warn('[LB] mammoth prefetch:', e); }
     }
 
-    // ── Pa fajl të dytë: instalimi në Chrome modern kërkon vetëm HTTPS + manifest me ikona.
-    //    Nëse në server ndodhet rastësisht një ./sw.js, e përdorim; përndryshe vazhdojmë pa të. ──
-    function registerSW(){
-      if(!('serviceWorker' in navigator)) return;
-      var secure = location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1';
-      if(!secure) return;
-      fetch('./sw.js', {method:'HEAD'}).then(function(r){
-        var ct=(r.headers.get('content-type')||'');
-        if(r.ok && ct.indexOf('javascript')>-1){
-          return navigator.serviceWorker.register('./sw.js', {scope:'./'}).then(function(){
-            window._lbSwOk = true;
-            if(typeof window._lbInstallStatusRefresh==='function')window._lbInstallStatusRefresh();
-          });
-        }
-      }).catch(function(){});
-    }
+    // ══ v5.0.0 — NJË FAJLL, PA VARËSI TË JASHTME ══
+    // Blloku i service worker-it u hoq. Ai kërkonte një ./sw.js të dytë, gjë që
+    // bie ndesh me konceptin e aplikacionit, dhe nga file:// nuk punonte kurrë
+    // (shfletuesit nuk lejojnë service worker jashtë http/https).
+    //
+    // Offline-i nuk varej kurrë prej tij:
+    //   • aplikacioni       = ky fajll, në disk
+    //   • ligjet/shënimet   = IndexedDB (lokale)
+    //   • cilësimet/çelësat = localStorage (lokale)
+    //   • FontAwesome       = i inline-uar si fallback + i cache-uar
+    // Asnjë prej tyre nuk e prek rrjetin.
 
     let deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', e => {
@@ -325,12 +609,12 @@
       if(btn) btn.style.display = 'none';
     };
     window.addEventListener('load', () => {
-      makePng(192, png192 => { makePng(512, png512 => { injectManifest(png192, png512); }); });
+      makePng(144, png144 => { makePng(192, png192 => { makePng(512, png512 => {
+        injectManifest(png144, png192, png512); }); }); });
       makePng(180, png180 => { document.getElementById('appleTouchIcon').href = png180; });
       const faviconEl = document.getElementById('faviconIcon');
       if(faviconEl) makePng(64, png64 => { faviconEl.href = png64; });
       offlineInit();
-      registerSW();
       setTimeout(showiOSHint, 1500);
       setTimeout(window._lbInstallStatusRefresh, 800);
       setTimeout(window._lbInstallStatusRefresh, 3500);
@@ -339,6 +623,12 @@
 
     // ── Offline/Online indicator ──
     function showOfflineBanner(offline){
+      // v5.0.0: ky funksion thirrej edhe nga <head>, kur document.body eshte ende
+      // null -> TypeError. Ndodhte pikerisht kur aplikacioni hapej OFFLINE.
+      if(!document.body){
+        document.addEventListener('DOMContentLoaded', function(){ showOfflineBanner(offline); }, {once:true});
+        return;
+      }
       let bar = document.getElementById('offlineBar');
       if(!bar){
         bar = document.createElement('div');
@@ -379,6 +669,14 @@
   </script>
   <!-- Google Fonts removed — using system Arial -->
   <style>
+    /* ── P1.5 (v5.0.0): virtualizim me CSS ──
+       Shfletuesi anashkalon layout/paint per nenet jashte ekranit.
+       Per nje kod me 400+ nene kjo e pergjysmon kohen e renderimit.
+       Dy rreshta, zero JS. */
+    .doc .article{ content-visibility:auto; contain-intrinsic-size:auto 260px; }
+    /* Gjate kerkimit e cakivojme, qe theksimet jashte ekranit te numerohen sakte */
+    .doc.searching .article{ content-visibility:visible; }
+
     /* ══════════════════════════════════════════════════════════════
        THEME SYSTEM — data-style + data-mode (light|dark)
        ══════════════════════════════════════════════════════════════ */
@@ -2559,7 +2857,7 @@
       };
       tryLoad([
         'https://unpkg.com/mammoth@1.12.0/mammoth.browser.min.js',
-        'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js'
+        'https://unpkg.com/mammoth@1.12.0/mammoth.browser.min.js'
       ]);
     });
   </script>
@@ -2589,10 +2887,10 @@
           <div class="brand" id="brandLawBase" style="cursor:pointer" title="Go to LegalBase"><i class="fas fa-scale-balanced"></i> LawBase</div>
         </div>
         <div class="nav-right">
-          <button id="dashboardBtn" class="btn btn-ghost" title="LegalBase"><i class="fas fa-sticky-note"></i></button>
-          <button id="readingModeBtn" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
-          <button id="dbDriveBtnLB" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
-          <button id="openSettings" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
+          <button id="dashboardBtn" aria-label="Hap LegalBase" class="btn btn-ghost" title="LegalBase"><i class="fas fa-sticky-note"></i></button>
+          <button id="readingModeBtn" aria-label="Mënyra e leximit" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
+          <button id="dbDriveBtnLB" aria-label="Sinkronizim me Dropbox" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
+          <button id="openSettings" aria-label="Cilësimet" class="btn btn-ghost" title="Settings"><i class="fas fa-cog"></i></button>
         </div>
       </div>
     </header>
@@ -2607,15 +2905,15 @@
       <div class="controls" id="controlsPanel">
         <div class="controls-row">
           <input id="searchInput" type="text" placeholder="" />
-          <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
-          <button id="clearSearchBtn" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+          <button id="searchBtn" aria-label="Kërko" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="clearSearchBtn" aria-label="Pastro kërkimin" class="btn btn-ghost"><i class="fas fa-times"></i></button>
         </div>
         <div class="controls-vsep-h"></div>
         <div class="controls-row">
           <input id="fulltextInput" type="text" placeholder="" />
-          <button id="fulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
-          <button id="fulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
-          <button id="fulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+          <button id="fulltextBtn" aria-label="Kërko në tekst" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="fulltextNextBtn" aria-label="Rezultati tjetër" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
+          <button id="fulltextClear" aria-label="Pastro" class="btn btn-ghost"><i class="fas fa-times"></i></button>
         </div>
         <span id="fulltextCount" class="hint"></span>
         <div id="activeTitle" class="hint"></div>
@@ -2646,10 +2944,11 @@
           <div class="brand" id="brandLegalBase" style="cursor:pointer" title="Go to LawBase"><i class="fas fa-sticky-note"></i> LegalBase</div>
         </div>
         <div class="nav-right">
-          <button id="dbBackBtn" class="btn btn-ghost" title="LawBase"><i class="fas fa-scale-balanced"></i></button>
-          <button id="readingModeBtnDB" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
-          <button id="dbDriveBtn" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
-          <button id="dbOpenSettings" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
+          <button id="dbBackBtn" aria-label="Kthehu te LawBase" class="btn btn-ghost" title="LawBase"><i class="fas fa-scale-balanced"></i></button>
+          <button id="readingModeBtnDB" aria-label="Mënyra e leximit" class="btn btn-ghost" title=""><i class="fas fa-book-open"></i></button>
+          <button id="calBtn" aria-label="Kalendar dhe kujtesa" class="btn btn-ghost cal-btn" title="Kalendar / Kujtesa"><i class="fas fa-calendar-days"></i><span id="calBadge" class="cal-badge" hidden>0</span></button>
+          <button id="dbDriveBtn" aria-label="Sinkronizim me Dropbox" class="btn btn-ghost" title="Dropbox Sync"><i class="fas fa-cloud"></i></button>
+          <button id="dbOpenSettings" aria-label="Cilësimet" class="btn btn-ghost" title="Cilësimet"><i class="fas fa-cog"></i></button>
         </div>
       </div>
     </header>
@@ -2663,15 +2962,15 @@
       <div class="controls" id="dbControlsPanel">
         <div class="controls-row">
           <input id="dbSearchInput" type="text" placeholder="" />
-          <button id="dbSearchBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
-          <button id="dbSearchClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+          <button id="dbSearchBtn" aria-label="Kërko" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="dbSearchClear" aria-label="Pastro kërkimin" class="btn btn-ghost"><i class="fas fa-times"></i></button>
         </div>
         <div class="controls-vsep-h"></div>
         <div class="controls-row">
           <input id="dbFulltextInput" type="text" placeholder="" />
-          <button id="dbFulltextBtn" class="btn btn-primary"><i class="fas fa-search"></i></button>
-          <button id="dbFulltextNextBtn" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
-          <button id="dbFulltextClear" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+          <button id="dbFulltextBtn" aria-label="Kërko në tekst" class="btn btn-primary"><i class="fas fa-search"></i></button>
+          <button id="dbFulltextNextBtn" aria-label="Rezultati tjetër" class="btn btn-ghost"><i class="fas fa-arrow-down"></i></button>
+          <button id="dbFulltextClear" aria-label="Pastro" class="btn btn-ghost"><i class="fas fa-times"></i></button>
         </div>
         <span id="dbFulltextCount" class="hint"></span>
         <span id="dbSearchCount" class="hint"></span>
@@ -2693,10 +2992,10 @@
   <!-- Dropbox Sync Modal -->
   <div id="dbDriveModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
     <div style="background:var(--panel);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.3);position:relative;">
-      <button id="dbDriveModalClose" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)"><i class="fas fa-times"></i></button>
+      <button id="dbDriveModalClose" aria-label="Mbyll" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--muted)"><i class="fas fa-times"></i></button>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <h3 style="margin:0;font-size:1.1rem"><i class="fab fa-dropbox" style="color:#0061ff"></i> Dropbox Sync</h3>
-        <span style="font-size:0.72rem;color:var(--muted)"><code>/Apps/LegalBase/</code></span>
+        <span style="font-size:0.72rem;color:var(--muted)"><code>App folder</code></span>
       </div>
 
       <!-- Step 1: App Key -->
@@ -2706,7 +3005,8 @@
           style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;background:var(--bg);color:var(--text);margin-bottom:6px" />
         <p style="font-size:0.75rem;color:var(--muted);margin:0 0 6px">
           <a href="https://www.dropbox.com/developers/apps" target="_blank" style="color:var(--primary)">dropbox.com/developers/apps</a>
-          → Create app → Scoped → Full Dropbox → kopjo <strong>App key</strong>
+          → Create app → Scoped access → <strong>App folder</strong> → kopjo <strong>App key</strong>
+          <br><span style="color:#2dc653">Zgjidh <b>App folder</b>, jo Full Dropbox — aplikacioni sheh vetëm dosjen e vet.</span>
         </p>
         <p style="font-size:0.75rem;color:var(--muted);margin:0 0 6px">Shto këtë URL te <strong>Redirect URIs</strong>:</p>
         <code id="dbRedirectUriDisplay" style="display:block;font-size:0.72rem;background:var(--chip);padding:6px 8px;border-radius:4px;word-break:break-all;margin-bottom:12px;cursor:pointer;color:var(--primary)" title="Klikoni për ta kopjuar"></code>
@@ -2786,7 +3086,7 @@
     <div class="ref-modal-box">
       <div class="ref-modal-head">
         <span id="dbRefModalTitle"><i class="fas fa-link"></i> Shto referencë</span>
-        <button class="btn btn-ghost" id="dbRefModalClose"><i class="fas fa-times"></i></button>
+        <button class="btn btn-ghost" id="dbRefModalClose" aria-label="Mbyll"><i class="fas fa-times"></i></button>
       </div>
       <div class="ref-modal-body" id="dbRefModalBody">
         <!-- filled by JS -->
@@ -2802,7 +3102,7 @@
   <aside id="dbSettingsDrawer" class="drawer" aria-hidden="true" style="z-index:1010">
     <header>
       <strong><i class="fas fa-cog"></i> <span id="db-lbl-settings">Settings</span></strong>
-      <div style="float:right"><button id="dbCloseSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
+      <div style="float:right"><button id="dbCloseSettings" aria-label="Mbyll cilësimet" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
     </header>
     <div class="body">
       <!-- LegalBase-only: Shto kategori -->
@@ -2855,10 +3155,10 @@
         <div class="font-size-row">
           <span class="font-size-label" id="db-lbl-font-size">Text size</span>
           <div class="font-size-controls">
-            <button id="dbFontDecBtn" class="btn btn-ghost font-btn" title="Smaller">A−</button>
+            <button id="dbFontDecBtn" aria-label="Zvogëlo tekstin" class="btn btn-ghost font-btn" title="Smaller">A−</button>
             <span id="dbFontSizeDisplay" class="font-size-val">15px</span>
-            <button id="dbFontIncBtn" class="btn btn-ghost font-btn" title="Larger">A+</button>
-            <button id="dbFontResetBtn" class="btn btn-ghost font-btn" title="Reset">↺</button>
+            <button id="dbFontIncBtn" aria-label="Rrit tekstin" class="btn btn-ghost font-btn" title="Larger">A+</button>
+            <button id="dbFontResetBtn" aria-label="Rikthe madhësinë" class="btn btn-ghost font-btn" title="Reset">↺</button>
           </div>
         </div>
       </div>
@@ -2890,13 +3190,13 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint" id="db-lbl-footer"><i class="fas fa-info-circle"></i> Data stored locally (IndexedDB). With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v4.4.1</span>
+      <span class="hint" style="opacity:0.6">v5.0.0</span>
     </div>
   </aside>
   <aside id="drawer" class="drawer" aria-hidden="true">
     <header>
       <strong><i class="fas fa-cog"></i> <span id="lbl-settings-title">Settings</span></strong>
-      <div style="float:right"><button id="closeSettings" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
+      <div style="float:right"><button id="closeSettings" aria-label="Mbyll cilësimet" class="btn btn-ghost"><i class="fas fa-times"></i></button></div>
     </header>
     <div class="body">
       <!-- LawBase-only: Shto ligj + Menaxho ligjet -->
@@ -2945,10 +3245,10 @@
         <div class="font-size-row">
           <span class="font-size-label" id="lbl-font-size">Text size</span>
           <div class="font-size-controls">
-            <button id="fontDecBtn" class="btn btn-ghost font-btn" title="Smaller">A−</button>
+            <button id="fontDecBtn" aria-label="Zvogëlo tekstin" class="btn btn-ghost font-btn" title="Smaller">A−</button>
             <span id="fontSizeDisplay" class="font-size-val">15px</span>
-            <button id="fontIncBtn" class="btn btn-ghost font-btn" title="Larger">A+</button>
-            <button id="fontResetBtn" class="btn btn-ghost font-btn" title="Reset">↺</button>
+            <button id="fontIncBtn" aria-label="Rrit tekstin" class="btn btn-ghost font-btn" title="Larger">A+</button>
+            <button id="fontResetBtn" aria-label="Rikthe madhësinë" class="btn btn-ghost font-btn" title="Reset">↺</button>
           </div>
         </div>
       </div>
@@ -3018,7 +3318,7 @@
     </div>
     <div class="footer" style="display:flex;flex-direction:column;gap:6px">
       <span class="hint"><i class="fas fa-info-circle"></i> <span id="lbl-footer-text">Data stored locally (IndexedDB).</span> With <i class="fa-solid fa-heart heart"></i> from J. Fatos</span>
-      <span class="hint" style="opacity:0.6">v4.4.1</span>
+      <span class="hint" style="opacity:0.6">v5.0.0</span>
     </div>
   </aside>
 
@@ -3027,7 +3327,7 @@
     <form method="dialog">
       <div class="modal-head">
         <div style="font-weight:700" id="lawModalTitle"><i class="fas fa-plus"></i> </div>
-        <button type="button" id="closeLawModal" class="btn btn-ghost"><i class="fas fa-times"></i></button>
+        <button type="button" id="closeLawModal" aria-label="Mbyll" class="btn btn-ghost"><i class="fas fa-times"></i></button>
       </div>
       <div class="modal-body">
         <label><i class="fas fa-heading"></i> Title</label>
@@ -3152,7 +3452,7 @@
       applyTheme(style, mode);
     }
 
-    const uid = () => Math.random().toString(36).slice(2,9);
+    const uid = () => LB.uid();   // P1.4: crypto.randomUUID — pa perplasje mes pajisjeve
     const updatePreview = (text) => { formPreview.textContent = (text || '').slice(0,300); };
 
     // Split text by articles -- supports MK (Член/чл), AL (Neni/neni.), SR (Član/čl), EN (Article)
@@ -3181,13 +3481,15 @@
     function openDB(){
       return new Promise((res,rej)=>{
         if(_db){res(_db);return;}
-        const req=indexedDB.open(DB_NAME,4);
+        const req=indexedDB.open(DB_NAME,5);   // v5.0.0
         req.onupgradeneeded=e=>{
           const db=e.target.result;
           if(!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE);
           if(!db.objectStoreNames.contains('annotations')) db.createObjectStore('annotations');
           if(!db.objectStoreNames.contains('courtpractice')) db.createObjectStore('courtpractice');
           if(!db.objectStoreNames.contains('subacts')) db.createObjectStore('subacts');
+          // P0.1: historiku i versioneve levizi nga localStorage (5MB) ne IndexedDB
+          if(!db.objectStoreNames.contains('versions')) db.createObjectStore('versions');
         };
         req.onsuccess=e=>{_db=e.target.result;res(_db);};
         req.onerror=e=>rej(e);
@@ -3206,7 +3508,21 @@
       document.body.appendChild(t);
       setTimeout(()=>t&&t.remove(), 6000);
     }
+    // P2.6 (v5.0.0): cdo buton vetem-me-ikone qe ka title merr edhe aria-label.
+    // title= nuk lexohet nga te gjithe screen reader-at; aria-label lexohet.
+    function _lbAutoAria(){
+      LB.$$('button[title]:not([aria-label])').forEach(function(b){
+        if(b.title) b.setAttribute('aria-label', b.title);
+      });
+    }
+    window.addEventListener('load', _lbAutoAria);
+    LB.on('lang:changed', function(){ setTimeout(_lbAutoAria, 60); });
+
     window._showStorageError = _showStorageError;
+    // v5.0.0: cdo deshtim kuote ne LB.ls behet i dukshem — pa me heshtje
+    LB.on('storage:quota', function(d){
+      _showStorageError('Hapësira lokale u mbush ('+(d&&d.key||'')+'). Eksporto dhe pastro të dhënat.');
+    });
 
     function saveToStorage(){
       const minimal=state.laws.map(l=>({id:l.id,title:l.title,alt:l.alt||'',content:l.content,updatedAt:l.updatedAt||Date.now()}));
@@ -3433,14 +3749,30 @@
       law.articles.forEach(a=>{
         const link=document.createElement('a'); link.href='javascript:void(0)'; link.className='art-link'; link.textContent=a.title;
         link.addEventListener('click',()=>{
-          const target=docEl.querySelector(`.article[data-index="${a.index}"]`);
+          // P0.5: "Neni 5a" nuk duhet te coje me te "Neni 5"
+          const sel=String(a.indexStr!=null?a.indexStr:a.index);
+          const target=docEl.querySelector('.article[data-index="'+(window.CSS&&CSS.escape?CSS.escape(sel):sel)+'"]');
           if(target){ target.scrollIntoView({behavior:'instant',block:'start'}); target.classList.add('highlight'); setTimeout(()=>target.classList.remove('highlight'),1200); }
         });
         articlesList.appendChild(link);
       });
     }
-    function clearHighlights(root){ root.querySelectorAll('mark.result').forEach(m=>{ const t=document.createTextNode(m.textContent); m.replaceWith(t); }); }
+    function clearHighlights(root){
+      root.querySelectorAll('mark.result').forEach(m=>{ m.replaceWith(document.createTextNode(m.textContent)); });
+      root.normalize();   // P1.2: bashko nyjet e ndara — pa kete kerkimi i dyte deshton
+    }
+    // P1.5: cache me kufi (LRU) — me pare rritej pa fund me cdo redaktim
     const _docCache={};
+    const _docCacheOrder=[];
+    const DOC_CACHE_MAX=3;
+    function _docCachePut(key,html){
+      if(!(key in _docCache)) _docCacheOrder.push(key);
+      _docCache[key]=html;
+      while(_docCacheOrder.length>DOC_CACHE_MAX){
+        const old=_docCacheOrder.shift();
+        if(old!==key) delete _docCache[old];
+      }
+    }
     window._docCache=_docCache;
     function renderDoc(){
       const law=state.laws.find(l=>l.id===state.activeId);
@@ -3497,10 +3829,16 @@
         }
         // v4.3.0: referenca inline "neni 12" / "nenit 12" / "член 12" / "членот 12" → klikueshme
         function inlineXref(escaped){
-          return escaped.replace(/(\b(?:nen(?:i|it|in|et|eve)?|член(?:от|и|ови|овите)?|article)\s+)(\d{1,4})/gi,
+          // v5.0.0: kap edhe "neni 5a" / "член 12б" / "article 3bis"
+          return escaped.replace(/(\b(?:nen(?:i|it|in|et|eve)?|член(?:от|и|ови|овите)?|article|art\.)\s+)(\d{1,4}(?:[a-zçëа-ш]|bis|ter)?)/gi,
             function(_,w,n){return w+'<span class="xref-num xref-inline" data-artnum="'+n+'">'+n+'</span>';});
         }
-        _docCache[key]=law.articles.map(a=>'<article class="article" data-index="'+a.index+'"><h3>'+esc(a.title||'')+'</h3><pre>'+renderText(a.text||'')+'</pre></article>').join('');
+        // P0.5: data-index tani perdor indexStr ("5a" ndryshon nga "5");
+        // data-num mbetet numerik qe referencat inline te vazhdojne te punojne.
+        _docCachePut(key, law.articles.map(a=>
+          '<article class="article" data-index="'+esc(String(a.indexStr!=null?a.indexStr:a.index))+
+          '" data-num="'+esc(String(a.index))+'"><h3>'+esc(a.title||'')+'</h3><pre>'+
+          renderText(a.text||'')+'</pre></article>').join(''));
       }
       docEl.innerHTML=_docCache[key];
 
@@ -3520,7 +3858,9 @@
         });
         const L = window._uiLang||{};
         Object.keys(refMap).forEach(idx=>{
-          const art = docEl.querySelector(`.article[data-index="${idx}"]`);
+          const _q=(window.CSS&&CSS.escape)?CSS.escape(String(idx)):String(idx);
+          const art = docEl.querySelector('.article[data-index="'+_q+'"]')
+                   || docEl.querySelector('.article[data-num="'+_q+'"]');
           if(!art) return;
           const notes = refMap[idx];
           const bar = document.createElement('div');
@@ -3554,7 +3894,7 @@
         const row=document.createElement('div'); row.className='law-item'; row.dataset.lawId=l.id;
         const left=document.createElement('div'); left.style.display='grid'; left.style.gap='6px';
         const name=document.createElement('input'); name.type='text'; name.value=l.title; name.placeholder=(window._uiLang&&window._uiLang.titlePh)||'Title';
-        name.addEventListener('change',()=>{ l.title=name.value.trim()||((window._uiLang&&window._uiLang.untitled)||'Untitled'); l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderTabs(); saveToStorage(); });
+        name.addEventListener('change',()=>{ l.title=name.value.trim()||((window._uiLang&&window._uiLang.untitled)||'Untitled'); l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderTabs(); saveToStorage(); if(window._lbSnapshotLaw) window._lbSnapshotLaw(l.id); });
         name.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); name.blur(); }});
         const alt=document.createElement('input'); alt.type='text'; alt.value=l.alt||''; alt.placeholder=(window._uiLang&&window._uiLang.altPh)||'Description / ALT';
         alt.addEventListener('change',()=>{ l.alt=alt.value.trim(); l.updatedAt=Date.now(); Object.keys(_docCache).filter(k=>k.startsWith(l.id)).forEach(k=>delete _docCache[k]); renderDoc(); renderTabs(); saveToStorage(); });
@@ -3573,6 +3913,8 @@
           if(state.activeId===l.id) state.activeId=state.laws[0]?.id||null;
           // Delete sub-legal acts linked to this law
           if(window._saDeleteForLaw) window._saDeleteForLaw(l.id);
+          // v5.0.0: fshi edhe historikun e versioneve (me pare mbetej pergjithmone)
+          if(window._lbDeleteVersions) window._lbDeleteVersions(l.id);
           // Delete annotations for this law
           openDB().then(db=>{
             const tx=db.transaction('annotations','readwrite');
@@ -3633,7 +3975,9 @@
         const id=uid(); const law={id,title,alt,content:raw,articles:splitIntoArticles(raw),updatedAt:Date.now()};
         state.laws.push(law); setActive(id);
       }
-      saveToStorage(); lawModal.close(); formTitle.value=''; formAlt.value=''; formText.value=''; formFile.value=''; updatePreview('');
+      saveToStorage();
+      if(window._lbSnapshotLaw) window._lbSnapshotLaw(editId||(state.laws[state.laws.length-1]||{}).id);
+      lawModal.close(); formTitle.value=''; formAlt.value=''; formText.value=''; formFile.value=''; updatePreview('');
     }
 
     // Search by article/title
@@ -3697,11 +4041,15 @@
     }
 
     // Full-text search (highlight all) -- supports fuzzy
-    function highlightAll(root, query){
+    // ══ P1.3 (v5.0.0) ══
+    // Fuzzy NUK eshte me i ndezur si default. Ne nje mjet juridik nje perputhje
+    // e perafert e pashenuar mund te te coje te dispozita e gabuar. Tani:
+    // se pari perputhje TE SAKTA; te perafertat vetem si fallback, me prag me
+    // te ngushte (max 2 gabime ne vend te len/5+1) dhe me njoftim te dukshem.
+    function highlightAll(root, query, allowFuzzy){
       if(!query) return 0;
-      const isFuzzy = query.length >= 4;
-      // maxErrors: 1 mistake per 4 chars (e.g. 4-7 chars → 1, 8-11 → 2)
-      const maxErrors = isFuzzy ? Math.floor(query.length / 5) + 1 : 0;
+      const isFuzzy = !!allowFuzzy && query.length >= 5;
+      const maxErrors = isFuzzy ? Math.min(2, Math.floor(query.length / 8) + 1) : 0;
       const exactRegex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode:(n)=> n.nodeValue.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT
@@ -3769,20 +4117,37 @@
       // Scroll to the result - instant jump, no animation
       currentResult.scrollIntoView({behavior: 'instant', block: 'center'});
       // Update counter
-      const isFuzzy = currentResult.classList.contains('fuzzy-match');
-      const label = isFuzzy ? ' (~fuzzy)' : '';
-      fulltextCount.textContent = (window._uiLang&&window._uiLang.hitNav||function(i,n){return 'Result '+i+' of '+n;})(currentSearchIndex+1, currentSearchResults.length) + label;
+      const nav = (window._uiLang&&window._uiLang.hitNav||function(i,n){return 'Result '+i+' of '+n;})(currentSearchIndex+1, currentSearchResults.length);
+      if(window._lbFuzzyMode){
+        // P1.3: paralajmerimi duhet te qendroje i dukshem gjate gjithe navigimit
+        fulltextCount.innerHTML = '<span style="color:#f7b731;font-weight:600">'+
+          '<i class="fas fa-triangle-exclamation"></i> Përputhje të përafërta</span> · '+LB.esc(nav);
+      } else {
+        fulltextCount.textContent = nav;
+      }
     }
 
     function runFulltext(){
       const q=(fulltextInput.value||'').trim();
+      docEl.classList.add('searching');     // P1.5: bej te dukshme te gjitha nenet per kerkimin
       clearHighlights(docEl);
       currentSearchResults = [];
       currentSearchIndex = -1;
       if(!q){ fulltextCount.textContent=''; return; }
-      const matches=highlightAll(docEl,q);
+      window._lbFuzzyMode = false;
+      // Hapi 1 — vetem perputhje te sakta
+      let matches = highlightAll(docEl, q, false);
       if (matches > 0) {
         fulltextCount.textContent = (window._uiLang&&window._uiLang.hits||function(n){return 'Total: '+n+' results';})(matches);
+        navigateToNextResult();
+        return;
+      }
+      // Hapi 2 — asgje e sakte: provo te perafertat, por thuaje qarte
+      clearHighlights(docEl);
+      currentSearchResults = []; currentSearchIndex = -1;
+      matches = highlightAll(docEl, q, true);
+      if (matches > 0) {
+        window._lbFuzzyMode = true;
         navigateToNextResult();
       } else {
         fulltextCount.textContent = (window._uiLang&&window._uiLang.noHits)||'⚠️ No results found';
@@ -4738,12 +5103,13 @@ function dbRenderDoc(){
         modal.classList.remove('open');
         selLawId=null; selArtIndex=null;
         modal.onclick = null;
+        document.removeEventListener('keydown', escHandler);  // P1.1: hiqe GJITHMONE
         if(onDone) onDone();
       }
       document.getElementById('dbRefModalClose').onclick = closeModal;
       document.getElementById('dbRefModalCancel').onclick = closeModal;
       modal.onclick = (e)=>{ if(e.target===modal) closeModal(); };
-      function escHandler(e){ if(e.key==='Escape'){ closeModal(); document.removeEventListener('keydown',escHandler); } }
+      function escHandler(e){ if(e.key==='Escape'){ closeModal(); } }
       document.addEventListener('keydown', escHandler);
 
       // "Save" button = close modal (refs already saved live)
@@ -4965,6 +5331,7 @@ function dbRenderDoc(){
       bodyEl.querySelectorAll('.db-srch-hl').forEach(m=>{
         m.replaceWith(document.createTextNode(m.textContent));
       });
+      bodyEl.normalize();   // P1.2
     }
 
     function dbRunFulltext(){
@@ -4980,11 +5347,23 @@ function dbRenderDoc(){
       function walk(node){
         if(node.nodeType===3){
           const text = node.textContent;
+          re.lastIndex=0;
           if(re.test(text)){
             re.lastIndex=0;
-            const span = document.createElement('span');
-            span.innerHTML = text.replace(re,'<mark class="db-srch-hl">$1</mark>');
-            node.parentNode.replaceChild(span, node);
+            // P0.4: DocumentFragment + createTextNode — pa rikthim te HTML-se,
+            // pa korruptim te < > &  (i njejti model si te LawBase)
+            const frag = document.createDocumentFragment();
+            let last=0, m;
+            while((m=re.exec(text))!==null){
+              if(m.index>last) frag.appendChild(document.createTextNode(text.slice(last,m.index)));
+              const mk=document.createElement('mark');
+              mk.className='db-srch-hl'; mk.textContent=m[0];
+              frag.appendChild(mk);
+              last=m.index+m[0].length;
+              if(m[0].length===0){ re.lastIndex++; }
+            }
+            if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
           }
         } else if(node.nodeType===1 && !['SCRIPT','STYLE','MARK'].includes(node.tagName)){
           Array.from(node.childNodes).forEach(walk);
@@ -5108,8 +5487,12 @@ function dbRenderDoc(){
     (function(){
 
       // ── Konstante ──
-      var DBX_AUTO    = '/Apps/LegalBase/backup_auto.json';
-      var DBX_MANUAL  = '/Apps/LegalBase/backup_manual.json';
+      // v5.0.0: me scope "App folder" shtegu eshte relativ ndaj dosjes se app-it.
+      // Perputhshmeri: nese llogaria eshte e vjeter (Full Dropbox), lejo fallback.
+      var DBX_AUTO    = '/backup_auto.json';
+      var DBX_MANUAL  = '/backup_manual.json';
+      var DBX_AUTO_LEGACY   = '/Apps/LegalBase/backup_auto.json';
+      var DBX_MANUAL_LEGACY = '/Apps/LegalBase/backup_manual.json';
       var DBX_TOKEN   = 'https://api.dropbox.com/oauth2/token';
 
       // localStorage keys
@@ -5119,6 +5502,9 @@ function dbRenderDoc(){
       var LS_AUTO     = 'lb-dbx-autosync';
       var LS_DELAY    = 'lb-dbx-delay';
       var LS_LASTSYNC = 'lb-dbx-lastsync';
+      // v5.0.0 — sync i bazuar ne PERMBAJTJE, jo ne kohe
+      var LS_LASTFP   = 'lb-dbx-lastfp';     // fingerprint i te dhenave qe sinkronizuam se fundi
+      var LS_REMOTEH  = 'lb-dbx-remotehash'; // content_hash i Dropbox-it qe njohim
 
       // sessionStorage keys
       var SS_VERIFIER = 'lb-dbx-verifier';   // PKCE code_verifier (30 min)
@@ -5139,6 +5525,44 @@ function dbRenderDoc(){
       function getLastSync()    { try{ return localStorage.getItem(LS_LASTSYNC)||null; }catch(e){ return null; } }
       function setLastSync(iso) { try{ localStorage.setItem(LS_LASTSYNC,iso); }catch(e){} }
       function isConnected()    { return !!(getAccess()||getRefresh()); }
+      function getFp()          { return LB.ls.get(LS_LASTFP,'')||''; }
+      function setFp(f)         { LB.ls.set(LS_LASTFP,f||''); }
+      function getRemoteH()     { return LB.ls.get(LS_REMOTEH,'')||''; }
+      function setRemoteH(h)    { LB.ls.set(LS_REMOTEH,h||''); }
+
+      // ══════════════════════════════════════════════
+      //  v5.0.0 — FINGERPRINT I PERMBAJTJES
+      //  Heq gjithcka VOLATILE qe ndryshon pa nje ndryshim te vertetet
+      //  te dhenash: exportedAt, activeId (navigim), ai.cache (derivat),
+      //  active-view (cili panel eshte hapur).
+      //  Pa kete, cdo eksport prodhon JSON tjeter -> cdo backup duket i ri.
+      // ══════════════════════════════════════════════
+      function _stripVolatile(data){
+        var d = JSON.parse(JSON.stringify(data||{}));
+        delete d.exportedAt;      // <- shkaku #1 i backup-eve fantazme
+        delete d.activeId;        // <- navigim, jo te dhena
+        delete d._fp;
+        if(d.ai){ delete d.ai.cache; }
+        if(d.appPrefs){ delete d.appPrefs['active-view']; }
+        return d;
+      }
+      async function _fingerprint(data){
+        try{ return await LB.sha256(LB.stableStringify(_stripVolatile(data))); }
+        catch(e){ LB.warn('fingerprint',e); return ''; }
+      }
+      // A ka ndryshim te vertete kundrejt gjendjes se fundit te sinkronizuar?
+      async function _isDirty(){
+        try{
+          var data = await exportDB();
+          var fp   = await _fingerprint(data);
+          return { dirty: !!fp && fp !== getFp(), fp: fp, data: data };
+        }catch(e){ LB.warn('isDirty',e); return { dirty:false, fp:'', data:null }; }
+      }
+      window._lbSyncDebug = async function(){
+        var r = await _isDirty();
+        return { fingerprintTani:r.fp, fingerprintISinkronizuar:getFp(),
+                 haNdryshim:r.dirty, remoteHash:getRemoteH(), lastSync:getLastSync() };
+      };
 
       // ── Sync History helpers (max 5 entri) ──
       function getHistory(){
@@ -5160,6 +5584,8 @@ function dbRenderDoc(){
           localStorage.removeItem(LS_APPKEY);
           localStorage.removeItem(LS_ACCESS);
           localStorage.removeItem(LS_REFRESH);
+          localStorage.removeItem(LS_LASTFP);
+          localStorage.removeItem(LS_REMOTEH);
         }catch(e){}
         try{ sessionStorage.removeItem(SS_VERIFIER); }catch(e){}
       }
@@ -5231,24 +5657,33 @@ function dbRenderDoc(){
         var w=window.open(url,'dbx-auth','width=600,height=700,left=200,top=100');
         if(!w){ alert('Popup u bllokua! Lejo popups për këtë faqe.'); return; }
 
-        // Dëgjo URL-n e popup-it — prit ?code=
-        var t=setInterval(function(){
-          try{
-            if(w.closed){ clearInterval(t); return; }
-            var search=w.location.search;
-            if(search&&search.indexOf('code=')>-1){
-              clearInterval(t);
-              var code=new URLSearchParams(search).get('code');
-              w.close();
-              if(code) _exchangeCode(code, appKey);
-            }
-            // Nëse user refuzoi
-            if(search&&search.indexOf('error=')>-1){
-              clearInterval(t); w.close();
-              autoStatus('<i class="fas fa-times-circle" style="color:var(--danger)"></i> Autorizimi u refuzua.');
-            }
-          }catch(e){ /* cross-origin — prit */ }
-        },400);
+        // ══ P1.9 (v5.0.0) ══
+        // Me pare: setInterval 400ms qe lexonte w.location.search dhe hidhte
+        // exception cross-origin ~150 here ne minute. Tani: postMessage nga
+        // faqja e redirect-it (shih blloku "LB OAUTH RELAY" ne krye te <head>).
+        var _done=false;
+        function _onMsg(ev){
+          if(ev.origin!==window.location.origin) return;
+          var d=ev.data||{};
+          if(d.type!=='lb-dbx-auth') return;
+          _done=true;
+          window.removeEventListener('message',_onMsg);
+          clearInterval(_watch);
+          try{ w.close(); }catch(e){}
+          if(d.code) _exchangeCode(d.code, appKey);
+          else autoStatus('<i class="fas fa-times-circle" style="color:var(--danger)"></i> Autorizimi u refuzua.');
+        }
+        window.addEventListener('message',_onMsg);
+
+        // Rrjete sigurie: nese popup-i mbyllet pa pergjigje
+        var _watch=setInterval(function(){
+          if(_done){ clearInterval(_watch); return; }
+          if(w.closed){
+            clearInterval(_watch);
+            window.removeEventListener('message',_onMsg);
+            autoStatus('<i class="fas fa-times-circle" style="color:var(--muted)"></i> Dritarja u mbyll pa autorizim.');
+          }
+        },600);
       }
 
       // ══════════════════════════════════════════════
@@ -5363,10 +5798,20 @@ function dbRenderDoc(){
           if(r.status===401) throw new Error('401');
           if(r.status===429) throw new Error('Shumë kërkesa — provo pas 60 sekondash');
           if(!r.ok){ var e=await r.json().catch(function(){return{};}); throw new Error(e.error_summary||String(r.status)); }
-          return await r.json();
+          var meta=await r.json();
+          if(meta&&meta.content_hash) setRemoteH(meta.content_hash);  // v5: mbaj mend cfare ka Dropbox
+          return meta;
         });
       }
 
+      // v5.0.0: provo shtegun e ri, pastaj ate te vjetrin (llogari te migruara)
+      async function dbxDownloadAny(path){
+        var t = await dbxDownload(path);
+        if(t!==null && t!==undefined) return t;
+        var legacy = path===DBX_AUTO?DBX_AUTO_LEGACY:(path===DBX_MANUAL?DBX_MANUAL_LEGACY:null);
+        if(legacy){ try{ return await dbxDownload(legacy); }catch(e){ LB.warn('dbx.legacy',e); } }
+        return null;
+      }
       async function dbxDownload(path){
         return _apiCall(async function(token){
           var r=await fetch('https://content.dropboxapi.com/2/files/download',{
@@ -5384,6 +5829,13 @@ function dbRenderDoc(){
         });
       }
 
+      async function dbxGetMetaAny(path){
+        var m = await dbxGetMeta(path);
+        if(m) return m;
+        var legacy = path===DBX_AUTO?DBX_AUTO_LEGACY:(path===DBX_MANUAL?DBX_MANUAL_LEGACY:null);
+        if(legacy) return await dbxGetMeta(legacy);
+        return null;
+      }
       async function dbxGetMeta(path){
         return _apiCall(async function(token){
           var r=await fetch('https://api.dropboxapi.com/2/files/get_metadata',{
@@ -5405,7 +5857,7 @@ function dbRenderDoc(){
           window._openDB().then(function(db){
             var tx=db.transaction(['data','annotations','courtpractice','subacts'],'readonly');
             var state=null,notes=null,annoKeys=[],annoVals=[],cpData=null,saData=null;
-            var aiSet=null,aiChat=null,aiCache=null,aiMulti=null,aiDoss=null,appPrefs=null,artHl=null;
+            var aiSet=null,aiChat=null,aiCache=null,aiMulti=null,aiDoss=null,appPrefs=null,artHl=null,remData=null;
             tx.objectStore('data').get('state').onsuccess=function(e2){state=e2.target.result;};
             tx.objectStore('data').get('dashboard-notes').onsuccess=function(e2){notes=e2.target.result;};
             tx.objectStore('data').get('ai_settings').onsuccess=function(e2){aiSet=e2.target.result;};
@@ -5415,6 +5867,7 @@ function dbRenderDoc(){
             tx.objectStore('data').get('ai_dossiers').onsuccess=function(e2){aiDoss=e2.target.result;};
             tx.objectStore('data').get('app_prefs').onsuccess=function(e2){appPrefs=e2.target.result;};
             tx.objectStore('data').get('art_highlights').onsuccess=function(e2){artHl=e2.target.result;};
+            tx.objectStore('data').get('reminders').onsuccess=function(e2){remData=e2.target.result;};
             // Export annotations as {key:value} map (not array) to preserve keys
             tx.objectStore('annotations').getAllKeys().onsuccess=function(e2){annoKeys=e2.target.result||[];};
             tx.objectStore('annotations').getAll().onsuccess=function(e2){annoVals=e2.target.result||[];};
@@ -5429,7 +5882,8 @@ function dbRenderDoc(){
                 annotations:annoMap,legalbase:notes||window._dbData||{cats:[]},
                 courtpractice:cpData||[],subacts:saData||[],
                 ai:{settings:aiSet||window._aiMem||{},chat:aiChat||window._aiChatLog||[],cache:aiCache||[],multi:aiMulti||null,dossiers:aiDoss||[]},
-                appPrefs:appPrefs||window._lbPrefs||{},artHighlights:artHl||{}});
+                appPrefs:appPrefs||window._lbPrefs||{},artHighlights:artHl||{},
+                reminders:remData||window._lbReminders||[]});
             };
           }).catch(function(){
             resolve({version:3,exportedAt:new Date().toISOString(),
@@ -5465,6 +5919,8 @@ function dbRenderDoc(){
             }
             if(data.appPrefs!==undefined)tx.objectStore('data').put(data.appPrefs,'app_prefs');
             if(data.artHighlights!==undefined)tx.objectStore('data').put(data.artHighlights,'art_highlights');
+            if(data.reminders!==undefined&&Array.isArray(data.reminders))
+              tx.objectStore('data').put(data.reminders,'reminders');
             if(data.annotations){
               var s=tx.objectStore('annotations');
               s.clear();
@@ -5483,6 +5939,7 @@ function dbRenderDoc(){
                 if(data.ai){
                   if(data.ai.settings)window._aiMem=data.ai.settings;
                   if(data.ai.chat){window._aiChatLog=data.ai.chat;var _m=document.getElementById('aiMsgs');if(_m)_m.innerHTML='';}
+                  if(window._calReload) window._calReload();
                   if(data.ai.cache)window._aiCacheArr=data.ai.cache;
                   if(data.ai.multi)window._aiMultiSaved=data.ai.multi;
                   if(data.ai.dossiers)window._aiDossiersSaved=data.ai.dossiers;
@@ -5509,6 +5966,24 @@ function dbRenderDoc(){
         if(_cdTimer){clearInterval(_cdTimer);_cdTimer=null;}
         var w=document.getElementById('dbCountdownWrap');
         if(w) w.style.display='none';
+      }
+
+      // v5.0.0: portë — countdown-i nis VETEM kur permbajtja ka ndryshuar vertet.
+      // Ruajtjet nga navigimi, Ctrl+S pa ndryshim, anulimi i redaktimit dhe
+      // beforeunload nuk e nisin me backup-in.
+      var _gateBusy=false;
+      async function _cdStartGated(){
+        if(!isAutoEnabled()||!isConnected()) return;
+        if(_gateBusy) return;
+        _gateBusy=true;
+        try{
+          var r = await _isDirty();
+          if(!r.dirty){
+            if(!_cdTimer) autoStatus('<i class="fas fa-circle-check" style="color:#2dc653"></i> Pa ndryshime — s\u2019ka nevoje per backup');
+            return;                      // <- ketu vdes ping-pongu
+          }
+          _cdStart();
+        } finally { _gateBusy=false; }
       }
 
       function _cdStart(){
@@ -5546,13 +6021,20 @@ function dbRenderDoc(){
       }
 
       async function _doAutoUpload(){
+        // v5: porta e dyte — edhe nese countdown-i mbaroi, mos ngarko te njejtat te dhena
+        var chk = await _isDirty();
+        if(!chk.dirty){
+          autoStatus('<i class="fas fa-circle-check" style="color:#2dc653"></i> Pa ndryshime — backup-i u anashkalua');
+          cloudIcon(isAutoEnabled()?'auto':'conn');
+          return;
+        }
         autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon në Dropbox...');
         cloudIcon('conn');
         try{
-          var data=await exportDB();
+          var data=chk.data; data._fp=chk.fp;
           await dbxUpload(JSON.stringify(data,null,2),DBX_AUTO);
           var now=new Date().toISOString();
-          setLastSync(now);
+          setLastSync(now); setFp(chk.fp);
           pushHistory({type:'auto-upload',iso:now,source:'auto'});
           autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U ruajt — '+new Date(now).toLocaleTimeString());
           cloudIcon(isAutoEnabled()?'auto':'conn');
@@ -5563,9 +6045,13 @@ function dbRenderDoc(){
       }
 
       // Hook: thirret nga dbSave() pas çdo ndryshimi
+      // v5.0.0: debounce 1.5s — shume ruajtje te njepasnjeshme => nje kontroll i vetem
+      var _autoSyncDeb = LB.debounce(function(){ _cdStartGated(); }, 1500);
       window._dbDropboxAutoSync=function(){
-        if(isAutoEnabled()&&isConnected()) _cdStart();
+        if(isAutoEnabled()&&isConnected()) _autoSyncDeb();
       };
+      // Ruajtje qe NUK jane ndryshime (navigim, beforeunload) e thirrin kete:
+      window._dbDropboxTouch=function(){ /* pa veprim — vetem per lexueshmeri */ };
 
       // ══════════════════════════════════════════════
       //  STARTUP SYNC
@@ -5580,14 +6066,24 @@ function dbRenderDoc(){
         try{ sessionStorage.setItem(SS_CHECK,String(now)); }catch(e){}
 
         try{
-          var meta=await dbxGetMeta(DBX_AUTO);
+          var meta=await dbxGetMetaAny(DBX_AUTO);
           if(!meta||!meta.server_modified) return;
           var remoteMs=new Date(meta.server_modified).getTime();
           var localMs=getLastSync()?new Date(getLastSync()).getTime():0;
 
+          // ══ v5.0.0 — PORTA E PERMBAJTJES ══
+          // Nese fajlli ne Dropbox eshte fizikisht i njejti qe njohim,
+          // atehere s'ka asgje te re — pavaresisht sa i vjeter eshte lastSync yne.
+          // Kjo e heq pyetjen "ka backup te ri, deshiron restore?" qe dilte pafund.
+          if(meta.content_hash && meta.content_hash===getRemoteH()){
+            autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — pa ndryshime ne Dropbox');
+            return;
+          }
+
           if(remoteMs>localMs+20000){
             _showToast(remoteMs,localMs);
           } else {
+            if(meta.content_hash) setRemoteH(meta.content_hash);
             autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Sinkronizuar — '+new Date(remoteMs).toLocaleTimeString());
           }
         }catch(err){
@@ -5641,12 +6137,16 @@ function dbRenderDoc(){
           autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
           cloudIcon('conn');
           try{
-            var text=await dbxDownload(DBX_AUTO);
+            var text=await dbxDownloadAny(DBX_AUTO);
             if(!text) throw new Error('backup_auto.json nuk ekziston');
             var data=JSON.parse(text);
             await importDB(data);
             var n=new Date().toISOString();
             setLastSync(n);
+            // v5: mbaj mend cfare morem, qe te mos pyesim serish per te njejten gje
+            try{ setFp(data._fp || await _fingerprint(data));
+                 var m2=await dbxGetMetaAny(DBX_AUTO); if(m2&&m2.content_hash) setRemoteH(m2.content_hash);
+            }catch(e){ LB.warn('sync.afterDownload',e); }
             pushHistory({type:'auto-download',iso:n,source:'conflict-remote'});
             _lastCheck=Date.now();
             try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
@@ -5664,9 +6164,10 @@ function dbRenderDoc(){
           cloudIcon('conn');
           try{
             var data=await exportDB();
+            var fpL=await _fingerprint(data); data._fp=fpL;
             await dbxUpload(JSON.stringify(data,null,2),DBX_AUTO);
             var n=new Date().toISOString();
-            setLastSync(n);
+            setLastSync(n); setFp(fpL);
             pushHistory({type:'auto-upload',iso:n,source:'conflict-local'});
             _lastCheck=Date.now();
             try{ sessionStorage.setItem(SS_CHECK,String(_lastCheck)); }catch(e){}
@@ -5688,6 +6189,7 @@ function dbRenderDoc(){
         manualStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
         try{
           var data=await exportDB();
+          data._fp=await _fingerprint(data);
           await dbxUpload(JSON.stringify(data,null,2),DBX_MANUAL);
           pushHistory({type:'manual-save',iso:new Date().toISOString(),source:'manual'});
           manualStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> U ruajt — '+new Date().toLocaleString());
@@ -5701,10 +6203,11 @@ function dbRenderDoc(){
         if(!confirm('Restauro nga backup_manual.json?\nKjo do te zevendesoje te dhenat aktuale.')) return;
         manualStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
         try{
-          var text=await dbxDownload(DBX_MANUAL);
+          var text=await dbxDownloadAny(DBX_MANUAL);
           if(!text) throw new Error('Skedari manual nuk ekziston — ruaj fillimisht');
           var data=JSON.parse(text);
           await importDB(data);
+          try{ setFp(data._fp || await _fingerprint(data)); }catch(e){ LB.warn('sync.manualRestore',e); }
           pushHistory({type:'manual-restore',iso:new Date().toISOString(),source:'manual'});
           manualStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Restauruar — '+new Date(data.exportedAt||Date.now()).toLocaleString());
         }catch(err){
@@ -5716,12 +6219,15 @@ function dbRenderDoc(){
         if(!confirm('Restauro nga backup_auto.json?\nKjo do te zevendesoje te dhenat aktuale.')) return;
         autoStatus('<i class="fas fa-spinner fa-spin"></i> Po ngarkon...');
         try{
-          var text=await dbxDownload(DBX_AUTO);
+          var text=await dbxDownloadAny(DBX_AUTO);
           if(!text) throw new Error('backup_auto.json nuk ekziston');
           var data=JSON.parse(text);
           await importDB(data);
           var n=new Date().toISOString();
           setLastSync(n);
+          try{ setFp(data._fp || await _fingerprint(data));
+               var m3=await dbxGetMetaAny(DBX_AUTO); if(m3&&m3.content_hash) setRemoteH(m3.content_hash);
+          }catch(e){ LB.warn('sync.afterRestore',e); }
           pushHistory({type:'auto-restore',iso:n,source:'manual'});
           autoStatus('<i class="fas fa-check-circle" style="color:#2dc653"></i> Restauruar — '+new Date(data.exportedAt||n).toLocaleString());
         }catch(err){
@@ -6114,9 +6620,14 @@ function dbRenderDoc(){
         if(cat && typeof dbActiveTitle !== 'undefined'){
           const t = cat.titles.find(x=>x.id===dbActiveTitle);
           if(t){
-            if(titleEl) t.title = titleEl.value.trim() || '(no title)';
-            if(bodyEl)  t.body  = bodyEl.innerHTML;
-            t.updatedAt = Date.now();
+            // v5.0.0: shenoje si te ndryshuar VETEM nese permbajtja ndryshoi vertet.
+            // Me pare updatedAt=Date.now() ne cdo mbyllje faqeje krijonte nje
+            // "ndryshim" fantazem qe shkaktonte backup te ri ne Dropbox.
+            const nt = titleEl ? (titleEl.value.trim() || '(no title)') : t.title;
+            const nb = bodyEl  ? bodyEl.innerHTML : t.body;
+            if(nt !== t.title || nb !== t.body){
+              t.title = nt; t.body = nb; t.updatedAt = Date.now();
+            }
           }
         }
       }
@@ -6779,6 +7290,7 @@ function dbRenderDoc(){
     function applyLang(lang) {
       var L = UI[lang] || UI.en;
       localStorage.setItem('zakoni_lang', lang);
+      try{ document.documentElement.lang = lang; LB.emit('lang:changed', lang); }catch(e){}
       window._uiLang = L;
       document.documentElement.lang = lang;
 
@@ -7854,85 +8366,166 @@ function dbRenderDoc(){
     /* ════════════════════════════════════════════
        11. VERSION HISTORY
     ════════════════════════════════════════════ */
-    function loadVersions(){ try { return JSON.parse(localStorage.getItem(VER_KEY))||{}; } catch(e){ return {}; } }
-    function saveVersions(v){ try { localStorage.setItem(VER_KEY, JSON.stringify(v)); } catch(e){} }
+    // ══════════════════════════════════════════════════════════
+    //  P0.1 (v5.0.0) — VERSION HISTORY, i rishkruar
+    //
+    //  Perpara:  localStorage (5MB) + snapshot per ÇDO ligj ne ÇDO ruajtje
+    //            (pra edhe ne cdo klikim tabi) + JSON.parse/stringify sinkron
+    //            i tere depos + QuotaExceededError i gelltitur ne heshtje.
+    //  Tani:     IndexedDB (asinkron, pa kufi 5MB), vetem ligji QË NDRYSHOI,
+    //            debounce 3s, kufi total, dhe gabimet shfaqen.
+    // ══════════════════════════════════════════════════════════
+    var VER_STORE = 'versions';
+    var MAX_TOTAL_MB = 40;                 // kufi i sigurt per tere historikun
+    var _verQueue = new Map();             // lawId -> {title, content}
+    var _verFlushTimer = null;
 
-    // Save a snapshot before each law edit
-    function saveSnapshot(lawId, title, content){
-      var versions = loadVersions();
-      if(!versions[lawId]) versions[lawId] = [];
-      var hist = versions[lawId];
-      // Don't save if identical to last version
-      if(hist.length && hist[hist.length-1].content === content) return;
-      hist.push({ ts:Date.now(), title:title, content:content, size:content.length });
-      // Limit
-      if(hist.length > MAX_VERSIONS) hist.splice(0, hist.length - MAX_VERSIONS);
-      versions[lawId] = hist;
-      saveVersions(versions);
+    function _verDb(){ return window._openDB(); }
+
+    function loadVersionsFor(lawId){
+      return _verDb().then(function(db){
+        return new Promise(function(res){
+          try{
+            var rq = db.transaction(VER_STORE,'readonly').objectStore(VER_STORE).get(lawId);
+            rq.onsuccess = function(e){ res(e.target.result || []); };
+            rq.onerror   = function(){ res([]); };
+          }catch(e){ LB.warn('versions.load',e); res([]); }
+        });
+      }).catch(function(e){ LB.warn('versions.load',e); return []; });
     }
 
-    // Hook into saveToStorage to auto-snapshot
-    var origSave = window.saveToStorage;
-    if(origSave){
-      window.saveToStorage = function(){
-        var state = window._appState;
-        if(state && state.laws){
-          state.laws.forEach(function(l){
-            if(l.content) saveSnapshot(l.id, l.title, l.content);
+    // Radhit snapshot-in — nuk shkruan menjehere
+    function queueSnapshot(lawId, title, content){
+      if(!lawId || !content) return;
+      _verQueue.set(lawId, {title:title, content:content});
+      clearTimeout(_verFlushTimer);
+      _verFlushTimer = setTimeout(flushSnapshots, 3000);
+    }
+
+    async function flushSnapshots(){
+      if(!_verQueue.size) return;
+      var batch = Array.from(_verQueue.entries());
+      _verQueue.clear();
+      try{
+        var db = await _verDb();
+        for(var k=0;k<batch.length;k++){
+          var lawId = batch[k][0], title = batch[k][1].title, content = batch[k][1].content;
+          var hist = await loadVersionsFor(lawId);
+          var last = hist[hist.length-1];
+          if(last && last.content === content) continue;      // pa ndryshim -> pa version
+          hist.push({ ts:Date.now(), title:title, content:content, size:content.length });
+          if(hist.length > MAX_VERSIONS) hist.splice(0, hist.length - MAX_VERSIONS);
+          // kufi total: hiq versionet me te vjetra derisa te futet ne buxhet
+          var bytes = hist.reduce(function(a,v){ return a+v.size; },0);
+          while(hist.length>1 && bytes > MAX_TOTAL_MB*1024*1024/4){
+            bytes -= hist[0].size; hist.shift();
+          }
+          await new Promise(function(res,rej){
+            var tx = db.transaction(VER_STORE,'readwrite');
+            tx.oncomplete = res;
+            tx.onerror = tx.onabort = function(e){ rej(e.target && e.target.error || e); };
+            tx.objectStore(VER_STORE).put(hist, lawId);
           });
         }
-        return origSave.apply(this, arguments);
-      };
+      }catch(e){
+        LB.warn('versions.flush', e);      // P1.6: jo me heshtje
+        if(window._showStorageError)
+          window._showStorageError('Historiku i versioneve nuk u ruajt: '+((e&&e.message)||e));
+      }
     }
 
-    function openVersionPanel(){
+    // Fshi versionet e nje ligji te fshire (me pare mbeteshin pergjithmone)
+    window._lbDeleteVersions = function(lawId){
+      return _verDb().then(function(db){
+        var tx = db.transaction(VER_STORE,'readwrite');
+        tx.objectStore(VER_STORE).delete(lawId);
+      }).catch(function(e){ LB.warn('versions.delete',e); });
+    };
+
+    // Pika e vetme e hyrjes: thirret VETEM kur nje ligj ndryshon vertet.
+    // NUK ka me monkey-patch mbi saveToStorage.
+    window._lbSnapshotLaw = function(lawId){
+      try{
+        var st = window._appState; if(!st) return;
+        var l = (st.laws||[]).find(function(x){ return x.id===lawId; });
+        if(l && l.content) queueSnapshot(l.id, l.title, l.content);
+      }catch(e){ LB.warn('versions.snapshot',e); }
+    };
+
+    // Migrim njehere: zhvendos historikun e vjeter nga localStorage -> IndexedDB
+    (function migrateOldVersions(){
+      var raw = LB.ls.get(VER_KEY,'');
+      if(!raw) return;
+      try{
+        var old = JSON.parse(raw)||{};
+        _verDb().then(function(db){
+          var tx = db.transaction(VER_STORE,'readwrite');
+          var st = tx.objectStore(VER_STORE);
+          Object.keys(old).forEach(function(id){
+            if(Array.isArray(old[id]) && old[id].length) st.put(old[id].slice(-MAX_VERSIONS), id);
+          });
+          tx.oncomplete = function(){
+            LB.ls.del(VER_KEY);            // liro 5MB-shin e bllokuar
+            console.info('[LB] Historiku i versioneve u zhvendos ne IndexedDB.');
+          };
+        });
+      }catch(e){ LB.warn('versions.migrate',e); LB.ls.del(VER_KEY); }
+    })();
+
+    async function openVersionPanel(){
       var panel = document.getElementById('versionPanel');
       var state = window._appState;
       if(!state || !state.activeId) return;
       var lang = getLang();
-      document.getElementById('verTitle').textContent = {sq:'Historiku i versioneve',mk:'Историја на верзии',en:'Version history'}[lang]||'Version history';
+      document.getElementById('verTitle').textContent =
+        {sq:'Historiku i versioneve',mk:'Историја на верзии',en:'Version history'}[lang]||'Version history';
 
       var list = document.getElementById('verList');
-      var versions = loadVersions();
-      var hist = versions[state.activeId] || [];
+      list.innerHTML = '<div class="ver-empty"><i class="fas fa-spinner fa-spin"></i></div>';
+      panel.classList.add('open');
+
+      await flushSnapshots();                       // shkruaj cfare pret ne radhe
+      var hist = await loadVersionsFor(state.activeId);
       list.innerHTML = '';
 
       if(!hist.length){
-        list.innerHTML = '<div class="ver-empty">'+({sq:'Nuk ka versione',mk:'Нема верзии',en:'No versions yet'}[lang]||'No versions yet')+'</div>';
-        panel.classList.add('open');
+        list.innerHTML = '<div class="ver-empty">'+
+          ({sq:'Nuk ka versione ende',mk:'Нема верзии',en:'No versions yet'}[lang]||'No versions yet')+'</div>';
         return;
       }
 
-      // Show newest first
-      hist.slice().reverse().forEach(function(v, ri){
-        var i = hist.length - 1 - ri;
+      hist.slice().reverse().forEach(function(v){
         var item = document.createElement('div');
         item.className = 'ver-item';
         var date = new Date(v.ts);
-        var timeStr = date.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}) + ' ' + date.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+        var timeStr = date.toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'})
+                    + ' ' + date.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
         var sizeStr = v.size > 1024 ? Math.round(v.size/1024)+'KB' : v.size+'B';
-        item.innerHTML = '<div><div style="font-weight:500;font-size:0.78rem">'+escH(v.title)+'</div><div class="ver-time">'+timeStr+'</div></div><span class="ver-size">'+sizeStr+'</span><button class="ver-restore">'+({sq:'Rikthe',mk:'Врати',en:'Restore'}[lang]||'Restore')+'</button>';
-        item.querySelector('.ver-restore').addEventListener('click', function(e){
+        item.innerHTML = '<div><div style="font-weight:500;font-size:0.78rem">'+LB.esc(v.title)+
+          '</div><div class="ver-time">'+timeStr+'</div></div><span class="ver-size">'+sizeStr+
+          '</span><button class="ver-restore">'+
+          ({sq:'Rikthe',mk:'Врати',en:'Restore'}[lang]||'Restore')+'</button>';
+        item.querySelector('.ver-restore').addEventListener('click', async function(e){
           e.stopPropagation();
           var L = window._uiLang||{};
-          if(!confirm(L.verRestoreConfirm||'Restore this version? Current content will be saved as a new version first.')){return;}
-          // Save current as snapshot first
+          if(!confirm(L.verRestoreConfirm||'Restore this version? Current content will be saved as a new version first.')) return;
           var law = state.laws.find(function(l){return l.id===state.activeId;});
-          if(law && law.content) saveSnapshot(law.id, law.title, law.content);
-          // Restore
-          if(law){
-            law.content = v.content;
-            law.articles = typeof splitIntoArticles==='function' ? splitIntoArticles(v.content) : [];
-            law.updatedAt = Date.now();
-            if(window._docCache) Object.keys(window._docCache).filter(function(k){return k.startsWith(law.id);}).forEach(function(k){delete window._docCache[k];});
-            if(typeof renderAll==='function') renderAll();
-            if(typeof saveToStorage==='function') origSave();
-          }
+          if(!law) return;
+          queueSnapshot(law.id, law.title, law.content);   // ruaj te tanishmen se pari
+          await flushSnapshots();
+          law.content   = v.content;
+          law.articles  = typeof splitIntoArticles==='function' ? splitIntoArticles(v.content) : [];
+          law.updatedAt = Date.now();
+          if(window._docCache) Object.keys(window._docCache)
+            .filter(function(k){return k.indexOf(law.id)===0;})
+            .forEach(function(k){ delete window._docCache[k]; });
+          if(typeof renderAll==='function') renderAll();
+          if(typeof window.saveToStorage==='function') window.saveToStorage();
+          queueSnapshot(law.id, law.title, law.content);
           panel.classList.remove('open');
         });
         list.appendChild(item);
       });
-      panel.classList.add('open');
     }
 
     document.getElementById('verClose').addEventListener('click', function(){ document.getElementById('versionPanel').classList.remove('open'); });
@@ -8315,26 +8908,13 @@ function dbRenderDoc(){
     }
 
     // ── HTML cleaner — MINIMAL: keep all formatting ──
-    function cleanHtml(html){
-      if(!html)return'';
-      var d=document.createElement('div');d.innerHTML=html;
-      d.querySelectorAll('*').forEach(function(el){
-        // Siguri: hiq event handler-ët (onclick, onerror, ...) dhe URL-të javascript:
-        Array.prototype.slice.call(el.attributes).forEach(function(a){
-          var n=a.name.toLowerCase();
-          if(n.indexOf('on')===0){el.removeAttribute(a.name);return;}
-          if((n==='href'||n==='src'||n==='xlink:href'||n==='formaction'||n==='action')
-             && /^\s*(javascript|vbscript|data:text\/html)/i.test(a.value)){el.removeAttribute(a.name);}
-        });
-        el.removeAttribute('class');el.removeAttribute('id');
-      });
-      d.querySelectorAll('o\\:p,xml,meta,link,style,script,title,head,iframe,object,embed,form').forEach(function(el){el.remove();});
-      // Remove comments
-      var walker=document.createTreeWalker(d,NodeFilter.SHOW_COMMENT);
-      var comments=[];while(walker.nextNode())comments.push(walker.currentNode);
-      comments.forEach(function(c){c.remove();});
-      return d.innerHTML;
-    }
+    // ══ P0.2 (v5.0.0) ══
+    // Sanitizuesi i vjeter me BLOCKLIST u hoq. Ai bente d.innerHTML=html PARA
+    // se te hiqte onerror/onclick — pra payload-i ndizej para pastrimit, dhe
+    // lista e ndaluar humbte svg/use, base, template, srcdoc etj.
+    // LB.cleanHtml perdor DOMParser (dokument INERT) + ALLOWLIST. Shih LB CORE.
+    function cleanHtml(html){ return LB.cleanHtml(html); }
+
     window._cleanHtml = cleanHtml;
 
     // ── PDF.js ──
@@ -8344,6 +8924,7 @@ function dbRenderDoc(){
         if(_pdfOk&&window.pdfjsLib){r(true);return;}
         var s=document.createElement('script');
         s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.crossOrigin='anonymous'; s.referrerPolicy='no-referrer';
         s.onload=function(){if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';_pdfOk=true;r(true);};
         s.onerror=function(){r(false);};document.head.appendChild(s);
       });
@@ -8355,8 +8936,9 @@ function dbRenderDoc(){
         var pg=await pdf.getPage(p),ct=await pg.getTextContent();
         var parts=[],lastY=null;
         ct.items.forEach(function(it){
-          var y=Math.round(it.transform[5]),bold=it.fontName&&/bold/i.test(it.fontName),txt=it.str;
-          if(lastY!==null&&Math.abs(y-lastY)>3){parts.push('</p><p>');} 
+          var y=Math.round(it.transform[5]),bold=it.fontName&&/bold/i.test(it.fontName);
+          var txt=LB.esc(it.str);            // P0.3: teksti i PDF-se NUK eshte HTML
+          if(lastY!==null&&Math.abs(y-lastY)>3){parts.push('</p><p>');}
           parts.push(bold?'<b>'+txt+'</b>':txt);lastY=y;
         });
         html+='<p>'+parts.join('')+'</p>';
@@ -8433,7 +9015,7 @@ function dbRenderDoc(){
         });
       }).catch(function(){return undefined;});
     };
-    // v4.4.1: a meriton ky ndryshim të nisë auto-sync?
+    // v5.0.0: a meriton ky ndryshim të nisë auto-sync?
     // - 'ai_cache' jo (zhurmë — sinkronizohet bashkë me ndryshimet e tjera)
     // - te 'app_prefs' ndërrimi i thjeshtë i pamjes (active-view) nuk numërohet si ndryshim të dhënash
     function _syncRelevant(key,oldV,newV){
@@ -8606,7 +9188,7 @@ function dbRenderDoc(){
           try{
             var r0=await fetch(cfg.url,{
               method:'POST',
-              headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+              signal:_aiSignal(),headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
               body:JSON.stringify({model:models[i],messages:[{role:'user',content:PROMPT+'\n\nDOCUMENT:\n'+excerpt}],temperature:0.1,max_tokens:2000})
             });
             if(r0.status===429){lastErr='429';await new Promise(function(rs){setTimeout(rs,1200);});continue;}
@@ -8624,7 +9206,7 @@ function dbRenderDoc(){
       }
       if(prov==='gemini'){
         for(var i=0;i<MODELS.length;i++) try{
-          var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+MODELS[i]+':generateContent?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:PROMPT+excerpt}]}],generationConfig:{maxOutputTokens:2000,temperature:0.1}})});
+          var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+MODELS[i]+':generateContent?key='+encodeURIComponent(key),{method:'POST',signal:_aiSignal(),headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:PROMPT+excerpt}]}],generationConfig:{maxOutputTokens:2000,temperature:0.1}})});
           if(r.status===429)continue;if(!r.ok)continue;
           var d=await r.json(),t=d.candidates&&d.candidates[0]&&d.candidates[0].content&&d.candidates[0].content.parts&&d.candidates[0].content.parts[0]?d.candidates[0].content.parts[0].text:'';
           if(t)return t;
@@ -8634,7 +9216,7 @@ function dbRenderDoc(){
         var CLAUDEMODELS=['claude-sonnet-4-6','claude-sonnet-4-20250514'];
         var lastStatus=0;
         for(var ci=0;ci<CLAUDEMODELS.length;ci++) try{
-          var rA=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:CLAUDEMODELS[ci],max_tokens:2000,messages:[{role:'user',content:PROMPT+excerpt}]})});
+          var rA=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:_aiSignal(),headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:CLAUDEMODELS[ci],max_tokens:2000,messages:[{role:'user',content:PROMPT+excerpt}]})});
           lastStatus=rA.status;
           if(rA.status===429){await new Promise(function(rs){setTimeout(rs,1500);});continue}
           if(rA.status===404)continue;
@@ -9624,7 +10206,8 @@ function dbRenderDoc(){
           return numsStr.trim().split(/\s+/).map(function(n){return '<span class="xref-num" data-artnum="'+n+'">'+n+'</span>';}).join(' ');
         }
         function inlineXref(escaped){
-          return escaped.replace(/(\b(?:nen(?:i|it|in|et|eve)?|член(?:от|и|ови|овите)?|article)\s+)(\d{1,4})/gi,
+          // v5.0.0: kap edhe "neni 5a" / "член 12б" / "article 3bis"
+          return escaped.replace(/(\b(?:nen(?:i|it|in|et|eve)?|член(?:от|и|ови|овите)?|article|art\.)\s+)(\d{1,4}(?:[a-zçëа-ш]|bis|ter)?)/gi,
             function(_,w,n){return w+'<span class="xref-num xref-inline" data-artnum="'+n+'">'+n+'</span>';});
         }
         while(i<arr.length){
@@ -10838,12 +11421,12 @@ function dbRenderDoc(){
         try{
           var r=await fetch(cfg.url,{
             method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+            signal:_aiSignal(),headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
             body:JSON.stringify({model:models[i],messages:[{role:'user',content:prompt}],temperature:purpose==='select'?0:0.2,max_tokens:mt})
           });
           if(r.status===429){ // backoff: prit dhe riprovoje TË NJËJTIN model një herë
             await new Promise(function(rs){setTimeout(rs,2500);});
-            r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+            r=await fetch(cfg.url,{method:'POST',signal:_aiSignal(),headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
               body:JSON.stringify({model:models[i],messages:[{role:'user',content:prompt}],temperature:purpose==='select'?0:0.2,max_tokens:mt})});
           }
           if(r.status===429){lastErr='429 (limit kërkesash — prit pak)';await new Promise(function(rs){setTimeout(rs,1200);});continue;}
@@ -10861,6 +11444,12 @@ function dbRenderDoc(){
       throw new Error(cfg.label+': '+lastErr);
     }
     var CLAUDE_MODELS=['claude-sonnet-4-6','claude-sonnet-4-20250514'];
+    // v5.0.0: pa timeout, nje ofrues i ngecur e bllokonte butonin pa fund
+    var AI_TIMEOUT_MS = 90000;
+    function _aiSignal(){
+      try{ return AbortSignal.timeout(AI_TIMEOUT_MS); }
+      catch(e){ var c=new AbortController(); setTimeout(function(){c.abort();},AI_TIMEOUT_MS); return c.signal; }
+    }
     // ── SSE streaming ──
     async function _readSSE(r,onData){
       var reader=r.body.getReader(),dec=new TextDecoder(),buf='';
@@ -10885,7 +11474,7 @@ function dbRenderDoc(){
           var mt=maxTok||3000;if(prov==='groq')mt=Math.min(mt,2000);
           for(var i=0;i<models.length;i++){
             full='';
-            var r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:models[i],messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:mt,stream:true})});
+            var r=await fetch(cfg.url,{method:'POST',signal:_aiSignal(),headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:models[i],messages:[{role:'user',content:prompt}],temperature:0.2,max_tokens:mt,stream:true})});
             if(!r.ok){if(r.status===429)await new Promise(function(rs){setTimeout(rs,1200);});continue;}
             await _readSSE(r,function(j){var d=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;if(d){full+=d;onChunk(full);}});
             if(full)return{text:full,model:models[i]};
@@ -10894,7 +11483,7 @@ function dbRenderDoc(){
           var gmodels=geminiModels('answer');
           for(var g=0;g<gmodels.length;g++){
             full='';
-            var rg=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+gmodels[g]+':streamGenerateContent?alt=sse&key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTok||3000,temperature:0.2}})});
+            var rg=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+gmodels[g]+':streamGenerateContent?alt=sse&key='+encodeURIComponent(key),{method:'POST',signal:_aiSignal(),headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:maxTok||3000,temperature:0.2}})});
             if(!rg.ok){if(rg.status===429)await new Promise(function(rs){setTimeout(rs,1200);});continue;}
             await _readSSE(rg,function(j){var p2=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts;if(p2)for(var q2=0;q2<p2.length;q2++){if(p2[q2].text){full+=p2[q2].text;onChunk(full);}}});
             if(full)return{text:full,model:gmodels[g]};
@@ -10902,7 +11491,7 @@ function dbRenderDoc(){
         }else{
           for(var c=0;c<CLAUDE_MODELS.length;c++){
             full='';
-            var rc=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:CLAUDE_MODELS[c],max_tokens:maxTok||3000,messages:[{role:'user',content:prompt}],stream:true})});
+            var rc=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:_aiSignal(),headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:CLAUDE_MODELS[c],max_tokens:maxTok||3000,messages:[{role:'user',content:prompt}],stream:true})});
             if(!rc.ok){if(rc.status===429)await new Promise(function(rs){setTimeout(rs,1500);});continue;}
             await _readSSE(rc,function(j){if(j.type==='content_block_delta'&&j.delta&&j.delta.text){full+=j.delta.text;onChunk(full);}});
             if(full)return{text:full,model:CLAUDE_MODELS[c]};
@@ -11783,6 +12372,551 @@ function dbRenderDoc(){
     if(docEl){var _t=null;new MutationObserver(function(){clearTimeout(_t);_t=setTimeout(injectAiArtBtns,160);}).observe(docEl,{childList:true});}
     document.addEventListener('DOMContentLoaded',function(){setTimeout(injectAiArtBtns,700);});
     setTimeout(injectAiArtBtns,900);
+  })();
+  </script>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODULI: KALENDAR / KUJTESA   (v5.0.0)
+       Ruajtja: IndexedDB 'data' -> celesi 'reminders'
+       Sinkronizimi: automatik (perfshihet ne exportDB + fingerprint)
+       ══════════════════════════════════════════════════════════════ -->
+  <style>
+    .cal-btn{position:relative}
+    .cal-badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;padding:0 4px;
+      border-radius:9px;background:var(--danger,#e63946);color:#fff;font-size:.6rem;font-weight:700;
+      line-height:16px;text-align:center;pointer-events:none}
+    #calOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:var(--z-modal,500);
+      display:none;align-items:center;justify-content:center;padding:16px}
+    #calOverlay.open{display:flex}
+    .cal-modal{background:var(--card,#fff);color:var(--text,#111);border-radius:14px;width:100%;
+      max-width:720px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;
+      box-shadow:0 18px 50px rgba(0,0,0,.3)}
+    .cal-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--border,#e5e5e5)}
+    .cal-head h3{margin:0;font-size:.95rem;flex:1}
+    .cal-nav{display:flex;align-items:center;gap:6px}
+    .cal-nav button{background:none;border:1px solid var(--border,#e5e5e5);border-radius:8px;
+      width:30px;height:30px;cursor:pointer;color:inherit}
+    .cal-nav button:hover{background:var(--hover,rgba(0,0,0,.05))}
+    .cal-month{min-width:132px;text-align:center;font-weight:600;font-size:.84rem}
+    .cal-body{overflow:auto;padding:12px 14px}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+    .cal-dow{font-size:.62rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted,#777);
+      text-align:center;padding:4px 0;font-weight:600}
+    .cal-day{aspect-ratio:1;border:1px solid transparent;border-radius:8px;display:flex;
+      flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+      font-size:.78rem;position:relative;background:var(--hover,rgba(0,0,0,.03))}
+    .cal-day:hover{border-color:var(--primary,#3b82f6)}
+    .cal-day.other{opacity:.32}
+    .cal-day.today{outline:2px solid var(--primary,#3b82f6);outline-offset:-2px;font-weight:700}
+    .cal-day.sel{background:var(--primary,#3b82f6);color:#fff}
+    .cal-dots{display:flex;gap:2px;margin-top:3px;height:5px}
+    .cal-dot{width:5px;height:5px;border-radius:50%;background:var(--primary,#3b82f6)}
+    .cal-dot.over{background:var(--danger,#e63946)}
+    .cal-dot.done{background:#2dc653}
+    .cal-day.sel .cal-dot{background:#fff}
+    .cal-sec{margin-top:14px;border-top:1px solid var(--border,#e5e5e5);padding-top:12px}
+    .cal-sec-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .cal-sec-h h4{margin:0;font-size:.82rem;flex:1}
+    .cal-item{display:flex;gap:9px;align-items:flex-start;padding:8px 9px;border-radius:9px;
+      background:var(--hover,rgba(0,0,0,.03));margin-bottom:6px}
+    .cal-item.overdue{border-left:3px solid var(--danger,#e63946)}
+    .cal-item.done{opacity:.5}
+    .cal-item.done .cal-it-title{text-decoration:line-through}
+    .cal-chk{margin-top:2px;cursor:pointer;flex:none;width:16px;height:16px}
+    .cal-it-main{flex:1;min-width:0}
+    .cal-it-title{font-size:.8rem;font-weight:600;word-break:break-word}
+    .cal-it-time{font-size:.68rem;color:var(--muted,#777);margin-top:1px}
+    .cal-it-note{font-size:.72rem;color:var(--muted,#777);margin-top:3px;white-space:pre-wrap;word-break:break-word}
+    .cal-it-acts{display:flex;gap:4px;flex:none}
+    .cal-it-acts button{background:none;border:none;cursor:pointer;color:var(--muted,#777);
+      padding:3px 5px;border-radius:6px;font-size:.74rem}
+    .cal-it-acts button:hover{background:var(--hover,rgba(0,0,0,.08));color:var(--text,#111)}
+    .cal-empty{font-size:.75rem;color:var(--muted,#777);padding:8px 2px}
+    .cal-form{display:none;gap:8px;flex-direction:column;padding:11px;border-radius:10px;
+      background:var(--hover,rgba(0,0,0,.04));margin-bottom:10px}
+    .cal-form.open{display:flex}
+    .cal-form input,.cal-form textarea,.cal-form select{width:100%;padding:7px 9px;border-radius:8px;
+      border:1px solid var(--border,#e5e5e5);background:var(--card,#fff);color:inherit;
+      font-size:.8rem;font-family:inherit;box-sizing:border-box}
+    .cal-form textarea{min-height:56px;resize:vertical}
+    .cal-row{display:flex;gap:8px}
+    .cal-row>*{flex:1;min-width:0}
+    .cal-form-acts{display:flex;gap:8px;justify-content:flex-end}
+    .cal-btn-p{background:var(--primary,#3b82f6);color:#fff;border:none;border-radius:8px;
+      padding:7px 15px;cursor:pointer;font-size:.78rem;font-weight:600}
+    .cal-btn-s{background:none;border:1px solid var(--border,#e5e5e5);border-radius:8px;
+      padding:7px 15px;cursor:pointer;font-size:.78rem;color:inherit}
+    #calToastWrap{position:fixed;right:14px;bottom:14px;z-index:var(--z-toast,700);
+      display:flex;flex-direction:column;gap:8px;max-width:330px}
+    .cal-toast{background:var(--card,#fff);border-left:4px solid var(--primary,#3b82f6);
+      border-radius:10px;padding:11px 13px;box-shadow:0 8px 26px rgba(0,0,0,.22);font-size:.8rem}
+    .cal-toast b{display:block;margin-bottom:3px}
+    .cal-toast .cal-toast-x{float:right;cursor:pointer;color:var(--muted,#777);margin-left:8px}
+    @media(max-width:560px){ .cal-modal{max-width:100%;max-height:100%;border-radius:0}
+      .cal-day{font-size:.72rem} .cal-row{flex-direction:column} }
+  </style>
+
+  <div id="calOverlay" role="dialog" aria-modal="true" aria-labelledby="calTitle">
+    <div class="cal-modal">
+      <div class="cal-head">
+        <h3 id="calTitle">Kalendar</h3>
+        <div class="cal-nav">
+          <button id="calPrev" aria-label="Muaji i kaluar"><i class="fas fa-chevron-left"></i></button>
+          <span class="cal-month" id="calMonthLbl"></span>
+          <button id="calNext" aria-label="Muaji tjetër"><i class="fas fa-chevron-right"></i></button>
+          <button id="calToday" aria-label="Sot" title="Sot"><i class="fas fa-crosshairs"></i></button>
+          <button id="calClose" aria-label="Mbyll"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="cal-body">
+        <div class="cal-grid" id="calDow"></div>
+        <div class="cal-grid" id="calGrid" style="margin-top:3px"></div>
+
+        <div class="cal-sec">
+          <div class="cal-sec-h">
+            <h4 id="calDayLbl"></h4>
+            <button class="cal-btn-p" id="calAddBtn"><i class="fas fa-plus"></i> <span id="calAddLbl">Shto</span></button>
+          </div>
+          <div class="cal-form" id="calForm">
+            <input type="text" id="calFTitle" maxlength="140" placeholder="Titulli i kujtesës" />
+            <div class="cal-row">
+              <input type="date" id="calFDate" />
+              <input type="time" id="calFTime" />
+            </div>
+            <div class="cal-row">
+              <select id="calFRepeat">
+                <option value="none">Pa përsëritje</option>
+                <option value="daily">Çdo ditë</option>
+                <option value="weekly">Çdo javë</option>
+                <option value="monthly">Çdo muaj</option>
+                <option value="yearly">Çdo vit</option>
+              </select>
+              <select id="calFLead">
+                <option value="0">Njofto në orën e caktuar</option>
+                <option value="10">10 min para</option>
+                <option value="60">1 orë para</option>
+                <option value="1440">1 ditë para</option>
+              </select>
+            </div>
+            <textarea id="calFNote" maxlength="2000" placeholder="Shënim (opsional)"></textarea>
+            <div class="cal-form-acts">
+              <button class="cal-btn-s" id="calFCancel">Anulo</button>
+              <button class="cal-btn-p" id="calFSave">Ruaj</button>
+            </div>
+          </div>
+          <div id="calDayList"></div>
+        </div>
+
+        <div class="cal-sec">
+          <div class="cal-sec-h"><h4 id="calUpcomingLbl">Së shpejti</h4></div>
+          <div id="calUpcoming"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="calToastWrap"></div>
+
+  <script>
+  /* ══════════════════════════════════════════════════════════════
+     MODULI: KALENDAR / KUJTESA  (v5.0.0)
+     Model moduli LB: varesite deklarohen ne rreshtin e pare.
+     ══════════════════════════════════════════════════════════════ */
+  (function(){
+    'use strict';
+    var esc = LB.esc, $ = LB.$, uid = LB.uid;
+
+    var KEY = 'reminders';
+    var NOTIFIED_KEY = 'lb-cal-notified';   // per-pajisje, NUK sinkronizohet
+    var CHECK_MS = 30000;
+
+    var TR = {
+      sq:{ title:'Kalendar & Kujtesa', add:'Shto', save:'Ruaj', cancel:'Anulo',
+           edit:'Redakto', del:'Fshij', delQ:'Të fshihet kjo kujtesë?',
+           noneDay:'Asnjë kujtesë për këtë ditë.', upcoming:'Së shpejti (30 ditët e ardhshme)',
+           noneUp:'Asnjë kujtesë e ardhshme.', needTitle:'Shkruaj një titull.',
+           needDate:'Zgjidh datën dhe orën.', today:'Sot', tomorrow:'Nesër',
+           overdue:'Kaluar', ph:'Titulli i kujtesës', phNote:'Shënim (opsional)',
+           rep:{none:'Pa përsëritje',daily:'Çdo ditë',weekly:'Çdo javë',monthly:'Çdo muaj',yearly:'Çdo vit'},
+           lead:{'0':'Njofto në orën e caktuar','10':'10 min para','60':'1 orë para','1440':'1 ditë para'},
+           dow:['Hën','Mar','Mër','Enj','Pre','Sht','Die'],
+           mon:['Janar','Shkurt','Mars','Prill','Maj','Qershor','Korrik','Gusht','Shtator','Tetor','Nëntor','Dhjetor'] },
+      mk:{ title:'Календар и потсетници', add:'Додај', save:'Зачувај', cancel:'Откажи',
+           edit:'Уреди', del:'Избриши', delQ:'Да се избрише потсетникот?',
+           noneDay:'Нема потсетници за овој ден.', upcoming:'Наскоро (следните 30 дена)',
+           noneUp:'Нема претстојни потсетници.', needTitle:'Внеси наслов.',
+           needDate:'Избери датум и време.', today:'Денес', tomorrow:'Утре',
+           overdue:'Изминато', ph:'Наслов на потсетникот', phNote:'Белешка (опционално)',
+           rep:{none:'Без повторување',daily:'Секој ден',weekly:'Секоја недела',monthly:'Секој месец',yearly:'Секоја година'},
+           lead:{'0':'Извести на закажаното време','10':'10 мин порано','60':'1 час порано','1440':'1 ден порано'},
+           dow:['Пон','Вто','Сре','Чет','Пет','Саб','Нед'],
+           mon:['Јануари','Февруари','Март','Април','Мај','Јуни','Јули','Август','Септември','Октомври','Ноември','Декември'] },
+      en:{ title:'Calendar & Reminders', add:'Add', save:'Save', cancel:'Cancel',
+           edit:'Edit', del:'Delete', delQ:'Delete this reminder?',
+           noneDay:'No reminders for this day.', upcoming:'Upcoming (next 30 days)',
+           noneUp:'No upcoming reminders.', needTitle:'Enter a title.',
+           needDate:'Pick a date and time.', today:'Today', tomorrow:'Tomorrow',
+           overdue:'Overdue', ph:'Reminder title', phNote:'Note (optional)',
+           rep:{none:'No repeat',daily:'Daily',weekly:'Weekly',monthly:'Monthly',yearly:'Yearly'},
+           lead:{'0':'Notify at the set time','10':'10 min before','60':'1 hour before','1440':'1 day before'},
+           dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+           mon:['January','February','March','April','May','June','July','August','September','October','November','December'] }
+    };
+    function T(){ return TR[LB.lang()] || TR.en; }
+
+    var items = [];
+    var viewY, viewM, selDate = null, editId = null, ready = false;
+
+    /* ── Ruajtja ── */
+    function load(){
+      if(!window._lbDbGet) return Promise.resolve([]);
+      return window._lbDbGet(KEY).then(function(v){
+        items = Array.isArray(v) ? v : [];
+        window._lbReminders = items;
+        return items;
+      }).catch(function(e){ LB.warn('cal.load', e); items = []; return items; });
+    }
+    function save(){
+      window._lbReminders = items;
+      // _lbDbPut shkakton automatikisht auto-sync te Dropbox-i (celes i ri => _syncRelevant true)
+      return window._lbDbPut(KEY, items).then(function(r){
+        try{ checkDue(); }catch(e){ LB.warn('cal.checkDue', e); }   // njofto menjehere nese eshte e vonuar
+        return r;
+      }).catch(function(e){
+        LB.warn('cal.save', e);
+        if(window._showStorageError) window._showStorageError('Kujtesa nuk u ruajt: '+((e&&e.message)||e));
+      });
+    }
+
+    /* ── Ndihmes datash ── */
+    var pad = function(n){ return (n<10?'0':'')+n; };
+    var dkey = function(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); };
+    function keyOfTs(ts){ return dkey(new Date(ts)); }
+    function fmtTime(ts){
+      var d = new Date(ts);
+      return pad(d.getHours())+':'+pad(d.getMinutes());
+    }
+    function fmtDayLabel(k){
+      var t = T(), d = new Date(k+'T00:00:00');
+      var today = dkey(new Date());
+      var tm = new Date(); tm.setDate(tm.getDate()+1);
+      if(k===today) return t.today+' · '+d.getDate()+' '+t.mon[d.getMonth()];
+      if(k===dkey(tm)) return t.tomorrow+' · '+d.getDate()+' '+t.mon[d.getMonth()];
+      return t.dow[(d.getDay()+6)%7]+', '+d.getDate()+' '+t.mon[d.getMonth()]+' '+d.getFullYear();
+    }
+
+    /* Perseritjet: kthen kohen e ardhshme te shfaqjes, ose vete ts nese s'perseritet */
+    function nextOccurrence(it, from){
+      if(!it.repeat || it.repeat==='none') return it.ts;
+      var d = new Date(it.ts), now = from || Date.now(), guard = 0;
+      while(d.getTime() < now && guard++ < 4000){
+        if(it.repeat==='daily')        d.setDate(d.getDate()+1);
+        else if(it.repeat==='weekly')  d.setDate(d.getDate()+7);
+        else if(it.repeat==='monthly') d.setMonth(d.getMonth()+1);
+        else if(it.repeat==='yearly')  d.setFullYear(d.getFullYear()+1);
+        else break;
+      }
+      return d.getTime();
+    }
+    /* Shfaqjet e nje kujtese brenda nje muaji (per pikat ne kalendar) */
+    function occurrencesInMonth(it, y, m){
+      var out = [], first = new Date(y,m,1).getTime(), last = new Date(y,m+1,0,23,59,59).getTime();
+      if(!it.repeat || it.repeat==='none'){
+        if(it.ts>=first && it.ts<=last) out.push(it.ts);
+        return out;
+      }
+      var d = new Date(it.ts), guard = 0;
+      while(d.getTime() <= last && guard++ < 4000){
+        if(d.getTime() >= first) out.push(d.getTime());
+        if(it.repeat==='daily')        d.setDate(d.getDate()+1);
+        else if(it.repeat==='weekly')  d.setDate(d.getDate()+7);
+        else if(it.repeat==='monthly') d.setMonth(d.getMonth()+1);
+        else if(it.repeat==='yearly')  d.setFullYear(d.getFullYear()+1);
+        else break;
+      }
+      return out;
+    }
+    function itemsOnDay(k){
+      var y = +k.slice(0,4), m = +k.slice(5,7)-1;
+      var out = [];
+      items.forEach(function(it){
+        occurrencesInMonth(it, y, m).forEach(function(ts){
+          if(keyOfTs(ts)===k) out.push({it:it, ts:ts});
+        });
+      });
+      return out.sort(function(a,b){ return a.ts-b.ts; });
+    }
+
+    /* ── Rendering ── */
+    function renderDow(){
+      var t = T();
+      $('#calDow').innerHTML = t.dow.map(function(d){
+        return '<div class="cal-dow">'+esc(d)+'</div>'; }).join('');
+    }
+    function renderGrid(){
+      var t = T();
+      $('#calMonthLbl').textContent = t.mon[viewM]+' '+viewY;
+      var first = new Date(viewY, viewM, 1);
+      var start = (first.getDay()+6)%7;             // e hena = 0
+      var gridStart = new Date(viewY, viewM, 1-start);
+      var todayK = dkey(new Date()), now = Date.now();
+
+      // pikat per tere muajin
+      var dots = {};
+      items.forEach(function(it){
+        occurrencesInMonth(it, viewY, viewM).forEach(function(ts){
+          var k = keyOfTs(ts);
+          (dots[k] = dots[k] || []).push(
+            it.done ? 'done' : (ts < now ? 'over' : ''));
+        });
+      });
+
+      var html = '';
+      for(var i=0;i<42;i++){
+        var d = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate()+i);
+        var k = dkey(d);
+        var cls = 'cal-day' + (d.getMonth()!==viewM ? ' other':'')
+                + (k===todayK ? ' today':'') + (k===selDate ? ' sel':'');
+        var dd = (dots[k]||[]).slice(0,3).map(function(c){
+          return '<span class="cal-dot '+c+'"></span>'; }).join('');
+        html += '<div class="'+cls+'" data-k="'+k+'" role="button" tabindex="0" aria-label="'+k+'">'
+              + d.getDate() + '<span class="cal-dots">'+dd+'</span></div>';
+      }
+      $('#calGrid').innerHTML = html;
+    }
+
+    function itemRow(it, ts, showDate){
+      var t = T(), over = !it.done && ts < Date.now();
+      var when = (showDate ? fmtDayLabel(keyOfTs(ts))+' · ' : '') + fmtTime(ts);
+      if(it.repeat && it.repeat!=='none') when += ' · '+t.rep[it.repeat];
+      if(over) when += ' · '+t.overdue;
+      return '<div class="cal-item'+(over?' overdue':'')+(it.done?' done':'')+'" data-id="'+esc(it.id)+'">'
+        + '<input type="checkbox" class="cal-chk" data-act="done" '+(it.done?'checked':'')+' aria-label="'+esc(t.save)+'" />'
+        + '<div class="cal-it-main"><div class="cal-it-title">'+esc(it.title)+'</div>'
+        + '<div class="cal-it-time">'+esc(when)+'</div>'
+        + (it.note ? '<div class="cal-it-note">'+esc(it.note)+'</div>' : '')
+        + '</div><div class="cal-it-acts">'
+        + '<button data-act="edit" title="'+esc(t.edit)+'" aria-label="'+esc(t.edit)+'"><i class="fas fa-pen"></i></button>'
+        + '<button data-act="del" title="'+esc(t.del)+'" aria-label="'+esc(t.del)+'"><i class="fas fa-trash"></i></button>'
+        + '</div></div>';
+    }
+
+    function renderDay(){
+      var t = T();
+      $('#calDayLbl').textContent = fmtDayLabel(selDate);
+      var list = itemsOnDay(selDate);
+      $('#calDayList').innerHTML = list.length
+        ? list.map(function(o){ return itemRow(o.it, o.ts, false); }).join('')
+        : '<div class="cal-empty">'+esc(t.noneDay)+'</div>';
+    }
+
+    function renderUpcoming(){
+      var t = T(), now = Date.now(), horizon = now + 30*864e5;
+      var rows = items.filter(function(it){ return !it.done; })
+        .map(function(it){ return {it:it, ts:nextOccurrence(it, now)}; })
+        .filter(function(o){ return o.ts <= horizon; })
+        .sort(function(a,b){ return a.ts-b.ts; }).slice(0,12);
+      $('#calUpcomingLbl').textContent = t.upcoming;
+      $('#calUpcoming').innerHTML = rows.length
+        ? rows.map(function(o){ return itemRow(o.it, o.ts, true); }).join('')
+        : '<div class="cal-empty">'+esc(t.noneUp)+'</div>';
+    }
+
+    function renderBadge(){
+      var now = Date.now(), n = 0;
+      items.forEach(function(it){
+        if(it.done) return;
+        var ts = nextOccurrence(it, now - 864e5);
+        if(ts <= now + 864e5) n++;          // e kaluar ose brenda 24 oreve
+      });
+      var b = $('#calBadge');
+      if(!b) return;
+      if(n>0){ b.textContent = n>99?'99+':String(n); b.hidden = false; }
+      else b.hidden = true;
+    }
+
+    function renderAll(){
+      if(!ready) return;
+      renderDow(); renderGrid(); renderDay(); renderUpcoming(); renderBadge();
+    }
+
+    /* ── Formulari ── */
+    function applyFormLabels(){
+      var t = T();
+      $('#calTitle').textContent = t.title;
+      $('#calAddLbl').textContent = t.add;
+      $('#calFTitle').placeholder = t.ph;
+      $('#calFNote').placeholder = t.phNote;
+      $('#calFSave').textContent = t.save;
+      $('#calFCancel').textContent = t.cancel;
+      Array.prototype.forEach.call($('#calFRepeat').options, function(o){
+        if(t.rep[o.value]) o.textContent = t.rep[o.value]; });
+      Array.prototype.forEach.call($('#calFLead').options, function(o){
+        if(t.lead[o.value]) o.textContent = t.lead[o.value]; });
+    }
+    function openForm(it){
+      editId = it ? it.id : null;
+      var d = it ? new Date(it.ts) : new Date();
+      if(!it){ d = new Date(selDate+'T09:00:00'); if(isNaN(d)) d = new Date(); }
+      $('#calFTitle').value  = it ? it.title : '';
+      $('#calFNote').value   = it ? (it.note||'') : '';
+      $('#calFDate').value   = dkey(d);
+      $('#calFTime').value   = pad(d.getHours())+':'+pad(d.getMinutes());
+      $('#calFRepeat').value = it ? (it.repeat||'none') : 'none';
+      $('#calFLead').value   = it ? String(it.lead||0) : '0';
+      $('#calForm').classList.add('open');
+      $('#calFTitle').focus();
+    }
+    function closeForm(){ $('#calForm').classList.remove('open'); editId = null; }
+
+    async function saveForm(){
+      var t = T();
+      var title = ($('#calFTitle').value||'').trim();
+      if(!title){ alert(t.needTitle); $('#calFTitle').focus(); return; }
+      var dv = $('#calFDate').value, tv = $('#calFTime').value || '09:00';
+      if(!dv){ alert(t.needDate); return; }
+      var ts = new Date(dv+'T'+tv+':00').getTime();
+      if(isNaN(ts)){ alert(t.needDate); return; }
+
+      if(editId){
+        var it = items.find(function(x){ return x.id===editId; });
+        if(it){ it.title=title; it.note=($('#calFNote').value||'').trim();
+                it.ts=ts; it.repeat=$('#calFRepeat').value;
+                it.lead=parseInt($('#calFLead').value,10)||0;
+                it.updatedAt=Date.now(); }
+      } else {
+        items.push({ id:uid(), title:title, note:($('#calFNote').value||'').trim(),
+          ts:ts, repeat:$('#calFRepeat').value, lead:parseInt($('#calFLead').value,10)||0,
+          done:false, createdAt:Date.now(), updatedAt:Date.now() });
+      }
+      await save();
+      selDate = dkey(new Date(ts));
+      viewY = new Date(ts).getFullYear(); viewM = new Date(ts).getMonth();
+      closeForm(); renderAll();
+    }
+
+    /* ── Njoftimet ── */
+    function notifiedSet(){
+      try{ return new Set(JSON.parse(LB.ls.get(NOTIFIED_KEY,'[]'))); }catch(e){ return new Set(); }
+    }
+    function markNotified(k){
+      var s = notifiedSet(); s.add(k);
+      var arr = Array.from(s).slice(-400);
+      LB.ls.set(NOTIFIED_KEY, JSON.stringify(arr));
+    }
+    function toast(it, ts){
+      var wrap = $('#calToastWrap'); if(!wrap) return;
+      var el = document.createElement('div');
+      el.className = 'cal-toast';
+      el.innerHTML = '<span class="cal-toast-x">&times;</span><b><i class="fas fa-bell"></i> '
+        + esc(it.title)+'</b>'+ esc(fmtTime(ts)) + (it.note ? '<br>'+esc(it.note.slice(0,140)) : '');
+      el.querySelector('.cal-toast-x').onclick = function(){ el.remove(); };
+      wrap.appendChild(el);
+      setTimeout(function(){ el.remove(); }, 25000);
+      try{
+        if(window.Notification && Notification.permission==='granted')
+          new Notification(it.title, { body:(it.note||'')+' · '+fmtTime(ts), tag:it.id+'@'+ts });
+      }catch(e){ LB.warn('cal.notify', e); }
+    }
+    function checkDue(){
+      if(!items.length) return;
+      var now = Date.now(), seen = notifiedSet();
+      items.forEach(function(it){
+        if(it.done) return;
+        var ts = nextOccurrence(it, now - 7*864e5);
+        var fire = ts - (it.lead||0)*60000;
+        if(fire <= now && now - fire < 24*3600e3){
+          var k = it.id+'@'+ts;
+          if(!seen.has(k)){ markNotified(k); toast(it, ts); }
+        }
+      });
+      renderBadge();
+    }
+
+    /* ── Ngjarjet ── */
+    function openCal(){
+      var now = new Date();
+      if(viewY===undefined){ viewY = now.getFullYear(); viewM = now.getMonth(); }
+      if(!selDate) selDate = dkey(now);
+      applyFormLabels(); closeForm(); renderAll();
+      $('#calOverlay').classList.add('open');
+      if(window.Notification && Notification.permission==='default'){
+        try{ Notification.requestPermission(); }catch(e){}
+      }
+    }
+    function closeCal(){ $('#calOverlay').classList.remove('open'); closeForm(); }
+
+    function bind(){
+      var btn = $('#calBtn'); if(btn) btn.addEventListener('click', openCal);
+      $('#calClose').addEventListener('click', closeCal);
+      $('#calOverlay').addEventListener('click', function(e){ if(e.target===$('#calOverlay')) closeCal(); });
+      document.addEventListener('keydown', function(e){
+        if(e.key==='Escape' && $('#calOverlay').classList.contains('open')) closeCal();
+      });
+      $('#calPrev').addEventListener('click', function(){
+        viewM--; if(viewM<0){ viewM=11; viewY--; } renderGrid(); });
+      $('#calNext').addEventListener('click', function(){
+        viewM++; if(viewM>11){ viewM=0; viewY++; } renderGrid(); });
+      $('#calToday').addEventListener('click', function(){
+        var n=new Date(); viewY=n.getFullYear(); viewM=n.getMonth(); selDate=dkey(n); renderAll(); });
+      $('#calGrid').addEventListener('click', function(e){
+        var d = e.target.closest('.cal-day'); if(!d) return;
+        selDate = d.dataset.k;
+        var dt = new Date(selDate+'T00:00:00');
+        if(dt.getMonth()!==viewM){ viewY=dt.getFullYear(); viewM=dt.getMonth(); }
+        closeForm(); renderGrid(); renderDay();
+      });
+      $('#calGrid').addEventListener('keydown', function(e){
+        if(e.key!=='Enter' && e.key!==' ') return;
+        var d = e.target.closest('.cal-day'); if(!d) return;
+        e.preventDefault(); d.click();
+      });
+      $('#calAddBtn').addEventListener('click', function(){ openForm(null); });
+      $('#calFCancel').addEventListener('click', closeForm);
+      $('#calFSave').addEventListener('click', saveForm);
+
+      function listHandler(e){
+        var row = e.target.closest('.cal-item'); if(!row) return;
+        var btn = e.target.closest('[data-act]'); if(!btn) return;
+        var it = items.find(function(x){ return x.id===row.dataset.id; }); if(!it) return;
+        var act = btn.dataset.act;
+        if(act==='done'){ it.done = btn.checked; it.updatedAt = Date.now(); save().then(renderAll); }
+        else if(act==='edit'){ openForm(it); }
+        else if(act==='del'){
+          if(!confirm(T().delQ)) return;
+          items = items.filter(function(x){ return x.id!==it.id; });
+          save().then(renderAll);
+        }
+      }
+      $('#calDayList').addEventListener('click', listHandler);
+      $('#calUpcoming').addEventListener('click', listHandler);
+      LB.on('lang:changed', function(){ applyFormLabels(); renderAll(); });
+    }
+
+    /* ── Nisja ── */
+    function init(){
+      bind();
+      load().then(function(){
+        ready = true;
+        var n = new Date();
+        if(viewY===undefined){ viewY=n.getFullYear(); viewM=n.getMonth(); }
+        if(!selDate) selDate = dkey(n);
+        renderBadge();
+        checkDue();
+        setInterval(checkDue, CHECK_MS);
+      });
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+
+    /* Rifreskim pas restore-it nga Dropbox */
+    window._calReload = function(){
+      return load().then(function(){ renderAll(); });
+    };
+    window._calAdd = function(title, ts, note){        // API per module te tjere
+      items.push({id:uid(),title:String(title||''),note:String(note||''),ts:+ts||Date.now(),
+        repeat:'none',lead:0,done:false,createdAt:Date.now(),updatedAt:Date.now()});
+      return save().then(renderAll);
+    };
   })();
   </script>
 
